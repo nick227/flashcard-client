@@ -1,0 +1,48 @@
+:root {
+    /* Color Palette */
+    --color-primary: #2563eb;
+    /* blue-600 */
+    --color-primary-hover: #1d4ed8;
+    --color-accent: #f59e42;
+    /* fun accent orange */
+    --color-bg: #f8fafc;
+    /* gray-50 */
+    --color-surface: #fff;
+    --color-border: #e5e7eb;
+    /* gray-200 */
+    --color-muted: #64748b;
+    /* slate-500 */
+    --color-success: #22c55e;
+    /* green-500 */
+    --color-danger: #ef4444;
+    /* red-500 */
+    --color-warning: #facc15;
+    /* yellow-400 */
+    --color-info: #38bdf8;
+    /* sky-400 */
+    --color-text: #0f172a;
+    /* slate-900 */
+    --color-subtle: #f1f5f9;
+    /* white-100 */
+    --color-white: #ffffff;
+    /* Spacing & Sizing */
+    --space-xs: 0.5rem;
+    --space-sm: 1rem;
+    --space-md: 2rem;
+    --space-lg: 3rem;
+    --space-xl: 4rem;
+    --radius: 1.25rem;
+    --radius-sm: 0.75rem;
+    --radius-lg: 2rem;
+    --shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08);
+    --shadow-xl: 0 8px 32px 0 rgba(30, 41, 59, 0.16);
+    /* Typography */
+    --font-main: 'Inter', 'Segoe UI', Arial, sans-serif;
+    --font-size-base: 1.125rem;
+    --font-size-lg: 2.25rem;
+    --font-size-xl: 3rem;
+    --font-weight-bold: 700;
+    --font-weight-normal: 400;
+    --container-max-width: 1440px;
+    --container-padding-x: 2rem;
+}

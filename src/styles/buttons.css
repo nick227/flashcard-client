@@ -1,0 +1,107 @@
+.button {
+    background: var(--color-primary);
+    color: #fff;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 0.5rem;
+    padding: 0.75em 2em;
+    font-size: 1.08em;
+    font-weight: 600;
+    font-family: var(--font-main);
+    letter-spacing: 0.01em;
+    box-shadow: 0 2px 8px 0 rgba(37, 99, 235, 0.04);
+    transition: background 0.18s, border-color 0.18s, box-shadow 0.18s, color 0.18s, transform 0.12s;
+    outline: none;
+    cursor: pointer;
+    display: inline-block;
+    line-height: 1.2;
+}
+
+.button:hover,
+.button:focus {
+    color: #fff;
+    box-shadow: 0 4px 16px 0 rgba(37, 99, 235, 0.10);
+    text-decoration: none;
+}
+
+.button:active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 1px 4px 0 rgba(37, 99, 235, 0.08);
+    transform: scale(0.98);
+}
+
+.button-accent {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+}
+
+.button-success {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: #fff;
+}
+
+.button-danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #fff;
+}
+
+.button:focus-visible {
+    outline: 2.5px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.button-disabled,
+.button:disabled {
+    background: #e5e7eb !important;
+    color: #a1a1aa !important;
+    border-color: #e5e7eb !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+}
+
+.exit-fullscreen-button,
+.small-button {
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    margin-right: 1rem;
+    transition: opacity 0.3s ease;
+}
+
+.exit-fullscreen-button:hover,
+.small-button:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.link {
+    cursor: pointer;
+    border-radius: 0.6em;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.link:hover,
+.link.active {
+    color: var(--color-success) !important;
+    text-decoration: none;
+}
+
+.button-round {
+    background: var(--color-subtle);
+    color: var(--color-primary);
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    margin-right: 1rem;
+    transition: opacity 0.3s ease;
+}

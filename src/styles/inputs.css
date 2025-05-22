@@ -1,0 +1,25 @@
+.input {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    font-size: 1em;
+    background: #fff;
+    color: var(--color-text);
+    outline: none;
+    transition: border 0.18s;
+    resize: vertical;
+}
+
+.input.large {
+    height: 300px;
+}
+
+.input-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 2px #ef444422 !important;
+}
+
+.input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px #2563eb22;
+}
