@@ -17,6 +17,26 @@
           <option value="premium">Premium</option>
           <option value="subscriber">Subscriber Only</option>
         </select>
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="Search sets..." 
+          class="min-w-[140px] px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          @input="onSearchInput"
+          :disabled="loading"
+        />
+        <button 
+          v-if="searchQuery" 
+          @click="clearSearch" 
+          class="p-2 text-gray-500 hover:text-gray-700"
+          :disabled="loading"
+        >
+          <span class="sr-only">Clear search</span>
+          ✕
+        </button>
+        <div v-if="loading" class="ml-2">
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        </div>
       </div>
       <div class="flex items-center gap-4">
         <select id="sort" v-model="sortOrder" class="min-w-[140px]">
@@ -96,10 +116,12 @@ const {
   categories,
   hasMore,
   error,
+  searchQuery,
   loadSets,
   updateCategory,
   updateSortOrder,
-  updateSetType
+  updateSetType,
+  updateSearch
 } = useSets()
 
 // Watch for route changes to update selected category
@@ -167,6 +189,21 @@ watch(() => route.fullPath, () => {
     observer = null
   }
 })
+
+const clearSearch = () => {
+  searchQuery.value = ''
+  updateSearch('')
+}
+
+const onSearchInput = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const value = target.value.trim()
+  
+  // Only search if query is at least 2 characters
+  if (value.length >= 2 || value.length === 0) {
+    updateSearch(value)
+  }
+}
 </script>
 
 <style scoped>

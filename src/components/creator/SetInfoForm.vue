@@ -72,7 +72,12 @@
       </select>
     </div>
     <!-- Tags and price components -->
-    <TagsInput :availableTags="availableTags" :modelValue="tags" @update:modelValue="$emit('update:tags', $event)" />
+    <TagsInput 
+      :availableTags="availableTags" 
+      :modelValue="tags" 
+      :setId="setId"
+      @update:modelValue="$emit('update:tags', $event)" 
+    />
     <PriceSelector :modelValue="price" @update:modelValue="$emit('update:price', $event)" />
   </form>
 </template>
@@ -92,7 +97,8 @@ const props = defineProps<{
   categories: { id: number, name: string }[],
   availableTags: string[],
   formSubmitted?: boolean,
-  thumbnail?: string | null
+  thumbnail?: string | null,
+  setId: string
 }>()
 
 // Component events

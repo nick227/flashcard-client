@@ -27,8 +27,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import TagsList from '@/components/common/TagsList.vue'
+import { removeTagFromSet } from '@/api'
 
-const props = defineProps<{ availableTags: string[], modelValue: string[] }>()
+const props = defineProps<{ 
+  availableTags: string[], 
+  modelValue: string[],
+  setId?: number 
+}>()
 const emit = defineEmits(['update:modelValue'])
 
 const tags = ref([...props.modelValue])
@@ -53,7 +58,15 @@ function addTag() {
   }
   input.value = ''
 }
-function removeTag(tag: string) {
+async function removeTag(tag: string) {
+  if (props.setId) {
+    try {
+      await removeTagFromSet(props.setId, tag)
+    } catch (error) {
+      console.error('Failed to remove tag:', error)
+      return
+    }
+  }
   tags.value = tags.value.filter(t => t !== tag)
   emit('update:modelValue', [...tags.value])
 }
@@ -68,6 +81,7 @@ function selectSuggestion(suggestion: string) {
 function onInput() {
   if (input.value.length > 20) input.value = input.value.slice(0, 20)
 }
+
 </script>
 
 <style scoped>

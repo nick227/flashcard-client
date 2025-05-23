@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flashcard-scaffold card flex flex-col items-center justify-center w-full max-w-3xl mx-auto relative"
+    class="flashcard-scaffold card flex flex-col items-center justify-center w-full mx-auto relative"
     :tabindex="editable ? -1 : 0"
     :aria-label="editable ? 'Edit flash card' : 'Flash card'"
     @click="onCardClick"
@@ -28,14 +28,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
-
-interface FlashCard {
-  id: number
-  front: string
-  back: string
-  hint?: string
-  setId: number
-}
+import type { FlashCard } from '@/types'
 
 const props = defineProps<{
   card: FlashCard
@@ -169,44 +162,7 @@ const exitFullscreen = () => {
 }
 
 .fullscreen .flashcard-scaffold {
-  height: 100%;
-}
-
-.flashcard-scaffold:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-}
-
-.card-content {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  transition: transform 0.6s;
-  transform-style: preserve-3d;
-}
-
-.card-content.is-flipped {
-  transform: rotateY(180deg);
-}
-
-.card-face {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  text-align: center;
-}
-
-.front {
-  transform: rotateY(0deg);
-}
-
-.back {
-  transform: rotateY(180deg);
+  height: 70%;
 }
 
 .formatted-content {
@@ -217,16 +173,6 @@ const exitFullscreen = () => {
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 
 /* Debug info */

@@ -133,18 +133,8 @@ export async function fetchCategories(): Promise<{ id: number; name: string }[]>
  * Fetch unique tags from sets (if sets have tags array), else fallback to static tags.
  */
 export async function fetchAvailableTags() {
-  const res = await api.get(apiEndpoints.sets)
-  // Handle new paginated response format
-  const sets = res.data.items || res.data
-  // If sets have tags array, flatten and dedupe
-  let tags: string[] = []
-  sets.forEach((s: any) => {
-    if (Array.isArray(s.tags)) tags.push(...s.tags)
-  })
-  if (tags.length > 0) {
-    tags = Array.from(new Set(tags))
-  } 
-  return tags
+  const res = await api.get('/tags')
+  return res.data.map((tag: { id: number, name: string }) => tag.name)
 }
 
 /**
@@ -158,5 +148,9 @@ export async function fetchTags() {
 
 export async function assignTagsToSet(setId: number, tags: string[]) {
   return api.post('/set_tags', { setId, tags });
+}
+
+export async function removeTagFromSet(setId: number, tagName: string) {
+  return api.post(`/sets/${setId}/remove-tag`, { setId, tagName });
 } 
 

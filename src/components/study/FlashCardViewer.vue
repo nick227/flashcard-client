@@ -102,7 +102,7 @@
     </div>
 
     <!-- Card Area -->
-    <div v-else class="w-full max-w-4xl mx-auto flex flex-col">
+    <div v-else class="w-full max-w-3xl mx-auto flex flex-col">
       <!-- Header with Download and Like -->
       <CardHeader :set="set" :is-liked="isLiked" :set-likes="setLikes" @download="downloadSet"
         @toggle-like="toggleLikeSet" />

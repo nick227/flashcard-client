@@ -21,6 +21,7 @@
     color: #fff;
     box-shadow: 0 4px 16px 0 rgba(37, 99, 235, 0.10);
     text-decoration: none;
+    background: var(--color-accent);
 }
 
 .button:active {

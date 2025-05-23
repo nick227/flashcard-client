@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full">
+  <div class="w-full mt-4">
     <!-- Controls -->
     <div class="controls-group mb-8 bg-gray-50 rounded-xl py-8 px-6 border border-gray-200 shadow-sm">
       <button class="button flex-1 min-w-[120px] py-4 mr-auto" :class="{ 'button-disabled': isPrevDisabled }"

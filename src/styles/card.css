@@ -1,29 +1,204 @@
+/* Base card styles */
+
 .card {
     background: var(--color-surface);
     border-radius: var(--radius);
     box-shadow: var(--shadow-xl);
     border: 1.5px solid var(--color-border);
     width: 100%;
+    aspect-ratio: 16/9;
+    max-width: 800px;
     display: flex;
     flex-direction: column;
     transition: all 0.18s, border-color 0.18s, transform 0.12s;
     margin: 0 auto;
     position: relative;
+    perspective: 1000px;
 }
 
 .card:hover {
-    box-shadow: 0 8px 32px 0 rgba(30, 41, 59, 0.16);
-    border-color: var(--color-primary);
-    transform: translateY(-2px) scale(1.01);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
-.card-image,
-.card-image-placeholder {
+
+/* Card content styles */
+
+.card-content {
     width: 100%;
-    height: 180px;
-    object-fit: cover;
-    display: block;
+    height: 100%;
+    padding: 2.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    color: inherit;
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+    position: relative;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    cursor: text;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
 }
+
+.card-content.is-flipped {
+    transform: rotateY(180deg);
+}
+
+
+/* Card face styles */
+
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem;
+    text-align: center;
+    border-radius: 1.5rem;
+    font-size: 2.2rem;
+    word-break: break-word;
+    box-sizing: border-box;
+    overflow: hidden;
+    transform-style: preserve-3d;
+}
+
+.front.card-face {
+    background: #fff;
+    color: #222;
+    transform: rotateY(0deg);
+}
+
+.back.card-face {
+    background: #2563eb;
+    color: #fff;
+    transform: rotateY(180deg);
+}
+
+
+/* Card preview styles */
+
+.card-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    max-width: 800px;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    perspective: 1000px;
+}
+
+.card-preview.front {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+}
+
+.card-preview.back {
+    background: #2563eb;
+    border: 1px solid #2563eb;
+}
+
+
+/* Fullscreen styles */
+
+.fullscreen .card,
+.fullscreen .card-preview {
+    width: 90vw;
+    max-width: 1200px;
+    aspect-ratio: 16/9;
+    margin: auto;
+}
+
+
+/* Card content editable styles */
+
+.card-content[contenteditable="true"] {
+    width: 100%;
+    height: 100%;
+    padding: 2.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    color: inherit;
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+    position: relative;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    cursor: text;
+    transition: font-size 0.2s ease;
+    overflow-y: auto;
+}
+
+.card-content[contenteditable="true"]:empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-content[contenteditable="true"]:empty:before {
+    content: attr(data-placeholder);
+    color: #9ca3af;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.card-preview.back .card-content[contenteditable="true"]:empty:before {
+    color: #e5e7eb;
+}
+
+.card-preview.front .card-content {
+    color: #222;
+}
+
+.card-preview.back .card-content {
+    color: #fff;
+}
+
+.card-content:focus {
+    outline: none;
+}
+
+.card-preview.front:focus-within {
+    box-shadow: 0 0 0 2px #2563eb33;
+    border-color: #2563eb;
+}
+
+.card-preview.back:focus-within {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+    border-color: #3b82f6;
+}
+
+
+/* Card states */
+
+.card-success {
+    border-color: #22c55e !important;
+}
+
+.card-error {
+    border-color: #ef4444 !important;
+}
+
+
+/* Card grid styles */
 
 .cards-grid {
     display: grid;
@@ -37,29 +212,8 @@
     max-width: 460px;
 }
 
-.card-content {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-md);
-    padding-bottom: 0;
-}
 
-.card-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--color-text);
-    line-height: 1.2;
-}
-
-.card-description {
-    color: var(--color-muted-dark);
-    font-size: 1rem;
-    margin-bottom: var(--space-sm);
-    min-height: 3.5em;
-    line-height: 1.4;
-    overflow-y: auto;
-}
+/* Card meta styles */
 
 .card-meta {
     font-size: 0.98em;
@@ -74,13 +228,8 @@
     gap: var(--space-xs);
 }
 
-.card-success {
-    border-color: #22c55e !important;
-}
 
-.card-error {
-    border-color: #ef4444 !important;
-}
+/* Category badge styles */
 
 .category-badge {
     display: inline-block;
@@ -102,41 +251,15 @@
     position: absolute;
 }
 
-.card-face {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.2rem;
-    padding: 2.5rem;
-    border-radius: 1.5rem;
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: transparent;
-    color: #222;
-    text-align: center;
-    word-break: break-word;
-    box-sizing: border-box;
-    overflow: hidden;
+
+/* Transitions */
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
 }
 
-.back.card-face {
-    background: #2563eb;
-    color: #fff;
-}
-
-.accent {
-    color: var(--color-accent);
-}
-
-.front.card-face {
-    background: #fff;
-    color: #222;
-}
-
-.back.card-face {
-    background: #2563eb;
-    color: #fff;
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }

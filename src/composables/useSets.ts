@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import type { Ref } from 'vue'
 import axios from 'axios'
 import { apiEndpoints, fetchCategories } from '@/api/index'
@@ -21,11 +21,13 @@ interface UseSetsReturn {
   hasMore: Ref<boolean>
   error: Ref<string | null>
   selectedSetType: Ref<string>
+  searchQuery: Ref<string>
   loadSets: (reset?: boolean) => Promise<void>
   resetPagination: () => void
   updateCategory: (category: string) => void
   updateSortOrder: (order: string) => void
   updateSetType: (type: string) => void
+  updateSearch: (query: string) => void
 }
 
 export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
@@ -46,6 +48,8 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
   const hasMore = ref(true)
   const error = ref<string | null>(null)
   const selectedSetType = ref(initialSetType)
+  const searchQuery = ref('')
+  const debounceTimeout = ref<number | null>(null)
 
   const resetPagination = () => {
     sets.value = []
@@ -70,26 +74,9 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
 
       const params = new URLSearchParams({
         page: currentPage.value.toString(),
-        limit: pageSize.toString()
+        limit: pageSize.toString(),
+        sortOrder: sortOrder.value
       })
-
-      // Handle sort parameters
-      if (sortOrder.value) {
-        switch (sortOrder.value) {
-          case 'featured':
-            params.append('sortBy', 'featured')
-            params.append('sortOrder', 'DESC')
-            break
-          case 'newest':
-            params.append('sortBy', 'created_at')
-            params.append('sortOrder', 'DESC')
-            break
-          case 'oldest':
-            params.append('sortBy', 'created_at')
-            params.append('sortOrder', 'ASC')
-            break
-        }
-      }
 
       if (selectedCategory.value) {
         params.append('category', selectedCategory.value)
@@ -99,21 +86,27 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
         params.append('setType', selectedSetType.value)
       }
 
+      if (searchQuery.value.trim()) {
+        console.log('Adding search query to params:', searchQuery.value.trim())
+        params.append('search', searchQuery.value.trim())
+      }
+
+      console.log('Fetching sets with params:', params.toString())
       const setsRes = await axios.get(`${apiEndpoints.sets}?${params.toString()}`)
+      console.log('Search response:', setsRes.data)
       const { items, pagination } = setsRes.data
 
-      // Only append new items if we're not resetting
       if (reset) {
         sets.value = items
       } else {
         sets.value = [...sets.value, ...items]
       }
 
-      // Update hasMore based on whether there are more pages
       hasMore.value = currentPage.value < pagination.totalPages
-      currentPage.value++
+      if (hasMore.value) {
+        currentPage.value++
+      }
 
-      // Load categories if not already loaded
       if (categories.value.length === 0) {
         const categoriesRes = await fetchCategories()
         categories.value = categoriesRes.map(c => typeof c === 'string' ? c : c.name)
@@ -121,6 +114,10 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
     } catch (err: any) {
       error.value = err.message || 'Error loading sets'
       console.error('Error loading sets:', err)
+      // Clear results on error
+      if (reset) {
+        sets.value = []
+      }
     } finally {
       loading.value = false
     }
@@ -141,6 +138,23 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
     loadSets(true)
   }
 
+  const updateSearch = (query: string) => {
+    searchQuery.value = query
+    if (debounceTimeout.value) {
+      clearTimeout(debounceTimeout.value)
+    }
+    
+    // If search is empty, reset the results
+    if (!query.trim()) {
+      loadSets(true)
+      return
+    }
+    
+    debounceTimeout.value = window.setTimeout(() => {
+      loadSets(true)
+    }, 300)
+  }
+
   if (autoLoad) {
     loadSets()
   }
@@ -154,10 +168,12 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
     hasMore,
     error,
     selectedSetType,
+    searchQuery,
     loadSets,
     resetPagination,
     updateCategory,
     updateSortOrder,
-    updateSetType
+    updateSetType,
+    updateSearch
   }
 } 
