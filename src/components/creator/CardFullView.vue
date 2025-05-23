@@ -1,5 +1,5 @@
 <template>
-  <div class="card-full-view bg-gray-50 rounded-xl shadow p-6 w-full mb-4" :class="{ 'card-success': !isBlank }">
+  <div class="card-full-view bg-gray-50 rounded-xl shadow p-6 mb-4" :class="{ 'card-success': !isBlank }">
     <div class="flex justify-between items-center mb-3">
       <button class="button button-danger text-xs px-3 py-1" @click="onRequestDelete">Delete</button>
       <button class="button button-accent text-xs px-3 py-1" @click="previewMode = !previewMode">
@@ -8,7 +8,7 @@
     </div>
     <div class="card-container">
       <div v-if="!previewMode" class="flex gap-4 items-start">
-        <div class="flex-1">
+        <div class="flex-1 card-col" style="min-width:0">
           <label class="block text-gray-500 text-xs mb-1">Front</label>
           <div class="card-preview front">
             <div
@@ -25,7 +25,7 @@
             ></div>
           </div>
         </div>
-        <div class="flex-1">
+        <div class="flex-1 card-col" style="min-width:0">
           <label class="block text-gray-500 text-xs mb-1">Back</label>
           <div class="card-preview back">
             <div
@@ -159,6 +159,13 @@ watch([() => props.card, previewMode], ([newCard, mode], [oldCard, oldMode]) => 
   border-radius: 1.25rem;
   box-shadow: 0 4px 24px 0 rgba(30,41,59,0.08);
   transition: box-shadow 0.18s, border-color 0.18s;
+  box-sizing: border-box;
+  width: 96%;
+}
+
+.card-col {
+  width: calc(50% - 0.5rem); /* gap-4 is 1rem, so each side gets half the gap */
+  min-width: 0;
 }
 
 .card-full-view:focus-within {
@@ -177,8 +184,6 @@ watch([() => props.card, previewMode], ([newCard, mode], [oldCard, oldMode]) => 
 }
 
 .card-preview {
-  position: relative;
-  width: 100%;
   min-height: 400px;
   height: 400px;
   border-radius: 1.5rem;
@@ -188,6 +193,7 @@ watch([() => props.card, previewMode], ([newCard, mode], [oldCard, oldMode]) => 
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  width: 100%;
 }
 
 .card-preview:hover {
@@ -206,8 +212,8 @@ watch([() => props.card, previewMode], ([newCard, mode], [oldCard, oldMode]) => 
 }
 
 .card-content {
-  width: calc(100% - 5rem);
-  height: calc(100% - 5rem);
+  width: 100%;
+  height: 100%;
   padding: 2.5rem;
   font-weight: 600;
   line-height: 1.2;
