@@ -55,19 +55,35 @@ export function usePaginatedData<T>(endpoint: string, options: {
         totalItems: res.data?.pagination?.total || 0
       })
 
-      if (res.data && res.data.pagination) {
+      // Handle history endpoint response structure
+      if (endpoint === apiEndpoints.history) {
+        if (res.data?.items) {
+          items.value = res.data.items
+          totalItems.value = res.data.total || res.data.items.length
+        } else {
+          items.value = []
+          totalItems.value = 0
+        }
+      }
+      // Handle standard pagination response
+      else if (res.data && res.data.pagination) {
         items.value = res.data.items || []
-        // Use the actual items length if it's less than the reported total
         const reportedTotal = res.data.pagination.total || 0
         const actualItems = items.value.length
         totalItems.value = actualItems < reportedTotal ? actualItems : reportedTotal
-      } else if (Array.isArray(res.data)) {
+      }
+      // Handle array response
+      else if (Array.isArray(res.data)) {
         items.value = res.data
         totalItems.value = res.data.length
-      } else if (res.data) {
+      }
+      // Handle single item response
+      else if (res.data) {
         items.value = [res.data]
         totalItems.value = 1
-      } else {
+      }
+      // Handle empty response
+      else {
         items.value = []
         totalItems.value = 0
       }
@@ -76,7 +92,8 @@ export function usePaginatedData<T>(endpoint: string, options: {
         itemsLength: items.value.length,
         totalItems: totalItems.value,
         currentPage: currentPage.value,
-        totalPages: totalPages.value
+        totalPages: totalPages.value,
+        items: items.value
       })
     } catch (err) {
       error.value = 'Failed to fetch data'

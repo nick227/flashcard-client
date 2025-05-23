@@ -1,5 +1,5 @@
 <template>
-  <Navbar />
+  
   <div class="container flex flex-col items-center justify-center py-16 min-h-screen">
     <div v-if="loading" class="text-gray-500">Loading profile...</div>
     <div v-else-if="error" class="text-red-500">{{ error }}</div>

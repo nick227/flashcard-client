@@ -1,6 +1,8 @@
 <template>
   <div class="container flex flex-col items-center justify-start w-full px-4 py-12">
     <div v-if="loading" class="text-gray-500 text-lg">Loading cards...</div>
+    <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
+    <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>
     <div v-else-if="error" class="text-red-500 text-lg">{{ error }}</div>
     <div v-else-if="!set" class="text-gray-500 text-lg">Set not found</div>
     <div v-else-if="unauthorized" class="w-full max-w-4xl mx-auto">
@@ -126,7 +128,7 @@
             :show-exit="isFullScreen"
             mode="view"
             @prev="prevCard" 
-            @next="nextCard" 
+            @next="handleNextCardWithHistory" 
           />
         </div>
       </div>
@@ -173,6 +175,7 @@ import type { FlashCard, FlashCardSet } from '@/types'
 import { useRouter, useRoute } from 'vue-router'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/common/Toaster.vue'
+import { useViewHistory } from '@/composables/useViewHistory'
 
 const props = defineProps<{
   setId: number | string
@@ -197,8 +200,8 @@ const {
   isPrevDisabled,
   isNextDisabled,
   prevCard,
-  nextCard,
-  handleCardFlip,
+  nextCard: handleNextCard,
+  handleCardFlip: handleCardNavigation,
   resetNavigation
 } = useCardNavigation(cards)
 
@@ -281,62 +284,67 @@ const formatPrice = (price: number | string | null): string => {
   return isNaN(numPrice) ? '0.00' : numPrice.toFixed(2);
 };
 
+const {
+    history,
+    loading: historyLoading,
+    error: historyError,
+    isFirstView,
+    isCompleted,
+    cardsViewed,
+    initializeHistory,
+    updateCardsViewed,
+    markAsCompleted
+} = useViewHistory(Number(props.setId))
+
 const fetchSet = async () => {
-  if (!props.setId) {
-    console.error('No setId provided to fetchSet!')
-    return
-  }
-  try {
-    
-    const res = await axios.get(`${apiEndpoints.sets}/${props.setId}`)
-    
-    set.value = res.data
-
-    // Check for access information
-    if (res.data.access && !res.data.access.hasAccess) {
-      
-      unauthorized.value = true
-      accessDetails.value = res.data.access
-      cards.value = [] // Clear cards since user can't access them
-    } else {
-      
-      unauthorized.value = false
-      accessDetails.value = null
-
-      // Ensure cards is an array and has the correct structure
-      const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
-      
-
-      // Map the cards to ensure they have the required structure
-      cards.value = cardsData.map((card: { id: number; setId: number; front: string; back: string; hint?: string }) => ({
-        id: card.id,
-        setId: card.setId,
-        front: card.front || '',
-        back: card.back || '',
-        hint: card.hint || ''
-      }))
-
-      
-
-      // Reset state
-      currentIndex.value = 0
-      flipped.value = false
-      showHint.value = false
-      currentFlip.value = 0
-
-      // Initialize viewed cards
-      viewedCards.value = cards.value.map(card => ({
-        id: card.id,
-        frontViewed: false,
-        backViewed: false
-      }))
+    if (!props.setId) {
+        console.error('No setId provided to fetchSet!')
+        return
     }
-  } catch (err) {
-    console.error('FlashCardViewer - Failed to fetch set:', err)
-    error.value = 'Failed to load flashcard set'
-  } finally {
-    loading.value = false
-  }
+    try {
+        const res = await axios.get(`${apiEndpoints.sets}/${props.setId}`)
+        set.value = res.data
+
+        // Check for access information
+        if (res.data.access && !res.data.access.hasAccess) {
+            unauthorized.value = true
+            accessDetails.value = res.data.access
+            cards.value = []
+        } else {
+            unauthorized.value = false
+            accessDetails.value = null
+
+            const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
+            cards.value = cardsData.map((card: { id: number; setId: number; front: string; back: string; hint?: string }) => ({
+                id: card.id,
+                setId: card.setId,
+                front: card.front || '',
+                back: card.back || '',
+                hint: card.hint || ''
+            }))
+
+            // Initialize history tracking
+            await initializeHistory()
+
+            // Reset state
+            currentIndex.value = 0
+            flipped.value = false
+            showHint.value = false
+            currentFlip.value = 0
+
+            // Initialize viewed cards
+            viewedCards.value = cards.value.map(card => ({
+                id: card.id,
+                frontViewed: false,
+                backViewed: false
+            }))
+        }
+    } catch (err) {
+        console.error('FlashCardViewer - Failed to fetch set:', err)
+        error.value = 'Failed to load flashcard set'
+    } finally {
+        loading.value = false
+    }
 }
 
 const downloadSet = async () => {
@@ -385,7 +393,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
       prevCard()
       break
     case 'ArrowRight':
-      nextCard()
+      handleNextCardWithHistory()
       break
     case 'h':
       if (cards.value[currentIndex.value]?.hint) {
@@ -433,33 +441,55 @@ const handleShuffle = () => {
   // Update cards with new order
   cards.value = newOrder
 }
+
+// Update handleCardFlip to track viewed cards
+const handleCardFlip = async () => {
+    console.log('Card flipped, current state:', {
+        currentIndex: currentIndex.value,
+        flipped: flipped.value,
+        viewedCards: viewedCards.value
+    })
+
+    // Call the navigation handler first
+    handleCardNavigation(!flipped.value)
+
+    // Update viewed cards state
+    if (cards.value[currentIndex.value]) {
+        const cardId = cards.value[currentIndex.value].id
+        const cardState = viewedCards.value.find(state => state.id === cardId)
+        if (cardState) {
+            if (!flipped.value) {
+                cardState.frontViewed = true
+            } else {
+                cardState.backViewed = true
+            }
+        }
+    }
+
+    // Update history with number of cards viewed
+    const uniqueViewedCards = viewedCards.value.filter(card => card.frontViewed || card.backViewed).length
+    console.log('Updating cards viewed:', uniqueViewedCards)
+    await updateCardsViewed(uniqueViewedCards)
+
+    // Check if this is the last card and both sides have been viewed
+    if (currentIndex.value === cards.value.length - 1 && 
+        flipped.value && 
+        viewedCards.value.every(card => card.frontViewed && card.backViewed)) {
+        console.log('Marking set as completed')
+        await markAsCompleted()
+    }
+}
+
+// Update nextCard to check for completion
+const handleNextCardWithHistory = async () => {
+    if (isNextDisabled.value) return
+
+    // Call the navigation handler first
+    handleNextCard()
+
+    // If we're at the last card and it's flipped, mark as completed
+    if (currentIndex.value === cards.value.length - 1 && flipped.value) {
+        await markAsCompleted()
+    }
+}
 </script>
-
-<style scoped>
-.main-card-area {
-  min-height: 600px;
-}
-
-.main-card-area.fullscreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 50;
-  background: white;
-  padding: 2rem;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

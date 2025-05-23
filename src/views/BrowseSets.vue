@@ -1,18 +1,16 @@
 <template>
-  <Navbar />
+  
   <div class="container py-0">
     <BrowseHero />
 
     <!-- Filter & Sort Controls -->
     <section class="flex items-center justify-between h-full w-full mb-8">
       <div class="flex items-center gap-4">
-        <label for="category" class="font-medium text-gray-700">Category:</label>
         <select id="category" v-model="selectedCategory" class="min-w-[140px]" @change="onCategoryChange">
           <option value="">All Categories</option>
           <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
         </select>
 
-        <label for="setType" class="font-medium text-gray-700 ml-4">Set Type:</label>
         <select id="setType" v-model="selectedSetType" class="min-w-[140px]" @change="onSetTypeChange">
           <option value="">All Types</option>
           <option value="free">Free</option>
@@ -21,7 +19,6 @@
         </select>
       </div>
       <div class="flex items-center gap-4">
-        <label for="sort" class="font-medium text-gray-700">Sort by:</label>
         <select id="sort" v-model="sortOrder" class="min-w-[140px]">
           <option value="featured">Featured</option>
           <option value="newest">Newest</option>
@@ -63,7 +60,10 @@
       </div>
       <!-- End of content message -->
       <div v-if="!hasMore && sets.length" class="text-center text-gray-500 py-8">
-        No more sets to load
+        <span class="text-2xl">😢</span> That's all the sets we have.
+        <div class="w-full h-4 mt-4">
+          <button @click="router.push('/create')" class="button button-accent text-white-500">Hey, what if you created one?</button>
+        </div>
       </div>
       <!-- Empty state -->
       <div v-if="!loading && !error && !sets.length" class="text-center text-gray-500 py-8">

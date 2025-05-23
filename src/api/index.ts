@@ -13,7 +13,8 @@ export const apiEndpoints = {
   purchases: `${BASE_URL}/purchases`,
   subscriptions: `${BASE_URL}/subscriptions`,
   checkout: `${BASE_URL}/checkout`,
-  sales: `${BASE_URL}/sales`
+  sales: `${BASE_URL}/sales`,
+  history: `${BASE_URL}/history`,
 };
 
 export const api = axios.create({

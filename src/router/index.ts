@@ -5,6 +5,9 @@ import Study from '../views/Study.vue'
 import BrowseSets from '../views/BrowseSets.vue'
 import LoginRegister from '../views/LoginRegister.vue'
 import { useAuthStore } from '@/stores/auth'
+import About from '../views/About.vue'
+import Privacy from '../views/Privacy.vue'
+import Terms from '../views/Terms.vue'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Home },
@@ -38,6 +41,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, requiresRole: 'educator' }
   },
   {
+    path: '/create',
+    name: 'CreateSet',
+    component: () => import('@/views/creator/SetWizard.vue'),
+    meta: { requiresAuth: true, requiresRole: 'educator' }
+  },
+  {
     path: '/profile',
     name: 'UserProfile',
     component: () => import('@/views/UserProfile.vue'),
@@ -53,6 +62,30 @@ const routes: RouteRecordRaw[] = [
     path: '/purchase-success',
     name: 'PurchaseSuccess',
     component: () => import('../views/PurchaseSuccess.vue'),
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/privacy',
+    name: 'Privacy',
+    component: Privacy,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/terms',
+    name: 'Terms',
+    component: Terms,
     meta: {
       requiresAuth: true
     }

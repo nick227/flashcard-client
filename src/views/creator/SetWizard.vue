@@ -1,10 +1,10 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50">
     <Toaster :toasts="toasts" :remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" />
-    <Navbar />
-    <main class="container flex-1 py-12">
+    
+    <main class="container flex-1">
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-3xl font-bold">{{ pageHeading }}</h1>
+        <h2 class="text-3xl font-bold flex w-full items-center justify-center cursive">Create Set</h2>
       </div>
 
       <!-- Set Info Form -->
@@ -18,12 +18,12 @@
           <ViewToggle v-model="viewMode" />
           <CardCountIndicator :count="cards.length" />
           <!-- Import Bar -->
-          <ImportBar :importFileName="importFileName" @import-csv="onImportCsv" @reset-clicked="onResetImport" />
+          <ImportBar :importFileName="importFileName" @import-csv="onImportCsv" />
+          <button class="button button-danger" @click="onReset" :disabled="!hasCards">Reset</button>
           <AddCardButton :disabled="hasBlankCard" :class="{ 'input-error': cardsTouched && cards.length === 0 }"
             @add-card="onAddCard" />
           <!-- Submit button -->
-          <button class="button button-success" :disabled="submitting"
-            @click="onSubmit">
+          <button class="button button-success" :disabled="submitting" @click="onSubmit">
             {{ submitting ? submitButtonText : submitButtonText }}
           </button>
         </div>
@@ -40,12 +40,7 @@
       <!-- submit row -->
       <div class="flex flex-wrap items-center gap-6 mb-8 justify-between align-middle">
       </div>
-      <ConfirmDialog 
-        v-model="confirmVisible"
-        title="Delete Card"
-        :text="confirmMessage"
-        @confirm="onConfirm"
-      />
+      <ConfirmDialog v-model="confirmVisible" title="Delete Card" :text="confirmMessage" @confirm="onConfirm" />
     </main>
   </div>
 </template>
@@ -87,8 +82,8 @@ const cardToDelete = ref<number | null>(null)
 const submitting = ref(false)
 
 const setId = computed(() => route.params.setId)
-const pageHeading = computed(() => setId.value ? 'Edit Set' : 'Create a New Flash Card Set')
 const submitButtonText = computed(() => setId.value ? 'Save Changes' : 'Submit Set')
+const hasCards = computed(() => cards.value.length > 0)
 
 const {
   setTitle,
@@ -109,6 +104,11 @@ const {
   deleteCard,
   updateOrder
 } = useSetForm()
+
+function onReset() {
+  confirmMessage.value = 'Are you sure you want to remove all cards?'
+  confirmVisible.value = true
+}
 
 function onAddCard() {
   if (hasBlankCard.value) return
@@ -152,10 +152,6 @@ async function onImportCsv(file: File) {
   }
 }
 
-function onResetImport() {
-  importFileName.value = null
-}
-
 function onRequestDelete(id: number) {
   cardToDelete.value = id
   confirmMessage.value = 'Are you sure you want to delete this card?'
@@ -166,6 +162,19 @@ function onConfirm() {
   if (cardToDelete.value !== null) {
     onDeleteCard(cardToDelete.value)
     cardToDelete.value = null
+  } else {
+    // Handle reset confirmation
+    cards.value = []
+    importFileName.value = null
+    setTitle.value = ''
+    setDescription.value = ''
+    setCategoryId.value = null
+    setTags.value = []
+    setPrice.value = { type: 'free', amount: 0 }
+    setThumbnail.value = null
+    formSubmitted.value = false
+    cardsTouched.value = false
+    importFileName.value = null
   }
   confirmVisible.value = false
 }
@@ -173,7 +182,7 @@ function onConfirm() {
 async function onSubmit() {
   formSubmitted.value = true
   cardsTouched.value = true
-  
+
   const validation = validateForm()
   if (!validation.isValid) {
     toast(validation.error!, 'error')
@@ -181,6 +190,7 @@ async function onSubmit() {
   }
 
   submitting.value = true
+
   try {
     const formData = SetService.prepareFormData({
       title: setTitle.value,

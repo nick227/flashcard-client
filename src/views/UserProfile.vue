@@ -1,5 +1,5 @@
 <template>
-  <Navbar />
+  
   <div class="container mx-auto px-4 py-8 min-h-screen bg-gray-50">
     <!-- Authenticated user profile view -->
     <div v-if="isAuthenticated && user" class="max-w-6xl mx-auto">
@@ -92,6 +92,26 @@
             </div>
           </template>
         </DataGrid>
+
+        <!-- View History -->
+        <DataGrid
+          title="View History"
+          icon="fas fa-clock"
+          iconColor="#0ea5e9"
+          :loading="viewHistory.loading.value"
+          :items="viewHistory.items.value"
+          :total-items="viewHistory.totalItems.value"
+          :current-page="viewHistory.currentPage.value"
+          :page-size="6"
+          :empty-message="viewHistory.error.value || 'No view history yet'"
+          @page-change="handleViewHistoryPageChange"
+        >
+          <template #default="{ items }">
+            <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
+              <ViewHistoryItem v-for="item in items as ViewHistory[]" :key="item.id" :item="item" />
+            </div>
+          </template>
+        </DataGrid>
       </div>
     </div>
 
@@ -120,11 +140,13 @@ import { usePaginatedData } from '@/composables/usePaginatedData'
 import FavoriteItem from '@/components/user/FavoriteItem.vue'
 import PurchaseItem from '@/components/user/PurchaseItem.vue'
 import SubscriptionItem from '@/components/user/SubscriptionItem.vue'
+import ViewHistoryItem from '@/components/user/ViewHistoryItem.vue'
 
 // TypeScript interfaces
 import type { Favorite } from '@/types'
 import type { Purchase } from '@/types'
 import type { Subscription } from '@/types'
+import type { ViewHistory } from '@/services/historyService'
 
 // Router and auth store setup
 const router = useRouter()
@@ -153,6 +175,10 @@ const subscriptions = usePaginatedData<Subscription>(apiEndpoints.subscriptions,
   pageSize: 6
 })
 
+const viewHistory = usePaginatedData<ViewHistory>(apiEndpoints.history, {
+  pageSize: 6
+})
+
 // Upload state
 const uploading = ref(false)
 
@@ -177,6 +203,9 @@ const fetchUserData = async () => {
 
   // Fetch subscriptions
   subscriptions.fetchData()
+
+  // Fetch view history
+  viewHistory.fetchData()
 }
 
 // Logout handler
@@ -229,6 +258,7 @@ onMounted(() => {
     favorites.fetchData()
     purchases.fetchData()
     subscriptions.fetchData()
+    viewHistory.fetchData()
   }
 })
 
@@ -243,5 +273,9 @@ const handlePurchasesPageChange = (page: number) => {
 
 const handleSubscriptionsPageChange = (page: number) => {
   subscriptions.fetchData(page)
+}
+
+const handleViewHistoryPageChange = (page: number) => {
+  viewHistory.fetchData(page)
 }
 </script>

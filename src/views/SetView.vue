@@ -1,5 +1,5 @@
 <template>
-  <Navbar />
+  
   <div class="container mx-auto px-4 py-8">
     <FlashCardViewer :set-id="setId" />
   </div>

@@ -101,9 +101,26 @@
     background: #fff;
 }
 
+.main-card-area {
+    min-height: 600px;
+}
+
+.main-card-area.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 50;
+    background: white;
+    padding: 2rem;
+}
+
 .fade-enter-active,
 .fade-leave-active {
-    transition: opacity 0.3s;
+    transition: opacity 0.3s ease;
 }
 
 .fade-enter-from,

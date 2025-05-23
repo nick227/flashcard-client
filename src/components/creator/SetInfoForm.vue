@@ -1,4 +1,3 @@
-// Form for creating/editing flashcard set information
 <template>
   <form class="grid gap-4 mb-8">
     <!-- Thumbnail upload section -->
@@ -14,8 +13,9 @@
             <!-- Placeholder when no image -->
             <div v-else class="flex items-center justify-center h-full w-full">
               <div class="flex items-center justify-center h-full w-full">
-                <div class="w-12 h-48 g-gray-200 flex items-center justify-center">
+                <div class="w-12 h-48 g-gray-200 flex items-center justify-center flex-col gap-2">
                   <i class="fa-solid fa-image text-gray-400 text-2xl"></i>
+                  <p class="text-gray-400 text-sm">Upload a thumbnail</p>
                 </div>
               </div>
             </div>

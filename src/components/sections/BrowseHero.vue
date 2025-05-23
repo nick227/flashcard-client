@@ -2,38 +2,38 @@
   <section class="hero">
     <div class="hero-content">
       <div class="hero-text">
-        <h1 class="hero-title">Flashcards Rule All!</h1>
-        <p class="hero-description">Remember when you used to write on index cards? We do too, but we made it digital. Create, share, and flip through flashcards without the paper cuts. Your future self will thank you.</p>
+        <h1 class="hero-title">{{ currentContent.titles }}</h1>
+        <p class="hero-description">{{ currentContent.descriptions }}</p>
         <div class="hero-stats">
           <div class="stat">
-            <span class="stat-number">0</span>
-            <span class="stat-label">Paper Cuts</span>
+            <span class="stat-number">{{ currentContent.statNumbers[0] }}</span>
+            <span class="stat-label">{{ currentContent.statLabels[0] }}</span>
           </div>
           <div class="stat">
-            <span class="stat-number">∞</span>
-            <span class="stat-label">Coffee Breaks</span>
+            <span class="stat-number">{{ currentContent.statNumbers[1] }}</span>
+            <span class="stat-label">{{ currentContent.statLabels[1] }}</span>
           </div>
           <div class="stat">
-            <span class="stat-number">100%</span>
-            <span class="stat-label">Less Lost Cards</span>
+            <span class="stat-number">{{ currentContent.statNumbers[2] }}</span>
+            <span class="stat-label">{{ currentContent.statLabels[2] }}</span>
           </div>
         </div>
       </div>
       <div class="hero-features">
         <div class="feature">
-          <div class="feature-icon">🎯</div>
-          <h3>No More Excuses</h3>
-          <p>Study anywhere, even in your pajamas (we won't tell)</p>
+          <div class="feature-icon">{{ currentContent.icons[0] }}</div>
+          <h3>{{ currentContent.featureTitles[0] }}</h3>
+          <p>{{ currentContent.featureDescriptions[0] }}</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">👥</div>
-          <h3>Share the Pain</h3>
-          <p>Join other students who also procrastinated until now</p>
+          <div class="feature-icon">{{ currentContent.icons[1] }}</div>
+          <h3>{{ currentContent.featureTitles[1] }}</h3>
+          <p>{{ currentContent.featureDescriptions[1] }}</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">⚡</div>
-          <h3>Quick & Easy</h3>
-          <p>Create cards faster than you can say "I'll study tomorrow"</p>
+          <div class="feature-icon">{{ currentContent.icons[2] }}</div>
+          <h3>{{ currentContent.featureTitles[2] }}</h3>
+          <p>{{ currentContent.featureDescriptions[2] }}</p>
         </div>
       </div>
     </div>
@@ -41,33 +41,124 @@
 </template>
 
 <script setup lang="ts">
-// No props or logic needed for now
+import { ref, onMounted, onUnmounted } from 'vue'
+
+const content = {
+  titles: [
+    'Flashcards Rule!',
+    'Study Smarter, Not Harder',
+    'Master Any Subject',
+    'Learn at Your Pace',
+    'Knowledge at Your Fingertips'
+  ],
+  descriptions: [
+    'You are totally your own judge. You look at the back of the card whenever you are ready. No rush and no timer.',
+    'Take control of your learning journey. Study when you want, where you want, at your own pace.',
+    'Break free from traditional study methods. Your success, your way, your time.',
+    'No pressure, no deadlines. Just pure, effective learning at your own speed.',
+    'The most flexible way to learn. You decide when you\'re ready to move forward.'
+  ],
+  statNumbers: [
+    '0',
+    '∞',
+    '100%',
+    '24/7',
+    '1M+'
+  ],
+  statLabels: [
+    'Paper Cuts',
+    'Coffee Breaks',
+    'Less Lost Cards',
+    'Study Hours',
+    'Cards Created'
+  ],
+  icons: [
+    '🎯',
+    '👥',
+    '⚡',
+    '📚',
+    '🎓',
+    '💡',
+    '🚀',
+    '🎮'
+  ],
+  featureTitles: [
+    'No More Excuses',
+    'Share the Pain',
+    'Quick & Easy',
+    'Learn Anywhere',
+    'Stay Motivated',
+    'Track Progress',
+    'Join Community',
+    'Smart Learning'
+  ],
+  featureDescriptions: [
+    'Study anywhere, even in your pajamas (we won\'t tell)',
+    'Join other students who also procrastinated until now',
+    'Create cards faster than you can say "I\'ll study tomorrow"',
+    'From your bed to the beach, learning follows you',
+    'Stay on track with our friendly reminders',
+    'Watch your knowledge grow with detailed stats',
+    'Connect with fellow learners worldwide',
+    'Adaptive learning that fits your style'
+  ]
+}
+
+const currentContent = ref({
+  titles: content.titles[0],
+  descriptions: content.descriptions[0],
+  statNumbers: [content.statNumbers[0], content.statNumbers[1], content.statNumbers[2]],
+  statLabels: [content.statLabels[0], content.statLabels[1], content.statLabels[2]],
+  icons: [content.icons[0], content.icons[1], content.icons[2]],
+  featureTitles: [content.featureTitles[0], content.featureTitles[1], content.featureTitles[2]],
+  featureDescriptions: [content.featureDescriptions[0], content.featureDescriptions[1], content.featureDescriptions[2]]
+})
+
+function getRandomItem(array: string[]): string {
+  return array[Math.floor(Math.random() * array.length)]
+}
+
+function updateContent() {
+  currentContent.value = {
+    titles: getRandomItem(content.titles),
+    descriptions: getRandomItem(content.descriptions),
+    statNumbers: [
+      getRandomItem(content.statNumbers),
+      getRandomItem(content.statNumbers),
+      getRandomItem(content.statNumbers)
+    ],
+    statLabels: [
+      getRandomItem(content.statLabels),
+      getRandomItem(content.statLabels),
+      getRandomItem(content.statLabels)
+    ],
+    icons: [
+      getRandomItem(content.icons),
+      getRandomItem(content.icons),
+      getRandomItem(content.icons)
+    ],
+    featureTitles: [
+      getRandomItem(content.featureTitles),
+      getRandomItem(content.featureTitles),
+      getRandomItem(content.featureTitles)
+    ],
+    featureDescriptions: [
+      getRandomItem(content.featureDescriptions),
+      getRandomItem(content.featureDescriptions),
+      getRandomItem(content.featureDescriptions)
+    ]
+  }
+}
+
+let contentInterval: number | null = null
+
+onMounted(() => {
+  // Initial content update
+  updateContent()
+})
 </script>
 
 <style scoped>
-.hero {
-  min-height: 480px;
-  padding: var(--space-xl);
-  background: linear-gradient(120deg, var(--color-primary) 0%, var(--color-accent2, #a21caf) 100%);
-  color: #fff;
-  border-radius: var(--radius-lg);
-  margin-bottom: var(--space-xl);
-  box-shadow: 0 8px 40px 0 rgba(30, 41, 59, 0.10);
-  position: relative;
-  overflow: hidden;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
-  opacity: 0.5;
-}
-
 .hero-content {
   position: relative;
   z-index: 1;

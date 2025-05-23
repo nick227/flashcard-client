@@ -1,19 +1,18 @@
 <template>
-  <Navbar />
-  <div class="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-    <div class="container flex flex-col md:flex-row items-stretch overflow-hidden items-center w-full flex-1 justify-center pt-64">
+  <div class="min-h-screen flex flex-col items-center justify-start bg-gray-50">
+    <div class="container flex flex-col items-center w-full flex-1 justify-start">
       <div class="flex flex-colpt-44 pb-64 max-w-[460px]">
         <div class="flex flex-col items-center w-full">
-          <h1 class="text-3xl font-bold mb-2">Flashcard Academy</h1>
-          <p class="mb-6 text-gray-600">{{ mode === 'login' ? 'Sign in to access your account.' : 'Create an account to start your progress.' }}</p>
+          <h1 class="font-bold mb-2 site-title">Flashcard Academy</h1>
+          <p class="mb-6 text-gray-600">{{ mode === 'login' ? 'Existing Members' : 'New Users' }}</p>
           <AuthToggle :mode="mode" @update:mode="mode = $event" />
           <AuthForm :mode="mode" @submit="onSubmit" :loading="loading">
             <template #description>
               <div v-if="mode === 'login'" class="text-blue-700 text-center text-base mb-2">
-                Sign in to access your flashcards and inner peace.
+                {{ randomIntroText }}
               </div>
               <div v-else class="text-green-700 text-center text-base mb-2">
-                Create an account to start your flash card journey.
+                {{ randomIntroText }}
               </div>
             </template>
             <template #error>
@@ -34,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import Navbar from '@/components/common/Navbar.vue'
 import AuthToggle from '@/components/auth/AuthToggle.vue'
 import AuthForm from '@/components/auth/AuthForm.vue'
@@ -71,21 +70,25 @@ const onSubmit = async (formData: { email: string; password: string; name?: stri
     loading.value = false
   }
 }
-</script>
 
-<style scoped>
-.min-h-screen {
-  min-height: 100vh;
-}
-.divider {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  margin: 1.5rem 0;
-}
-@media (max-width: 767px) {
-  .max-h-\[480px\] {
-    max-height: 220px;
-  }
-}
-</style> 
+
+const introTexts = [
+  'Sign in to access your flashcards and inner peace.',
+  'Bruh, I mean like, flashcards you know?',
+  'What is the sound of one hand clapping?',
+  'The smartest geniuses use flashcards.',
+  'If only everything was as simple as flashcards.',
+  'These flashcards are tripping me out.',
+  'Flashcards are super-cool daddy-o.',
+  'I\'m about to ace this test with flashcards.',
+  'I am flashcard legend.',
+  'So two flashcards walk into a bar...',
+  'You get a flashcard, you get a flashcard!',
+  'It  was a dark and stormy night...',
+  'Life, universe, time, and flashcards.',
+]
+
+const randomIntroText = computed(() => {
+  return introTexts[Math.floor(Math.random() * introTexts.length)]
+})
+</script>

@@ -1,11 +1,8 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50">
-    <Navbar />
+    
     <main class="container flex-1 py-12">
       <CreatorHero />
-      <div class="flex flex-row justify-end items-end">
-        <router-link to="/creator/wizard" class="button button-accent mb-6 inline-block w-fit">+ Create New Set</router-link>
-      </div>
       <h2 class="text-xl font-semibold mb-4">Your Sets</h2>
       <div v-if="loading" class="text-gray-500">Loading your sets...</div>
       <div v-else-if="sets.length === 0" class="text-gray-500">You have not created any sets yet.</div>

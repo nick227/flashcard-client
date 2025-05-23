@@ -1,5 +1,4 @@
 <template>
-  <Navbar />
   <div class="container py-0">
     <HomeHero />
 
@@ -33,7 +32,6 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import Navbar from '../components/common/Navbar.vue'
 import HomeHero from '../components/sections/HomeHero.vue'
 import SetPreviewCard from '../components/cards/SetPreviewCard.vue'
 import FeaturedSet from '../components/home/FeaturedSet.vue'

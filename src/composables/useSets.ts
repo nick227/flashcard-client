@@ -33,7 +33,7 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
     initialCategory = '',
     initialSortOrder = 'featured',
     initialSetType = '',
-    pageSize = 9,
+    pageSize = 12,
     autoLoad = true
   } = options
 
@@ -102,8 +102,15 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
       const setsRes = await axios.get(`${apiEndpoints.sets}?${params.toString()}`)
       const { items, pagination } = setsRes.data
 
-      sets.value = [...sets.value, ...items]
-      hasMore.value = pagination.hasMore
+      // Only append new items if we're not resetting
+      if (reset) {
+        sets.value = items
+      } else {
+        sets.value = [...sets.value, ...items]
+      }
+
+      // Update hasMore based on whether there are more pages
+      hasMore.value = currentPage.value < pagination.totalPages
       currentPage.value++
 
       // Load categories if not already loaded

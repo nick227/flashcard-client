@@ -5,10 +5,16 @@
         <img :src="set.thumbnail" :alt="set.title + ' Thumbnail'" class="rounded-xl shadow-xl w-full h-full object-cover" />
       </div>
       <div class="featured-info">
-        <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })" class="category-badge link">
-          {{ set.category }}
+        <div class="flex items-center gap-4 mb-4">
+          <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })" class="category-badge link">
+            {{ set.category }}
+          </div>
+          <div v-else class="category-badge link">Uncategorized</div>
+          <div class="text-sm text-gray-500">
+            {{ formatDate(set.createdAt) }}
+          </div>
         </div>
-        <div v-else class="category-badge link">Uncategorized</div>
+
         <h2 class="title">{{ set.title }}</h2>
         <p class="description">{{ set.description }}</p>
         
@@ -16,13 +22,34 @@
           <span v-for="tag in set.tags" :key="tag" class="tag">{{ tag }}</span>
         </div>
 
-        <div class="price-info">
-          <span v-if="set.isSubscriberOnly" class="price-subscribers">Subscribers Only</span>
-          <span v-else-if="set.price && set.price > 0" class="price-premium">${{ set.price }}</span>
-          <span v-else class="price-free">Free</span>
+        <div class="flex items-center gap-6 mt-4">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-heart text-red-500"></i>
+            <span class="text-gray-600">{{ isLoadingLikes ? '...' : likesCount }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <i class="fas fa-eye text-blue-500"></i>
+            <span class="text-gray-600">{{ isLoadingViews ? '...' : viewsCount }}</span>
+          </div>
         </div>
 
-        <div class="actions">
+        <div class="educator-info mt-4 flex items-center gap-3">
+          <img 
+            v-if="educatorImage" 
+            :src="educatorImage" 
+            :alt="set.educatorName + ' avatar'"
+            class="w-10 h-10 rounded-full object-cover"
+          />
+          <div v-else class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+            <i class="fas fa-user text-gray-500"></i>
+          </div>
+          <div>
+            <div class="font-medium text-gray-900">{{ set.educatorName }}</div>
+            <div class="text-sm text-gray-500">Educator</div>
+          </div>
+        </div>
+
+        <div class="actions mt-8">
           <button class="button button-primary" @click="$emit('view', set.id)">
             Try This Set
           </button>
@@ -35,18 +62,76 @@
 <script setup lang="ts">
 import type { FlashCardSet } from '@/types'
 import { useRouter } from 'vue-router'
-import { watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const router = useRouter()
+const likesCount = ref(0)
+const viewsCount = ref(0)
+const isLoadingLikes = ref(false)
+const isLoadingViews = ref(false)
 
 const props = defineProps<{
   set: FlashCardSet | null
 }>()
 
+// Computed property for educator image URL
+const educatorImage = computed(() => {
+  if (!props.set?.educator?.image) return null
+  return props.set.educator.image
+})
+
 // Watch for changes to the set prop
-watch(() => props.set, (newSet) => {
-  console.log('Featured Set updated:', JSON.parse(JSON.stringify(newSet)))
+watch(() => props.set, async (newSet) => {
+  if (newSet) {
+    await Promise.all([
+      fetchLikesCount(newSet.id),
+      fetchViewsCount(newSet.id)
+    ])
+  }
 }, { immediate: true })
+
+async function fetchLikesCount(setId: number) {
+  isLoadingLikes.value = true
+  try {
+    const response = await fetch(`/api/sets/${setId}/likes`)
+    if (!response.ok) throw new Error('Failed to fetch likes count')
+    const data = await response.json()
+    likesCount.value = data.count
+  } catch (error) {
+    console.error('Error fetching likes count:', error)
+    likesCount.value = 0
+  } finally {
+    isLoadingLikes.value = false
+  }
+}
+
+async function fetchViewsCount(setId: number) {
+  isLoadingViews.value = true
+  try {
+    const response = await fetch(`/api/sets/${setId}/views`)
+    if (!response.ok) throw new Error('Failed to fetch views count')
+    const data = await response.json()
+    viewsCount.value = data.count
+  } catch (error) {
+    console.error('Error fetching views count:', error)
+    viewsCount.value = 0
+  } finally {
+    isLoadingViews.value = false
+  }
+}
+
+function formatDate(date: string) {
+  const d = new Date(date)
+  const now = new Date()
+  const diffInDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+  
+  if (diffInDays === 0) return 'Today'
+  if (diffInDays === 1) return 'Yesterday'
+  if (diffInDays < 7) return `${diffInDays} days ago`
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
+  if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`
+  return `${Math.floor(diffInDays / 365)} years ago`
+}
 
 defineEmits<{
   (e: 'view', setId: number): void
@@ -64,61 +149,5 @@ defineEmits<{
 
 .featured-image {
   @apply w-full lg:w-1/2 min-h-[400px] lg:h-[500px];
-}
-
-.featured-info {
-  @apply flex-1 flex flex-col gap-6;
-}
-
-.category-badge {
-  @apply inline-block px-4 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors duration-200;
-}
-
-.title {
-  @apply text-4xl font-bold leading-tight;
-}
-
-.description {
-  @apply text-xl text-gray-600 leading-relaxed;
-}
-
-.tags-container {
-  @apply flex flex-wrap gap-2;
-}
-
-.tag {
-  @apply px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-700;
-}
-
-.price-info {
-  @apply mt-2;
-}
-
-.price-free {
-  @apply text-green-600 font-semibold text-lg;
-}
-
-.price-subscribers {
-  @apply text-blue-600 font-semibold text-lg;
-}
-
-.price-premium {
-  @apply text-purple-600 font-semibold text-lg;
-}
-
-.actions {
-  @apply flex flex-col sm:flex-row gap-4 mt-6;
-}
-
-.button {
-  @apply px-6 py-3 rounded-lg font-medium transition-all duration-200;
-}
-
-.button-primary {
-  @apply bg-blue-600 text-white hover:bg-blue-700;
-}
-
-.button-outline {
-  @apply border-2 border-blue-600 text-blue-600 hover:bg-blue-50;
 }
 </style> 

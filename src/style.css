@@ -8,6 +8,8 @@
 @import './styles/nprogress.css';
 @import './styles/hero.css';
 @import './styles/main.css';
+@import './styles/typography.css';
+@import './styles/featured-sets.css';
 @@tailwind base;
 @tailwind components;
 @tailwind utilities;

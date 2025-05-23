@@ -7,9 +7,7 @@
       class="hidden"
       @change="onFileChange"
     />
-    <a class="link" @click="openFilePicker">Import CSV</a>
-    <span v-if="importFileName" class="text-gray-600">{{ importFileName }}</span>
-    <button v-if="importFileName" class="button button-danger" @click="onReset">Reset</button>
+    <a class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600" @click="openFilePicker">{{ importFileName ? importFileName : 'Import CSV' }}</a>
   </div>
 </template>
 <script setup lang="ts">
@@ -27,8 +25,11 @@ function onFileChange(e: Event) {
     emit('import-csv', files[0])
   }
 }
-function onReset() {
-  if (fileInput.value) fileInput.value.value = ''
-  emit('reset-clicked')
-}
 </script> 
+
+<style scoped>
+.button:hover {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+</style>

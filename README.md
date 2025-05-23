@@ -1,6 +1,6 @@
 # Flashcard App
 
-A modern flashcard application for efficient learning and memorization.
+A flashcard application for learning and memorization.
 
 ## Features
 
