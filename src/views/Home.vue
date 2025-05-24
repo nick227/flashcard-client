@@ -47,19 +47,23 @@ const fetchSets = async () => {
   console.log('Axios default Authorization:', axios.defaults.headers.common['Authorization']);
   loading.value = true
   try {
-    const res = await axios.get('http://localhost:5000/sets')
-    // Handle new paginated response format
-    const setsData = res.data.items || res.data
-    sets.value = setsData
-    // Debug log to see all sets
-    console.log('All sets:', JSON.parse(JSON.stringify(sets.value)))
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/sets`)
+    // Handle paginated response format
+    const { items, pagination } = res.data
+    sets.value = items || []
+    
+    // Debug logs
+    console.log('API Response:', res.data)
+    console.log('Sets:', sets.value)
+    console.log('Pagination:', pagination)
     
     // Find a featured set or use the first one
-    const featured = sets.value[0]
-    console.log('Featured set data:', JSON.parse(JSON.stringify(featured)))
-    featuredSet.value = featured
+    featuredSet.value = sets.value[0] || null
+    console.log('Featured set:', featuredSet.value)
   } catch (err) {
     console.error('Error fetching sets:', err)
+    sets.value = []
+    featuredSet.value = null
   } finally {
     loading.value = false
   }

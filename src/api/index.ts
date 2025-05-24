@@ -4,6 +4,8 @@ import { useAuthStore } from '@/stores/auth'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+console.log('API Base URL:', BASE_URL); // Debug log
+
 export const apiEndpoints = {
   baseUrl: BASE_URL,
   sets: `${BASE_URL}/sets`,
