@@ -225,19 +225,9 @@ async function onSubmit() {
     })
 
     if (setId.value) {
-      const cardsData = cards.value.map(card => ({
-        front: card.front,
-        back: card.back,
-        hint: card.hint || null
-      }))
-      await SetService.updateSet(Number(setId.value), formData, cardsData)
+      await SetService.updateSet(Number(setId.value), formData)
     } else {
-      const cardsData = cards.value.map(card => ({
-        front: card.front,
-        back: card.back,
-        hint: card.hint || null
-      }))
-      await SetService.createSet(formData, cardsData)
+      await SetService.createSet(formData)
     }
 
     submitting.value = false
