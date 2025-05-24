@@ -33,6 +33,20 @@
         Name is valid
       </div>
     </div>
+    <div v-if="mode === 'register'" class="relative">
+      <textarea
+        v-model="bio"
+        class="input"
+        placeholder="Tell us about yourself"
+        required
+        minlength="1"
+        maxlength="500"
+        rows="3"
+      ></textarea>
+      <div class="text-gray-500 text-sm mt-1">
+        {{ bio.length }}/500 characters
+      </div>
+    </div>
     <input
       v-model="email"
       class="input"
@@ -58,7 +72,7 @@
     <button 
       :class="['button', mode === 'login' ? 'button-accent' : 'button-success', 'w-full', 'mt-2']" 
       type="submit"
-      :disabled="mode === 'register' && Boolean(nameError)"
+      :disabled="!isFormValid"
     >
       {{ mode === 'login' ? 'Sign In' : 'Create Account' }}
     </button>
@@ -66,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, computed } from 'vue'
 import axios from 'axios'
 
 const props = defineProps<{ mode: 'login' | 'register' }>()
@@ -77,7 +91,21 @@ const password = ref('')
 const showPassword = ref(false)
 const nameError = ref('')
 const checkingName = ref(false)
+const bio = ref('')
 let nameCheckTimeout: number | null = null
+
+// Form validation state
+const isFormValid = computed(() => {
+  if (props.mode === 'register') {
+    return name.value.trim().length >= 2 && 
+           !nameError.value && 
+           !checkingName.value &&
+           bio.value.length >= 10 &&
+           email.value.includes('@') &&
+           password.value.length >= 6
+  }
+  return email.value.includes('@') && password.value.length >= 6
+})
 
 // Cleanup on component unmount
 onUnmounted(() => {
@@ -169,7 +197,8 @@ async function onSubmit() {
   emit('submit', { 
     name: name.value.trim(),
     email: email.value, 
-    password: password.value 
+    password: password.value,
+    bio: bio.value
   });
 }
 </script>

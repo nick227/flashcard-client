@@ -45,7 +45,7 @@ const loading = ref(false)
 const auth = useAuthStore()
 const router = useRouter()
 
-const onSubmit = async (formData: { email: string; password: string; name?: string }) => {
+const onSubmit = async (formData: { email: string; password: string; name?: string; bio?: string }) => {
   try {
     loading.value = true
     error.value = ''
@@ -57,7 +57,8 @@ const onSubmit = async (formData: { email: string; password: string; name?: stri
         name: formData.name || '',
         email: formData.email,
         password: formData.password,
-        role_id: 2 // Default to user role
+        role_id: 2, // Default to user role
+        bio: formData.bio || ''
       })
     }
 
