@@ -2,10 +2,8 @@ export interface User {
   id: number
   name: string
   email: string
-  role: 'member' | 'admin' | 'educator'
-  image: string
-  bio?: string
-  username: string
-  createdAt?: string
-  updatedAt?: string
+  role?: string
+  image?: string
+  created_at?: string
+  updated_at?: string
 } 
