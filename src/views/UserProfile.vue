@@ -24,7 +24,15 @@
             <h1 class="text-2xl font-bold mb-2">{{ user.name }}</h1>
             <p class="text-gray-600 mb-1">{{ user.email }}</p>
             <p class="text-gray-500">{{ user.role }}</p>
-            <p v-if="user.bio" class="mt-2 text-gray-600">{{ user.bio }}</p>
+            <div class="mt-2">
+              <textarea 
+                v-model="user.bio" 
+                class="w-full p-2 border rounded-lg"
+                placeholder="Add a bio..."
+                rows="3"
+                @blur="updateBio"
+              ></textarea>
+            </div>
           </div>
           <!-- Logout button -->
           <button @click="logout" class="button button-accent">Logout</button>
@@ -250,5 +258,27 @@ const handleSubscriptionsPageChange = (page: number) => {
 
 const handleViewHistoryPageChange = (page: number) => {
   viewHistory.fetchData(page)
+}
+
+// Bio update handler
+const updateBio = async () => {
+  try {
+    const token = auth.jwt
+    if (!token) throw new Error('No authentication token found')
+
+    const res = await api.patch(`${apiEndpoints.users}/${user.value?.id}/bio`, {
+      bio: user.value?.bio
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (user.value && res.data.bio) {
+      user.value.bio = res.data.bio
+    }
+  } catch (err) {
+    console.error('Failed to update bio:', err)
+  }
 }
 </script>
