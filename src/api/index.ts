@@ -77,17 +77,15 @@ export async function createSetWithCards(formData: FormData) {
  * Updates an existing set and its cards in the backend.
  * @param setId - The ID of the set to update
  * @param formData - The form data containing the set and cards
- * @param cardsData - The cards data (without id, with front/back)
  * @returns The updated set and cards
  */
-export async function updateSetWithCards(setId: number, formData: FormData, cardsData: any[]) {
+export async function updateSetWithCards(setId: number, formData: FormData) {
   try {
     console.log('Frontend: Starting set update for ID:', setId);
     console.log('Frontend: FormData contents:');
     for (let pair of formData.entries()) {
       console.log(pair[0], pair[1]);
     }
-    console.log('Frontend: Cards data:', cardsData);
 
     const response = await axios.put(`${apiEndpoints.sets}/${setId}`, formData, {
       headers: {

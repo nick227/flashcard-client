@@ -100,7 +100,7 @@ export const router = createRouter({
   },
 })
 
-router.beforeEach(async (to, _, next) => {
+router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
   if (auth.jwt && !auth.user) {
     await auth.fetchUser()

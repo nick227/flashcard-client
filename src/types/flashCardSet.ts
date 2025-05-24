@@ -1,4 +1,4 @@
-import type { FlashCard } from './flashCard'
+import type { FlashCard } from '@/types/flashCard'
 
 export interface FlashCardSet {
   id: number

@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAuthenticated: (state) => !!state.user,
     isAdmin: (state) => state.user?.role === 'admin',
-    isEducator: (state) => state.user?.role === 'educator' as const
+    isEducator: (state) => state.user?.role === 'educator'
   },
 
   actions: {
@@ -99,5 +99,8 @@ export const useAuthStore = defineStore('auth', {
       }
     },
   },
-  persist: true,
+  persist: {
+    key: 'auth',
+    storage: localStorage
+  }
 }) 

@@ -27,7 +27,7 @@ export class SetService {
     throw error
   }
 
-  static async createSet(formData: FormData, _cardsData: CardData[]) {
+  static async createSet(formData: FormData) {
     try {
       const response = await axios.post(apiEndpoints.sets, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -38,7 +38,7 @@ export class SetService {
     }
   }
 
-  static async updateSet(setId: number, formData: FormData, _cardsData: CardData[]) {
+  static async updateSet(setId: number, formData: FormData) {
     try {
       const response = await axios.patch(`${apiEndpoints.sets}/${setId}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
