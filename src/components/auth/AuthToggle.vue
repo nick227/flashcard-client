@@ -16,7 +16,7 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ mode: 'login' | 'register' }>()
+defineProps<{ mode: 'login' | 'register' }>()
 </script>
 
 <style scoped>

@@ -100,7 +100,7 @@ export const router = createRouter({
   },
 })
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _, next) => {
   const auth = useAuthStore()
   if (auth.jwt && !auth.user) {
     await auth.fetchUser()
@@ -109,7 +109,7 @@ router.beforeEach(async (to, from, next) => {
     auth.setMessage('Please log in to access this page.')
     return next('/login')
   }
-  if (to.meta.requiresOwnership && auth.user?.id !== to.params.id) {
+  if (to.meta.requiresOwnership && auth.user?.id !== Number(to.params.id)) {
     auth.setMessage('You can only access your own data.')
     return next('/unauthorized')
   }

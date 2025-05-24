@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, type Ref } from 'vue'
+import { computed, type Ref } from 'vue'
 
 interface Props<T = unknown> {
   title: string

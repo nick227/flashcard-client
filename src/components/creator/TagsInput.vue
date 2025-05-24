@@ -32,7 +32,7 @@ import { removeTagFromSet } from '@/api'
 const props = defineProps<{ 
   availableTags: string[], 
   modelValue: string[],
-  setId?: number 
+  setId: number 
 }>()
 const emit = defineEmits(['update:modelValue'])
 

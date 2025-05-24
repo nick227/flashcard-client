@@ -1,8 +1,7 @@
-import { ref, watch, computed } from 'vue'
-import type { Ref } from 'vue'
+import { ref, type Ref } from 'vue'
+import type { FlashCardSet } from '@/types'
 import axios from 'axios'
 import { apiEndpoints, fetchCategories } from '@/api/index'
-import type { FlashCardSet } from '../types'
 
 interface UseSetsOptions {
   initialCategory?: string

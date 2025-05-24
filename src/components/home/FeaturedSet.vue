@@ -2,7 +2,7 @@
   <section v-if="set" class="featured-set">
     <div class="featured-content">
       <div class="featured-image">
-        <img :src="set.thumbnail" :alt="set.title + ' Thumbnail'" class="rounded-xl shadow-xl w-full h-full object-cover" />
+        <a :href="`/sets/${set.id}`"><img :src="set.thumbnail" :alt="set.title + ' Thumbnail'" class="rounded-xl shadow-xl w-full h-full object-cover" /></a>
       </div>
       <div class="featured-info">
         <div class="flex items-center gap-4 mb-4">
@@ -15,11 +15,11 @@
           </div>
         </div>
 
-        <h2 class="title">{{ set.title }}</h2>
+        <h2 class="title"><a :href="`/sets/${set.id}`">{{ set.title }}</a></h2>
         <p class="description">{{ set.description }}</p>
         
         <div class="tags-container">
-          <span v-for="tag in set.tags" :key="tag" class="tag">{{ tag }}</span>
+          <span v-for="tag in set.tags" :key="tag" class="tag"><a :href="`/tags/${tag}`">{{ tag }}</a></span>
         </div>
 
         <div class="flex items-center gap-6 mt-4">
@@ -34,7 +34,7 @@
         </div>
 
         <div class="educator-info mt-4 flex items-center gap-3">
-          <img 
+          <a :href="`/u/${set.educatorName}`"><img 
             v-if="educatorImage" 
             :src="educatorImage" 
             :alt="set.educatorName + ' avatar'"
@@ -42,10 +42,9 @@
           />
           <div v-else class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
             <i class="fas fa-user text-gray-500"></i>
-          </div>
+          </div></a>
           <div>
-            <div class="font-medium text-gray-900">{{ set.educatorName }}</div>
-            <div class="text-sm text-gray-500">Educator</div>
+            <div class="font-medium text-gray-900"><a :href="`/u/${set.educatorName}`">{{ set.educatorName }}</a></div>
           </div>
         </div>
 
@@ -63,6 +62,8 @@
 import type { FlashCardSet } from '@/types'
 import { useRouter } from 'vue-router'
 import { ref, watch, computed } from 'vue'
+import { apiEndpoints } from '@/api'
+import axios from 'axios'
 
 const router = useRouter()
 const likesCount = ref(0)
@@ -76,8 +77,8 @@ const props = defineProps<{
 
 // Computed property for educator image URL
 const educatorImage = computed(() => {
-  if (!props.set?.educator?.image) return null
-  return props.set.educator.image
+  if (!props.set?.educatorId) return null
+  return props.set.educatorImage
 })
 
 // Watch for changes to the set prop
@@ -93,10 +94,8 @@ watch(() => props.set, async (newSet) => {
 async function fetchLikesCount(setId: number) {
   isLoadingLikes.value = true
   try {
-    const response = await fetch(`/api/sets/${setId}/likes`)
-    if (!response.ok) throw new Error('Failed to fetch likes count')
-    const data = await response.json()
-    likesCount.value = data.count
+    const response = await axios.get(`${apiEndpoints.sets}/${setId}/likes`)
+    likesCount.value = response.data.count || 0
   } catch (error) {
     console.error('Error fetching likes count:', error)
     likesCount.value = 0
@@ -108,10 +107,8 @@ async function fetchLikesCount(setId: number) {
 async function fetchViewsCount(setId: number) {
   isLoadingViews.value = true
   try {
-    const response = await fetch(`/api/sets/${setId}/views`)
-    if (!response.ok) throw new Error('Failed to fetch views count')
-    const data = await response.json()
-    viewsCount.value = data.count
+    const response = await axios.get(`${apiEndpoints.sets}/${setId}/views`)
+    viewsCount.value = response.data.count || 0
   } catch (error) {
     console.error('Error fetching views count:', error)
     viewsCount.value = 0

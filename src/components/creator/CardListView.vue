@@ -6,7 +6,7 @@
       handle=".card-drag-handle"
       @end="onDragEnd"
     >
-      <template #item="{ element: card, index }">
+      <template #item="{ element: card }">
         <div class="flex items-center gap-2">
           <span class="card-drag-handle cursor-move text-gray-400 text-lg pr-1">☰</span>
           <FlashCardScaffold
@@ -24,7 +24,7 @@
 <script setup lang="ts">
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
 import Draggable from 'vuedraggable'
-const props = defineProps<{ cards: any[], autoFocusId?: string }>()
+defineProps<{ cards: any[], autoFocusId?: string }>()
 const emit = defineEmits(['update-order', 'delete-card', 'edit-card', 'request-delete'])
 function onDragEnd(e: any) {
   emit('update-order', e.to)

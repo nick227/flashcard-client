@@ -9,9 +9,7 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
 const auth = useAuthStore()
 const user = computed(() => auth.user)
 

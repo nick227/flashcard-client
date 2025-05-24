@@ -12,7 +12,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue'
-const props = defineProps<{ importFileName: string|null }>()
+defineProps<{ importFileName: string|null }>()
 const emit = defineEmits(['import-csv', 'reset-clicked'])
 const fileInput = ref<HTMLInputElement|null>(null)
 

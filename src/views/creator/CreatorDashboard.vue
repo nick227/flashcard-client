@@ -69,7 +69,6 @@ import { ref, onMounted, computed, watch } from 'vue'
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import { apiEndpoints } from '@/api/index'
-import Navbar from '@/components/common/Navbar.vue'
 import { useRouter } from 'vue-router'
 import type { User, FlashCardSet, Sale, Subscription } from '@/types'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -105,10 +104,6 @@ const actionLoading = ref(false)
 
 const totalSales = ref(0)
 const totalSubs = ref(0)
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString()
-}
 
 const fetchSets = async () => {
   loading.value = true

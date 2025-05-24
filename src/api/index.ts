@@ -41,11 +41,10 @@ api.interceptors.request.use(
 /**
  * Creates a new set and its cards in the backend.
  * @param formData - The form data containing the set and cards
- * @param cardsData - The cards data (without id, with front/back)
  * @param onProgress - Optional progress callback
  * @returns The created set and cards
  */
-export async function createSetWithCards(formData: FormData, cardsData: any[]) {
+export async function createSetWithCards(formData: FormData) {
   try {
     const response = await axios.post(apiEndpoints.sets, formData, {
       headers: {

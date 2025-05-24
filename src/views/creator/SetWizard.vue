@@ -1,6 +1,9 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50">
-    <Toaster :toasts="toasts" :remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" />
+    <Toaster 
+      :toasts="toasts"
+      @remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" 
+    />
     
     <main class="container flex-1">
       <div class="flex items-center justify-between mb-6">
@@ -9,11 +12,25 @@
 
       <!-- Set Info Form -->
       <div class="bg-white rounded-xl shadow p-8 mb-8">
-        <SetInfoForm :title="setTitle" :description="setDescription" :category="setCategoryId" :tags="setTags"
-          :price="setPrice" :categories="categories" :availableTags="availableTags" :formSubmitted="formSubmitted"
-          :thumbnail="setThumbnail" @update:title="setTitle = $event" @update:description="setDescription = $event"
-          @update:category="setCategoryId = $event" @update:tags="setTags = $event" @update:price="setPrice = $event"
-          @update:thumbnail="thumbnailFile = $event" />
+        <SetInfoForm 
+          :title="setTitle" 
+          :description="setDescription" 
+          :category="setCategoryId" 
+          :tags="setTags"
+          :price="setPrice"
+          :categories="categories"
+          :availableTags="availableTags"
+          :thumbnail="setThumbnail"
+          :setId="setId || 0"
+          :loading="loading"
+          :error="error"
+          @update:title="setTitle = $event"
+          @update:description="setDescription = $event"
+          @update:category="setCategoryId = $event"
+          @update:tags="setTags = $event"
+          @update:price="setPrice = $event"
+          @update:thumbnail="handleThumbnailUpdate"
+        />
         <div class="flex flex-wrap items-center gap-6 mb-8">
           <ViewToggle v-model="viewMode" />
           <CardCountIndicator :count="cards.length" />
@@ -49,7 +66,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { FlashCard } from '@/types'
-import Navbar from '@/components/common/Navbar.vue'
 import ImportBar from '@/components/creator/ImportBar.vue'
 import SetInfoForm from '@/components/creator/SetInfoForm.vue'
 import ViewToggle from '@/components/creator/ViewToggle.vue'
@@ -80,8 +96,10 @@ const categories = ref<{ id: number, name: string }[]>([])
 const availableTags = ref<string[]>([])
 const cardToDelete = ref<number | null>(null)
 const submitting = ref(false)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
-const setId = computed(() => route.params.setId)
+const setId = computed(() => Number(route.params.setId) || 0)
 const submitButtonText = computed(() => setId.value ? 'Save Changes' : 'Submit Set')
 const hasCards = computed(() => cards.value.length > 0)
 
@@ -97,13 +115,16 @@ const {
   formSubmitted,
   cardsTouched,
   hasBlankCard,
-  canSubmit,
   validateForm,
   addCard,
   updateCard,
   deleteCard,
   updateOrder
 } = useSetForm()
+
+const handleThumbnailUpdate = (file: File) => {
+  thumbnailFile.value = file
+}
 
 function onReset() {
   confirmMessage.value = 'Are you sure you want to remove all cards?'
@@ -170,7 +191,7 @@ function onConfirm() {
     setDescription.value = ''
     setCategoryId.value = null
     setTags.value = []
-    setPrice.value = { type: 'free', amount: 0 }
+    setPrice.value = { type: 'free' as const, amount: 0 }
     setThumbnail.value = null
     formSubmitted.value = false
     cardsTouched.value = false
@@ -203,22 +224,20 @@ async function onSubmit() {
       educatorId: auth.user!.id
     })
 
-    let set
     if (setId.value) {
       const cardsData = cards.value.map(card => ({
         front: card.front,
         back: card.back,
         hint: card.hint || null
       }))
-      set = await SetService.updateSet(Number(setId.value), formData, cardsData)
+      await SetService.updateSet(Number(setId.value), formData, cardsData)
     } else {
       const cardsData = cards.value.map(card => ({
         front: card.front,
         back: card.back,
         hint: card.hint || null
       }))
-      const response = await SetService.createSet(formData, cardsData)
-      set = response.set
+      await SetService.createSet(formData, cardsData)
     }
 
     submitting.value = false
@@ -253,10 +272,10 @@ onMounted(async () => {
       setTags.value = set.tags || []
       setThumbnail.value = set.thumbnail
       setPrice.value = set.price === 0
-        ? { type: 'free', amount: 0 }
+        ? { type: 'free' as const, amount: 0 }
         : set.is_subscriber_only
-          ? { type: 'subscriber', amount: 0 }
-          : { type: 'premium', amount: Number(set.price) }
+          ? { type: 'subscribers' as const, amount: 0 }
+          : { type: 'premium' as const, amount: Number(set.price) }
 
       const cardsData = await SetService.fetchSetCards(Number(setId.value))
       cards.value = cardsData.map((card: any) => ({

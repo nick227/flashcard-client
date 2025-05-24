@@ -34,7 +34,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import Navbar from '@/components/common/Navbar.vue'
 import AuthToggle from '@/components/auth/AuthToggle.vue'
 import AuthForm from '@/components/auth/AuthForm.vue'
 import { useAuthStore } from '@/stores/auth'

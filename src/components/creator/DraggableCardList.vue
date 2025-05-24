@@ -7,7 +7,7 @@
     :class="layoutClass"
     :ghost-class="'dragging'"
   >
-    <template #item="{ element: card, index }">
+    <template #item="{ element: card }">
       <div :class="itemWrapperClass">
         <span class="card-drag-handle cursor-move text-gray-400 text-lg pr-1">☰</span>
         <component

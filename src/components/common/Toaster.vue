@@ -11,15 +11,28 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ 
-  toasts: { id: number, message: string, type: string }[],
-  remove: (id: number) => void 
+interface Toast {
+  id: number
+  message: string
+  type: 'success' | 'error' | 'info' | 'warning'
+}
+
+defineProps<{
+  toasts: Toast[]
+}>()
+
+const emit = defineEmits<{
+  (e: 'remove', id: number): void
 }>()
 
 function typeClass(type: string) {
   if (type === 'success') return 'toaster-success'
   if (type === 'error') return 'toaster-error'
   return 'toaster-info'
+}
+
+function remove(id: number) {
+  emit('remove', id)
 }
 </script>
 

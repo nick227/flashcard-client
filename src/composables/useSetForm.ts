@@ -39,7 +39,7 @@ export function useSetForm() {
     }
 
     if (thumbnailFile.value) {
-      if (!VALIDATION_LIMITS.THUMBNAIL.ALLOWED_TYPES.includes(thumbnailFile.value.type)) {
+      if (!VALIDATION_LIMITS.THUMBNAIL.ALLOWED_TYPES.includes(thumbnailFile.value.type as typeof VALIDATION_LIMITS.THUMBNAIL.ALLOWED_TYPES[number])) {
         return { isValid: false, error: 'Thumbnail must be a valid image file (JPEG, PNG, GIF, or WebP).' }
       }
       if (thumbnailFile.value.size > VALIDATION_LIMITS.THUMBNAIL.MAX_SIZE_BYTES) {

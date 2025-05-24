@@ -1,29 +1,21 @@
-import { FlashCard } from './flashCard'
+import type { FlashCard } from './flashCard'
 
 export interface FlashCardSet {
   id: number
   title: string
   description: string
+  thumbnail: string
+  hidden: boolean
   educatorId: number
   educatorName: string
-  price: number | null
-  isSubscriberOnly: boolean
-  thumbnail: string
+  educatorImage?: string
   category: string
-  featured: boolean
+  tags: string[]
+  price: {
+    type: 'free' | 'subscribers' | 'premium'
+    amount?: number
+  }
   createdAt: string
-  hidden: boolean
-  likes: number
   updatedAt: string
   cards?: FlashCard[]
-  tags?: string[]
-  type: 'free' | 'subscribers' | 'premium'
-  amount?: number
-  userId: number
-  user: {
-    id: number
-    userName: string
-    displayName: string
-    avatar: string
-  }
 } 

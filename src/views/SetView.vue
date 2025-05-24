@@ -9,7 +9,6 @@
 import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
-import Navbar from '@/components/common/Navbar.vue'
 
 const route = useRoute()
 const setId = computed(() => {

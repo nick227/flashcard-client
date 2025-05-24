@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const content = {
   titles: [
@@ -149,8 +149,6 @@ function updateContent() {
     ]
   }
 }
-
-let contentInterval: number | null = null
 
 onMounted(() => {
   // Initial content update

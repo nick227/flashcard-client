@@ -96,12 +96,11 @@
 </template>
 
 <script setup lang="ts">
-import Navbar from '../components/common/Navbar.vue'
 import BrowseHero from '../components/sections/BrowseHero.vue'
 import SetPreviewCard from '../components/cards/SetPreviewCard.vue'
 import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useSets } from '../composables/useSets'
+import { useSets } from '@/composables/useSets'
 
 const route = useRoute()
 const router = useRouter()

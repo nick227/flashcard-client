@@ -75,7 +75,7 @@
 <script setup lang="ts">
 import { useCategories } from '@/composables/useCategories'
 
-const { categories, loading, error } = useCategories()
+const { categories } = useCategories()
 </script>
 
 <style scoped>

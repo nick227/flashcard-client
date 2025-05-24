@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { FlashCard } from '@/types'
 
 const props = defineProps<{
@@ -55,10 +55,8 @@ const isFlipped = computed(() => {
   return props.flipped !== undefined ? props.flipped : localFlipped.value
 })
 
-const isFullscreen = computed(() => document.fullscreenElement !== null)
-
 // Methods
-function onCardClick(e: MouseEvent) {
+function onCardClick() {
   if (!props.editable) {
     if (props.flipped !== undefined) {
       emit('flip', !props.flipped)
@@ -136,12 +134,6 @@ onUnmounted(() => {
     element.removeEventListener('touchmove', () => {})
   }
 })
-
-const exitFullscreen = () => {
-  if (document.fullscreenElement) {
-    document.exitFullscreen()
-  }
-}
 
 </script>
 

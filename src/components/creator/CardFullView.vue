@@ -109,7 +109,7 @@ function onBackInput(e: Event) {
 }
 
 function adjustCardHeight(element: HTMLElement) {
-  const cardPreview = element.closest('.card-preview')
+  const cardPreview = element.closest('.card-preview') as HTMLElement
   if (!cardPreview) return
 
   const isOverflowing = element.scrollHeight > element.clientHeight
@@ -145,7 +145,7 @@ watch(() => props.autoFocus, (val) => {
 }, { immediate: true })
 
 // Reset flip when switching cards or exiting preview
-watch([() => props.card, previewMode], ([newCard, mode], [oldCard, oldMode]) => {
+watch([() => props.card, previewMode], ([newCard, mode], [oldCard]) => {
   if (mode === false || newCard?.id !== oldCard?.id) {
     flipped.value = false
   }

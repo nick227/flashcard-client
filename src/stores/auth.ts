@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { api } from '@/api'
-import piniaPersist from 'pinia-plugin-persistedstate'
 import type { User } from '@/types'
 
 interface AuthState {
@@ -21,9 +20,9 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   getters: {
-    isAuthenticated: (state) => !!state.jwt,
+    isAuthenticated: (state) => !!state.user,
     isAdmin: (state) => state.user?.role === 'admin',
-    isEducator: (state) => state.user?.role === 'educator'
+    isEducator: (state) => state.user?.role === 'educator' as const
   },
 
   actions: {

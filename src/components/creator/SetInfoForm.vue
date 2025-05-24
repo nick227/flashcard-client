@@ -98,7 +98,7 @@ const props = defineProps<{
   availableTags: string[],
   formSubmitted?: boolean,
   thumbnail?: string | null,
-  setId: string
+  setId: number
 }>()
 
 // Component events

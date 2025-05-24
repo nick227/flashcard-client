@@ -16,7 +16,7 @@ import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 NProgress.configure({ showSpinner: false })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((_, __, next) => {
   NProgress.start()
   next()
 })

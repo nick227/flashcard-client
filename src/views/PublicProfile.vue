@@ -40,7 +40,6 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToaster } from '@/composables/useToaster'
-import Navbar from '@/components/common/Navbar.vue'
 import SetPreviewCard from '@/components/cards/SetPreviewCard.vue'
 import axios from 'axios'
 import { apiEndpoints } from '@/api/index'

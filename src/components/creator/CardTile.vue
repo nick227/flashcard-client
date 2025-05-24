@@ -14,13 +14,10 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { FlashCardSet } from '../../types'
 
 const props = defineProps<{ card: any }>()
 const emit = defineEmits(['update-card', 'delete-card', 'request-delete'])
 const localCard = ref({ ...props.card })
-const sets = ref<FlashCardSet[]>([])
-const featuredSet = ref<FlashCardSet | null>(null)
 watch(() => props.card, (val) => { localCard.value = { ...val } })
 function emitUpdate() {
   emit('update-card', { ...localCard.value })

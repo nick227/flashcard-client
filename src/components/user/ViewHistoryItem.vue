@@ -21,11 +21,11 @@
       <div class="flex-1 min-w-0">
         <a :href="`/study/${item.setId}`">
           <h3 class="font-semibold text-gray-900 mb-1 truncate hover:text-blue-600 transition-colors">
-            {{ item.setTitle || 'Unknown Set' }}
+            {{ item.setTitle || 'Untitled Set' }}
           </h3>
         </a>
         <p class="text-sm text-gray-600">
-          {{ item.description || 'No description available' }}
+          {{ item.setTitle || 'No description available' }}
         </p>
       </div>
     </div>

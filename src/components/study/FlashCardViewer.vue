@@ -5,11 +5,11 @@
     <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>
     <div v-else-if="error" class="text-red-500 text-lg">{{ error }}</div>
     <div v-else-if="!set" class="text-gray-500 text-lg">Set not found</div>
-    <div v-else-if="unauthorized" class="w-full max-w-4xl mx-auto">
+    <div v-else-if="unauthorized && set" class="w-full max-w-4xl mx-auto">
       <div class="bg-white rounded-lg shadow-lg overflow-hidden">
         <!-- Set Header with Image -->
         <div class="relative bg-gray-200 h-96">
-          <img v-if="set.thumbnail" :src="set.thumbnail" :alt="set.title" class="w-full h-full object-contain" />
+          <img v-if="set?.thumbnail" :src="set.thumbnail" :alt="set?.title" class="w-full h-full object-contain" />
           <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
             <i class="fas fa-book text-4xl text-gray-400"></i>
           </div>
@@ -20,16 +20,16 @@
           <div class="flex items-center justify-between mb-4">
             <div>
               <span class="inline-block px-3 py-1 text-sm font-semibold text-blue-600 bg-blue-100 rounded-full">
-                {{ set.category }}
+                {{ set?.category }}
               </span>
             </div>
             <div v-if="accessDetails?.setType === 'premium'" class="text-xl font-bold text-green-600">
-              ${{ formatPrice(set.price) }}
+              ${{ formatPrice(set?.price?.amount) }}
             </div>
           </div>
 
-          <h1 class="text-3xl font-bold mb-4">{{ set.title }}</h1>
-          <p class="text-gray-600 mb-8">{{ set.description }}</p>
+          <h1 class="text-3xl font-bold mb-4">{{ set?.title }}</h1>
+          <p class="text-gray-600 mb-8">{{ set?.description }}</p>
 
           <!-- Access Message -->
           <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
@@ -66,7 +66,7 @@
       <div class="bg-white rounded-lg shadow-lg overflow-hidden">
         <!-- Set Header with Image -->
         <div class="relative bg-gray-200 h-96">
-          <img v-if="set.thumbnail" :src="set.thumbnail" :alt="set.title" class="w-full h-full object-contain" />
+          <img v-if="set?.thumbnail" :src="set.thumbnail" :alt="set?.title" class="w-full h-full object-contain" />
           <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
             <i class="fas fa-book text-4xl text-gray-400"></i>
           </div>
@@ -77,13 +77,13 @@
           <div class="flex items-center justify-between mb-4">
             <div>
               <span class="inline-block px-3 py-1 text-sm font-semibold text-blue-600 bg-blue-100 rounded-full">
-                {{ set.category }}
+                {{ set?.category }}
               </span>
             </div>
           </div>
 
-          <h1 class="text-3xl font-bold mb-4">{{ set.title }}</h1>
-          <p class="text-gray-600 mb-8">{{ set.description }}</p>
+          <h1 class="text-3xl font-bold mb-4">{{ set?.title }}</h1>
+          <p class="text-gray-600 mb-8">{{ set?.description }}</p>
 
           <!-- Empty State Message -->
           <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-8">
@@ -104,7 +104,7 @@
     <!-- Card Area -->
     <div v-else class="w-full max-w-3xl mx-auto flex flex-col">
       <!-- Header with Download and Like -->
-      <CardHeader :set="set" :is-liked="isLiked" :set-likes="setLikes" @download="downloadSet"
+      <CardHeader v-if="set" :set="set" :is-liked="isLiked" :set-likes="setLikes" @download="downloadSet"
         @toggle-like="toggleLikeSet" />
 
       <!-- Main Card Area -->
@@ -154,12 +154,12 @@
         />
       </div>
     </div>
-    <Toaster :toasts="toasts" :remove="remove" />
+    <Toaster :toasts="toasts" @remove="remove" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, nextTick, computed, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { apiEndpoints, api } from '@/api'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
@@ -207,7 +207,7 @@ const {
 
 const {
   progressPercent
-} = useCardProgress(cards, currentIndex, flipped, currentFlip)
+} = useCardProgress(cards, currentFlip)
 
 const {
   isLiked,
@@ -278,19 +278,14 @@ const showHintToast = () => {
   }
 }
 
-const formatPrice = (price: number | string | null): string => {
-  if (price === null || price === undefined) return '0.00';
-  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-  return isNaN(numPrice) ? '0.00' : numPrice.toFixed(2);
-};
+function formatPrice(price: number | undefined): string {
+  if (!price) return '0.00'
+  return price.toFixed(2)
+}
 
 const {
-    history,
     loading: historyLoading,
     error: historyError,
-    isFirstView,
-    isCompleted,
-    cardsViewed,
     initializeHistory,
     updateCardsViewed,
     markAsCompleted

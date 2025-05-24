@@ -55,7 +55,7 @@ const fetchSets = async () => {
     console.log('All sets:', JSON.parse(JSON.stringify(sets.value)))
     
     // Find a featured set or use the first one
-    const featured = sets.value.find(s => s.featured) || sets.value[0]
+    const featured = sets.value[0]
     console.log('Featured set data:', JSON.parse(JSON.stringify(featured)))
     featuredSet.value = featured
   } catch (err) {

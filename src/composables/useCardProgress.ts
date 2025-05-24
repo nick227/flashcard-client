@@ -4,8 +4,6 @@ import type { FlashCard } from '@/types'
 
 export function useCardProgress(
   cards: Ref<FlashCard[]>,
-  currentIndex: Ref<number>,
-  flipped: Ref<boolean>,
   currentFlip: Ref<number>
 ) {
   const progressPercent = computed(() => {

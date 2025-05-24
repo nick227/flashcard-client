@@ -68,7 +68,7 @@
         >
           <template #default="{ items }">
             <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
-              <PurchaseItem v-for="item in items as Purchase[]" :key="item.id" :item="item" />
+              <PurchaseItem v-for="item in items as Purchase[]" :key="item.id" :purchase="item" />
             </div>
           </template>
         </DataGrid>
@@ -88,7 +88,7 @@
         >
           <template #default="{ items }">
             <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
-              <SubscriptionItem v-for="item in items as Subscription[]" :key="item.id" :item="item" />
+              <SubscriptionItem v-for="item in items as Subscription[]" :key="item.id" :subscription="item" />
             </div>
           </template>
         </DataGrid>
@@ -130,7 +130,6 @@
 </template>
 
 <script setup lang="ts">
-import Navbar from '@/components/common/Navbar.vue'
 import { useAuthStore } from '@/stores/auth'
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -181,32 +180,6 @@ const viewHistory = usePaginatedData<ViewHistory>(apiEndpoints.history, {
 
 // Upload state
 const uploading = ref(false)
-
-// Format date helper
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
-
-// Fetch user data
-const fetchUserData = async () => {
-  if (!user.value?.id) return
-
-  // Fetch favorites (likes)
-  favorites.fetchData()
-
-  // Fetch purchases
-  purchases.fetchData()
-
-  // Fetch subscriptions
-  subscriptions.fetchData()
-
-  // Fetch view history
-  viewHistory.fetchData()
-}
 
 // Logout handler
 const logout = () => {

@@ -45,7 +45,7 @@ export class CardService {
     return cards.filter(card => card.id !== id)
   }
 
-  static reorderCards(cards: FlashCard[], newOrder: FlashCard[]): FlashCard[] {
-    return [...newOrder]
+  static reorderCards(_cards: FlashCard[], newOrder: FlashCard[]): FlashCard[] {
+    return newOrder
   }
 } 

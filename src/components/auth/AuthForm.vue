@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-const props = defineProps<{ mode: 'login' | 'register' }>()
+defineProps<{ mode: 'login' | 'register' }>()
 const emit = defineEmits(['submit'])
 const email = ref('')
 const password = ref('')
