@@ -41,11 +41,11 @@ export const useAuthStore = defineStore('auth', {
         this.loading = true;
         this.error = null;
         const res = await api.post('/auth/login', { email, password });
-        this.setAuth(res.data.user, res.data.token);
+        this.setAuth(res.data.user, res.data.accessToken);
         this.clearMessage();
         return res.data;
       } catch (err: any) {
-        this.error = err.response?.data?.message || 'Login failed';
+        this.error = err.response?.data?.error || 'Login failed';
         throw err;
       } finally {
         this.loading = false;
@@ -54,11 +54,17 @@ export const useAuthStore = defineStore('auth', {
 
     async register(userData: any) {
       try {
+        this.loading = true;
+        this.error = null;
         const res = await api.post('/auth/register', userData);
-        this.setAuth(res.data.user, res.data.token);
+        this.setAuth(res.data.user, res.data.accessToken);
+        this.clearMessage();
         return res.data;
-      } catch (err) {
+      } catch (err: any) {
+        this.error = err.response?.data?.error || 'Registration failed';
         throw err;
+      } finally {
+        this.loading = false;
       }
     },
 
