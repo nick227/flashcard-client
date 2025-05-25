@@ -1,5 +1,5 @@
 <template>
-  <div class="container flex flex-col items-center justify-start w-full px-4 py-12 mb-32">
+  <div class="container flex flex-col items-center justify-start w-full px-4 py-2 mb-32 sm:mb-2">
     <div v-if="loading" class="text-gray-500 text-lg">Loading cards...</div>
     <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
     <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>
@@ -24,7 +24,7 @@
               </span>
             </div>
             <div v-if="accessDetails?.setType === 'premium'" class="text-xl font-bold text-green-600">
-              ${{ formatPrice(set?.price?.amount) }}
+            ${{ formatPrice(set?.price?.amount) }}
             </div>
           </div>
 
@@ -344,15 +344,36 @@ const fetchSet = async () => {
 
 const downloadSet = async () => {
   try {
-    const res = await axios.get(`${apiEndpoints.sets}/${props.setId}`)
-    const url = res.data.downloadUrl
-    if (url) {
-      window.open(url, '_blank')
-    } else {
-      console.error('No download URL found for this set.')
-    }
-  } catch (err) {
-    console.error('Failed to fetch download URL:', err)
+    // Create CSV content with headers
+    const headers = ['Front', 'Back']
+    const rows = cards.value.map(card => [
+      // Escape quotes and wrap in quotes to handle commas and newlines
+      `"${card.front.replace(/"/g, '""')}"`,
+      `"${card.back.replace(/"/g, '""')}"`
+    ])
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n')
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${set.value?.title || 'flashcards'}.csv`
+    document.body.appendChild(link)
+    link.click()
+    
+    // Cleanup
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    
+    toast('Flashcards downloaded successfully', 'success')
+  } catch (error) {
+    console.error('Failed to download flashcards:', error)
+    toast('Failed to download flashcards', 'error')
   }
 }
 

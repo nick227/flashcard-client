@@ -19,33 +19,35 @@
       </div>
     </div>
     <!-- Title Row -->
-    <div class="title-container mb-2 flex items-start gap-4">
-      <!-- Set thumbnail -->
-      <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gray-100">
-        <img 
-          v-if="set.thumbnail && !thumbnailError" 
-          :src="set.thumbnail" 
-          :alt="set.title"
-          class="w-full h-full object-cover"
-          @error="handleThumbnailError"
-        />
-        <div v-else class="w-full h-full flex items-center justify-center">
-          <span class="text-2xl font-bold text-gray-400">{{ getFirstLetter }}</span>
+    <div class="title-container mb-2 flex flex-col sm:flex-row items-end gap-4">
+      <div class="flex items-start gap-4 w-full sm:w-[80%]">
+        <!-- Set thumbnail -->
+        <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gray-100">
+          <img 
+            v-if="set.thumbnail && !thumbnailError" 
+            :src="set.thumbnail" 
+            :alt="set.title"
+            class="w-full h-full object-cover"
+            @error="handleThumbnailError"
+          />
+          <div v-else class="w-full h-full flex items-center justify-center">
+            <span class="text-2xl font-bold text-gray-400">{{ getFirstLetter }}</span>
+          </div>
         </div>
+        <!-- Set title -->
+        <h1 ref="titleElement" class="text-2xl font-bold flex-1 set-title">{{ set.title }}</h1>
       </div>
-      <!-- Set title -->
-      <h1 ref="titleElement" class="text-2xl font-bold flex-1 set-title">{{ set.title }}</h1>
-    </div>
-    <!-- Action Buttons Row -->
-    <div class="flex items-center justify-end gap-4 title-buttons w-full mb-4">
-      <!-- Download Button -->
-      <a class="link" @click="$emit('download')">
-        <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
-      </a>
-      <!-- Like Button -->
-      <a class="link" @click="$emit('toggle-like')">
-        <i :class="['fa-solid', 'fa-heart', isLiked ? 'text-red-500' : 'text-gray-400', 'text-2xl']"></i>&nbsp; {{ setLikes }}
-      </a>
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-between sm:justify-end gap-4 title-buttons w-full sm:w-[20%] mt-4 sm:mt-0">
+        <!-- Download Button -->
+        <a class="link" @click="$emit('download')">
+          <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
+        </a>
+        <!-- Like Button -->
+        <a class="link" @click="$emit('toggle-like')">
+          <i :class="['fa-solid', 'fa-heart', isLiked ? 'text-red-500' : 'text-gray-400', 'text-2xl']"></i>&nbsp; {{ setLikes }}
+        </a>
+      </div>
     </div>
   </div>
 </template>
@@ -122,16 +124,6 @@ onMounted(() => {
 
 .title-buttons {
   flex-shrink: 0;
-  margin-top: 0.5rem;
-}
-
-.link {
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.link:hover {
-  opacity: 0.8;
 }
 
 /* Add new styles for thumbnail fallback */
