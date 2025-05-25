@@ -14,7 +14,7 @@
           <i class="fas fa-user text-gray-400"></i>
         </div>
         <a @click="router.push(`/u/${set.educatorName}`)" class="link">
-          <h3>{{ set.educatorName }}</h3>
+          <h3 class="my-0">{{ set.educatorName }}</h3>
         </a>
       </div>
     </div>
