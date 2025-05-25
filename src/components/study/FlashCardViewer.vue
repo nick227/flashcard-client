@@ -1,5 +1,5 @@
 <template>
-  <div class="container flex flex-col items-center justify-start w-full px-4 py-12">
+  <div class="container flex flex-col items-center justify-start w-full px-4 py-12 mb-32">
     <div v-if="loading" class="text-gray-500 text-lg">Loading cards...</div>
     <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
     <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>

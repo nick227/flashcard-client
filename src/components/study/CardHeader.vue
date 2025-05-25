@@ -1,33 +1,65 @@
 <template>
   <div class="w-full">
     <div class="flex flex-col items-start w-full">
-      <!-- Creator Name -->
-      <a @click="router.push(`/u/${set.educatorName}`)" class="link">
-        <h3>{{ set.educatorName }}</h3>
-      </a>
+      <!-- Creator Info with Avatar -->
+      <div class="flex items-center gap-3 mb-4">
+        <img 
+          v-if="set.educatorImage" 
+          :src="set.educatorImage" 
+          :alt="set.educatorName"
+          class="w-8 h-8 rounded-full object-cover"
+          @error="handleAvatarError"
+        />
+        <div v-else class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+          <i class="fas fa-user text-gray-400"></i>
+        </div>
+        <a @click="router.push(`/u/${set.educatorName}`)" class="link">
+          <h3>{{ set.educatorName }}</h3>
+        </a>
+      </div>
     </div>
-    <div class="title-container mb-4">
+    <div class="title-container mb-4 flex items-center gap-4">
+      <!-- Set thumbnail -->
+      <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+        <img 
+          v-if="set.thumbnail" 
+          :src="set.thumbnail" 
+          :alt="set.title"
+          class="w-full h-full object-cover"
+          @error="handleThumbnailError"
+        />
+        <div v-else class="w-full h-full bg-gray-200 flex items-center justify-center">
+          <i class="fas fa-book text-gray-400"></i>
+        </div>
+      </div>
       <!-- Set title -->
-      <h1 class="text-2xl font-bold">{{ set.title }}</h1>
-      <!-- Download Button -->
-      <a class="link mr-4" @click="$emit('download')">
-        <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
-      </a>
-      <!-- Like Button -->
-      <a class="link" @click="$emit('toggle-like')">
-        <i :class="['fa-solid', 'fa-heart', isLiked ? 'text-red-500' : 'text-gray-400', 'text-2xl']"></i>&nbsp; {{ setLikes }}
-      </a>
+      <h1 ref="titleElement" class="text-2xl font-bold flex-1 set-title">{{ set.title }}</h1>
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-4 title-buttons">
+        <!-- Download Button -->
+        <a class="link" @click="$emit('download')">
+          <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
+        </a>
+        <!-- Like Button -->
+        <a class="link" @click="$emit('toggle-like')">
+          <i :class="['fa-solid', 'fa-heart', isLiked ? 'text-red-500' : 'text-gray-400', 'text-2xl']"></i>&nbsp; {{ setLikes }}
+        </a>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FlashCardSet } from '@/types'
 
 const router = useRouter()
+const avatarError = ref(false)
+const thumbnailError = ref(false)
+const titleElement = ref<HTMLElement | null>(null)
 
-defineProps<{
+const props = defineProps<{
   set: FlashCardSet
   isLiked: boolean
   setLikes: number
@@ -37,4 +69,61 @@ defineEmits<{
   (e: 'download'): void
   (e: 'toggle-like'): void
 }>()
-</script> 
+
+const handleAvatarError = () => {
+  avatarError.value = true
+}
+
+const handleThumbnailError = () => {
+  thumbnailError.value = true
+}
+
+// Update font size based on content length
+const updateTitleSize = () => {
+  if (titleElement.value) {
+    const charCount = titleElement.value.textContent?.length || 0
+    titleElement.value.style.setProperty('--char-count', charCount.toString())
+  }
+}
+
+// Watch for title changes
+watch(() => props.set.title, () => {
+  nextTick(updateTitleSize)
+})
+
+onMounted(() => {
+  nextTick(updateTitleSize)
+})
+</script>
+
+<style scoped>
+.title-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.set-title {
+  font-size: clamp(0.8em, calc(4em - (var(--char-count) * 0.1em)), 4em);
+  margin-top: 0;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+}
+
+.title-buttons {
+  align-self: flex-end;
+  flex-shrink: 0;
+}
+
+.link {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.link:hover {
+  opacity: 0.8;
+}
+</style> 

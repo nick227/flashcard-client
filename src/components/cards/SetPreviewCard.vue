@@ -26,7 +26,7 @@
         <h3 class="card-title">
           <a @click="goToSet" class="link">{{ set.title }}</a>
         </h3>
-        <a :href="`/u/${set.educator?.name}`"><h6 class="text-sm text-gray-500 mt-2">{{ set.educator?.name || 'Unknown' }}</h6></a>
+        <a :href="`/u/${set.educatorName}`"><h6 class="text-sm text-gray-500 mt-2">{{ set.educatorName || 'Unknown' }}</h6></a>
         <p class="card-description w-full text-left">{{ set.description }}</p>
       </div>
       <div class="card-stats w-full text-left">
@@ -46,14 +46,8 @@
         </div>
       </div>
       <div class="card-footer w-full text-left">
-        <div class="price-tag" :class="{
-          'free': set.price === 0 && !set.isSubscriberOnly,
-          'subscriber': set.isSubscriberOnly,
-          'paid': set.price > 0
-        }">
-          <span v-if="set.price === 0 && !set.isSubscriberOnly">Free</span>
-          <span v-else-if="set.isSubscriberOnly">Subscriber Only</span>
-          <span v-else>${{ set.price }}</span>
+        <div class="price-tag" :class="priceClass">
+          <span>{{ priceDisplay }}</span>
         </div>
         <TagsList :tags="tags" :removable="false" class="tags-list" />
       </div>
@@ -73,13 +67,11 @@ import { computed, ref, onMounted, watch } from 'vue'
 import TagsList from '@/components/common/TagsList.vue'
 import axios from 'axios'
 import { apiEndpoints } from '@/api'
+import type { FlashCardSet } from '@/types'
 
-const props = defineProps({
-  set: {
-    type: Object,
-    required: true
-  }
-})
+const props = defineProps<{
+  set: FlashCardSet
+}>()
 
 defineEmits(['view'])
 
@@ -94,6 +86,18 @@ const goToSet = () => {
 }
 
 const tags = computed(() => props.set.tags || [])
+
+const priceDisplay = computed(() => {
+  if (props.set.price.type === 'free') return 'Free'
+  if (props.set.price.type === 'subscribers') return 'Subscriber Only'
+  return `$${props.set.price.amount}`
+})
+
+const priceClass = computed(() => {
+  if (props.set.price.type === 'free') return 'free'
+  if (props.set.price.type === 'subscribers') return 'subscriber'
+  return 'paid'
+})
 
 const fetchSetStats = async () => {
   try {
@@ -213,7 +217,6 @@ watch(() => props.set?.id, (newId) => {
 }
 
 .card-content {
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;

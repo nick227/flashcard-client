@@ -2,7 +2,14 @@
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 
+// Ensure we have a valid API URL
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Validate the base URL
+if (!BASE_URL.startsWith('http')) {
+  console.error('Invalid API URL:', BASE_URL);
+  throw new Error('Invalid API URL configuration');
+}
 
 console.log('API Base URL:', BASE_URL); // Debug log
 
@@ -19,11 +26,14 @@ export const apiEndpoints = {
   history: `${BASE_URL}/history`,
 };
 
+// Create axios instance with proper configuration
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  validateStatus: (status) => status >= 200 && status < 300
 });
 
 // Add request interceptor to automatically add auth token
@@ -36,6 +46,28 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => {
+    // Check if response is HTML instead of JSON
+    const contentType = response.headers['content-type'];
+    if (contentType && contentType.includes('text/html')) {
+      console.error('Received HTML instead of JSON:', response.data);
+      throw new Error('Invalid API response format');
+    }
+    return response;
+  },
+  (error) => {
+    console.error('API Response Error:', error);
+    if (error.response) {
+      console.error('Error Response:', error.response.data);
+      console.error('Error Status:', error.response.status);
+    }
     return Promise.reject(error);
   }
 );

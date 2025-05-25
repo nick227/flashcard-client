@@ -31,23 +31,31 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
 import HomeHero from '../components/sections/HomeHero.vue'
 import SetPreviewCard from '../components/cards/SetPreviewCard.vue'
 import FeaturedSet from '../components/home/FeaturedSet.vue'
 import type { FlashCardSet } from '../types'
+import { api } from '@/api'
 
 const router = useRouter()
 const sets = ref<FlashCardSet[]>([])
 const loading = ref(true)
 const featuredSet = ref<FlashCardSet | null>(null)
+const error = ref<string | null>(null)
 
 const fetchSets = async () => {
-  console.log('JWT before fetching sets:', localStorage.getItem('jwt'));
-  console.log('Axios default Authorization:', axios.defaults.headers.common['Authorization']);
   loading.value = true
+  error.value = null
+  
   try {
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/sets`)
+    const res = await api.get('/sets', {
+      params: {
+        page: 1,
+        limit: 10,
+        sortOrder: 'newest'
+      }
+    })
+    
     // Handle paginated response format
     const { items, pagination } = res.data
     sets.value = items || []
@@ -60,8 +68,9 @@ const fetchSets = async () => {
     // Find a featured set or use the first one
     featuredSet.value = sets.value[0] || null
     console.log('Featured set:', featuredSet.value)
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error fetching sets:', err)
+    error.value = err.message || 'Failed to load sets'
     sets.value = []
     featuredSet.value = null
   } finally {
