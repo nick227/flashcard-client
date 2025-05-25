@@ -20,6 +20,7 @@
         <h3 class="card-title">
           <a @click="goToSet" class="link">{{ set.title }}</a>
         </h3>
+        <a :href="`/u/${set.educator?.name}`"><h6 class="text-sm text-gray-500 mt-2">{{ set.educator?.name || 'Unknown' }}</h6></a>
         <p class="card-description w-full text-left">{{ set.description }}</p>
       </div>
       <div class="card-stats w-full text-left">
@@ -89,21 +90,16 @@ const tags = computed(() => props.set.tags || [])
 
 const fetchSetStats = async () => {
   try {
-    console.log('Fetching stats for set:', props.set.id);
-    
     // Fetch views count
     const viewsRes = await axios.get(`${apiEndpoints.sets}/${props.set.id}/views`);
-    console.log('Views response:', viewsRes.data);
     viewCount.value = viewsRes.data.count || 0;
     
     // Fetch likes count
     const likesRes = await axios.get(`${apiEndpoints.sets}/${props.set.id}/likes`);
-    console.log('Likes response:', likesRes.data);
     likeCount.value = likesRes.data.count || 0;
     
     // Fetch cards count
     const cardsRes = await axios.get(`${apiEndpoints.sets}/${props.set.id}/cards`);
-    console.log('Cards response:', cardsRes.data);
     cardCount.value = cardsRes.data.count || 0;
     
   } catch (err) {

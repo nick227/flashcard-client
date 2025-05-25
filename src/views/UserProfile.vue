@@ -1,5 +1,5 @@
 <template>
-  
+
   <div class="container mx-auto px-4 py-8 min-h-screen bg-gray-50">
     <!-- Authenticated user profile view -->
     <div v-if="isAuthenticated && user" class="max-w-6xl mx-auto">
@@ -7,17 +7,26 @@
       <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
         <div class="flex items-center gap-6">
           <!-- Profile image section -->
-          <div class="relative">
-            <img v-if="user.image" @click="triggerFileInput" :src="user.image" alt="avatar" 
-              class="w-24 h-24 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity" />
-            <div @click="triggerFileInput" v-else 
-              class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors">
-              <i class="fa-solid fa-user text-gray-400 text-3xl"></i>
+          <div class="relative flex flex-col gap-4 items-center">
+            <div class="group-upload">
+              <img v-if="user.image" @click="triggerFileInput" :src="user.image" alt="avatar"
+                class="w-24 h-24 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity" />
+              <div @click="triggerFileInput" v-else
+                class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors">
+                <i class="fa-solid fa-user text-gray-400 text-3xl"></i>
+              </div>
+              <div class="w-full text-center h-8">
+                <a @click="triggerFileInput"
+                  class="upload-text hidden text-sm text-gray-500 hover:text-gray-700 cursor-pointer">upload</a>
+              </div>
             </div>
             <!-- Loading spinner during upload -->
-            <div v-if="uploading" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
+            <div v-if="uploading"
+              class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
             </div>
+            <!-- Logout button -->
+            <button @click="logout" class="button button-dark">Logout</button>
           </div>
           <!-- User information -->
           <div class="flex-1">
@@ -25,35 +34,20 @@
             <p class="text-gray-600 mb-1">{{ user.email }}</p>
             <p class="text-gray-500">{{ user.role }}</p>
             <div class="mt-2">
-              <textarea 
-                v-model="user.bio" 
-                class="w-full p-2 border rounded-lg"
-                placeholder="Add a bio..."
-                rows="3"
-                @blur="updateBio"
-              ></textarea>
+              <textarea v-model="user.bio" class="w-full p-2 border rounded-lg" placeholder="Add a bio..." rows="3"
+                @blur="updateBio"></textarea>
             </div>
           </div>
-          <!-- Logout button -->
-          <button @click="logout" class="button button-accent">Logout</button>
         </div>
       </div>
 
       <!-- Dashboard Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Favorites -->
-        <DataGrid
-          title="Favorites"
-          icon="fas fa-heart"
-          iconColor="#ef4444"
-          :loading="favorites.loading.value"
-          :items="favorites.items.value"
-          :total-items="favorites.totalItems.value"
-          :current-page="favorites.currentPage.value"
-          :page-size="6"
-          :empty-message="favorites.error.value || 'No favorites yet'"
-          @page-change="handleFavoritesPageChange"
-        >
+        <DataGrid title="Favorites" icon="fas fa-heart" iconColor="#ef4444" :loading="favorites.loading.value"
+          :items="favorites.items.value" :total-items="favorites.totalItems.value"
+          :current-page="favorites.currentPage.value" :page-size="6"
+          :empty-message="favorites.error.value || 'No favorites yet'" @page-change="handleFavoritesPageChange">
           <template #default="{ items }">
             <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
               <FavoriteItem v-for="item in items as Favorite[]" :key="item.id" :item="item" />
@@ -62,18 +56,10 @@
         </DataGrid>
 
         <!-- Purchases -->
-        <DataGrid
-          title="Purchases"
-          icon="fas fa-shopping-cart"
-          iconColor="#10b981"
-          :loading="purchases.loading.value"
-          :items="purchases.items.value"
-          :total-items="purchases.totalItems.value"
-          :current-page="purchases.currentPage.value"
-          :page-size="6"
-          :empty-message="purchases.error.value || 'No purchases yet'"
-          @page-change="handlePurchasesPageChange"
-        >
+        <DataGrid title="Purchases" icon="fas fa-shopping-cart" iconColor="#10b981" :loading="purchases.loading.value"
+          :items="purchases.items.value" :total-items="purchases.totalItems.value"
+          :current-page="purchases.currentPage.value" :page-size="6"
+          :empty-message="purchases.error.value || 'No purchases yet'" @page-change="handlePurchasesPageChange">
           <template #default="{ items }">
             <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
               <PurchaseItem v-for="item in items as Purchase[]" :key="item.id" :purchase="item" />
@@ -82,18 +68,11 @@
         </DataGrid>
 
         <!-- Subscriptions -->
-        <DataGrid
-          title="Subscriptions"
-          icon="fas fa-crown"
-          iconColor="#f59e0b"
-          :loading="subscriptions.loading.value"
-          :items="subscriptions.items.value"
-          :total-items="subscriptions.totalItems.value"
-          :current-page="subscriptions.currentPage.value"
-          :page-size="6"
+        <DataGrid title="Subscriptions" icon="fas fa-crown" iconColor="#f59e0b" :loading="subscriptions.loading.value"
+          :items="subscriptions.items.value" :total-items="subscriptions.totalItems.value"
+          :current-page="subscriptions.currentPage.value" :page-size="6"
           :empty-message="subscriptions.error.value || 'No subscriptions yet'"
-          @page-change="handleSubscriptionsPageChange"
-        >
+          @page-change="handleSubscriptionsPageChange">
           <template #default="{ items }">
             <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
               <SubscriptionItem v-for="item in items as Subscription[]" :key="item.id" :subscription="item" />
@@ -102,18 +81,10 @@
         </DataGrid>
 
         <!-- View History -->
-        <DataGrid
-          title="View History"
-          icon="fas fa-clock"
-          iconColor="#0ea5e9"
-          :loading="viewHistory.loading.value"
-          :items="viewHistory.items.value"
-          :total-items="viewHistory.totalItems.value"
-          :current-page="viewHistory.currentPage.value"
-          :page-size="6"
-          :empty-message="viewHistory.error.value || 'No view history yet'"
-          @page-change="handleViewHistoryPageChange"
-        >
+        <DataGrid title="View History" icon="fas fa-clock" iconColor="#0ea5e9" :loading="viewHistory.loading.value"
+          :items="viewHistory.items.value" :total-items="viewHistory.totalItems.value"
+          :current-page="viewHistory.currentPage.value" :page-size="6"
+          :empty-message="viewHistory.error.value || 'No view history yet'" @page-change="handleViewHistoryPageChange">
           <template #default="{ items }">
             <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
               <ViewHistoryItem v-for="item in items as ViewHistory[]" :key="item.id" :item="item" />
@@ -164,7 +135,7 @@ const isAuthenticated = computed(() => auth.isAuthenticated)
 // Initialize paginated data
 const favorites = usePaginatedData<Favorite>(apiEndpoints.sets, {
   userId: user.value?.id,
-  queryParams: { 
+  queryParams: {
     liked: true,
     userId: user.value?.id,
     user_id: user.value?.id
@@ -199,23 +170,23 @@ const logout = () => {
 const updateUserImage = async (event: Event) => {
   const target = event.target as HTMLInputElement
   if (!target?.files?.length) return
-  
+
   try {
     uploading.value = true
     const formData = new FormData()
     const file = target.files[0]
     formData.append('image', file)
-    
+
     const token = auth.jwt
     if (!token) throw new Error('No authentication token found')
 
     const res = await api.patch(`${apiEndpoints.users}/${user.value?.id}`, formData, {
-      headers: { 
+      headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': `Bearer ${token}`
       }
     })
-    
+
     if (user.value && res.data.image) {
       user.value.image = res.data.image
     }
@@ -273,7 +244,7 @@ const updateBio = async () => {
         'Authorization': `Bearer ${token}`
       }
     })
-    
+
     if (user.value && res.data.bio) {
       user.value.bio = res.data.bio
     }
@@ -282,3 +253,9 @@ const updateBio = async () => {
   }
 }
 </script>
+
+<style scoped>
+.group-upload:hover .upload-text {
+  display: inline;
+}
+</style>

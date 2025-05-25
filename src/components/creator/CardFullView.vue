@@ -44,7 +44,14 @@
         </div>
       </div>
       <div v-else>
-        <FlashCardScaffold :card="localCard" :flipped="flipped" :editable="false" :inlineEditable="true" @update:card="onInlineEdit" @flip="flipped = $event" />
+        <FlashCardScaffold 
+          :card="localCard" 
+          :flipped="flipped" 
+          :editable="false" 
+          :inlineEditable="true" 
+          @update:card="onInlineEdit" 
+          @flip="handleFlip" 
+        />
       </div>
     </div>
     <div class="mt-3">
@@ -110,6 +117,8 @@ const touchedFront = ref(false)
 const touchedBack = ref(false)
 const previewMode = ref(false)
 const flipped = ref(false)
+const isFlipping = ref(false)
+const isNavigating = ref(false)
 
 function getFontSize(text: string): string {
   const length = text.length
@@ -174,9 +183,27 @@ watch(() => props.autoFocus, (val) => {
 // Reset flip when switching cards or exiting preview
 watch([() => props.card, previewMode], ([newCard, mode], [oldCard]) => {
   if (mode === false || newCard?.id !== oldCard?.id) {
+    isNavigating.value = true
     flipped.value = false
+    isFlipping.value = false
+    
+    // Reset navigation state after a short delay
+    setTimeout(() => {
+      isNavigating.value = false
+    }, 50)
   }
 })
+
+function handleFlip(newFlippedState: boolean) {
+  if (isFlipping.value || isNavigating.value) return
+  isFlipping.value = true
+  flipped.value = newFlippedState
+  
+  // Reset flipping state after animation
+  setTimeout(() => {
+    isFlipping.value = false
+  }, 300) // Match with FlashCardScaffold transition duration
+}
 </script>
 
 <style scoped>

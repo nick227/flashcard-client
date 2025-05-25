@@ -4,19 +4,19 @@
     :tabindex="editable ? -1 : 0"
     :aria-label="editable ? 'Edit flash card' : 'Flash card'"
     @click="onCardClick"
-    @keydown.space.prevent="!editable && emit('flip', !(props.flipped ?? false))"
-    @keydown.enter.prevent="!editable && emit('flip', !(props.flipped ?? false))"
+    @keydown.space.prevent="!editable && handleFlip()"
+    @keydown.enter.prevent="!editable && handleFlip()"
     :style="{ cursor: editable ? 'default' : 'pointer' }"
     @touchstart.passive="onTouchStart"
     @touchend.passive="onTouchEnd"
     @mousedown="onMouseDown"
     @mouseup="onMouseUp"
   >
-    <div class="card-content" :class="{ 'is-flipped': isFlipped }">
-      <div class="card-face front">
+    <div class="card-content" :class="{ 'is-flipped': isFlipped, 'is-flipping': isFlipping }">
+      <div v-show="!isFlipped" class="card-face front">
         <div class="text-2xl font-semibold formatted-content" v-html="card?.front || 'No front content'"></div>
       </div>
-      <div class="card-face back">
+      <div v-show="isFlipped" class="card-face back">
         <div class="text-2xl font-semibold formatted-content" v-html="card?.back || 'No back content'"></div>
       </div>
     </div>
@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { FlashCard } from '@/types'
 
 const props = defineProps<{
@@ -49,21 +49,53 @@ const emit = defineEmits<{
 }>()
 
 const localFlipped = ref(false)
+const isFlipping = ref(false)
+const flipTimeout = ref<number | null>(null)
+const isNavigating = ref(false)
 
 // Computed properties
 const isFlipped = computed(() => {
   return props.flipped !== undefined ? props.flipped : localFlipped.value
 })
 
+// Reset flip state when card changes
+watch(() => props.card, () => {
+  if (flipTimeout.value) {
+    clearTimeout(flipTimeout.value)
+  }
+  isNavigating.value = true
+  localFlipped.value = false
+  isFlipping.value = false
+  
+  // Reset navigation state after a short delay
+  setTimeout(() => {
+    isNavigating.value = false
+  }, 50)
+})
+
 // Methods
+function handleFlip() {
+  if (isFlipping.value || isNavigating.value) return
+  
+  isFlipping.value = true
+  const newFlippedState = !isFlipped.value
+  
+  if (props.flipped !== undefined) {
+    emit('flip', newFlippedState)
+  } else {
+    localFlipped.value = newFlippedState
+    emit('flip', localFlipped.value)
+  }
+  
+  // Reset flipping state after animation
+  flipTimeout.value = window.setTimeout(() => {
+    isFlipping.value = false
+  }, 300) // Match this with CSS transition duration
+}
+
 function onCardClick() {
   if (!props.editable) {
-    if (props.flipped !== undefined) {
-      emit('flip', !props.flipped)
-    } else {
-      localFlipped.value = !localFlipped.value
-      emit('flip', localFlipped.value)
-    }
+    handleFlip()
   }
 }
 
@@ -129,6 +161,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (flipTimeout.value) {
+    clearTimeout(flipTimeout.value)
+  }
   const element = document.querySelector('.flashcard-scaffold')
   if (element) {
     element.removeEventListener('touchmove', () => {})
@@ -176,5 +211,35 @@ onUnmounted(() => {
   text-align: center;
   font-size: 12px;
   color: #666;
+}
+
+.card-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.card-content.is-flipping {
+  transition: transform 0.3s ease;
+}
+
+.card-content.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-face.back {
+  transform: rotateY(180deg);
 }
 </style>
