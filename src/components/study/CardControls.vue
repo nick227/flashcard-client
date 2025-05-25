@@ -33,7 +33,7 @@
           :aria-label="`Progress: ${progressPercent.toFixed(0)}%`"
         ></div>
       </div>
-      <div class="flex items-center w-full justify-end">
+      <div class="flex items-center w-full justify-center">
         <span class="text-black-400">card {{ currentIndex + 1 }} of {{ totalCards }}</span>
         <button 
           v-if="showExit" 

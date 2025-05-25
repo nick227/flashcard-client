@@ -28,10 +28,10 @@
           </div>
         </div>
 
-        <h2 class="title"><a :href="`/sets/${set.id}`">{{ set.title }}</a></h2>
+        <h2 class="title my-0"><a :href="`/sets/${set.id}`">{{ set.title }}</a></h2>
         <p class="description">{{ set.description }}</p>
         
-        <div class="tags-container">
+        <div v-if="set.tags" class="tags-container">
           <span v-for="tag in set.tags" :key="tag" class="tag"><a :href="`/tags/${tag}`">{{ tag }}</a></span>
         </div>
 
@@ -161,15 +161,43 @@ defineEmits<{
 
 <style scoped>
 .featured-set {
-  @apply w-full py-16 px-4 md:px-8 mb-16 bg-gradient-to-r from-gray-50 to-white;
+  @apply w-full py-8 md:py-16 md:px-8 mb-8 md:mb-16 bg-gradient-to-r from-gray-50 to-white overflow-hidden;
 }
 
 .featured-content {
-  @apply max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 items-center;
+  @apply max-w-7xl mx-auto flex flex-col lg:flex-row gap-4 md:gap-8 items-center;
 }
 
 .featured-image {
-  @apply w-full lg:w-1/2 min-h-[400px] lg:h-[500px];
+  @apply w-full lg:w-1/2 h-[340px] md:min-h-[400px] lg:h-[500px];
+}
+
+.featured-info {
+  @apply w-full lg:w-1/2 flex flex-col gap-3 md:gap-4;
+}
+
+.title {
+  @apply text-2xl md:text-3xl font-bold;
+}
+
+.description {
+  @apply text-sm md:text-base text-gray-600;
+}
+
+.tags-container {
+  @apply flex flex-wrap gap-1.5 mb-2;
+}
+
+.tag {
+  @apply text-xs md:text-sm bg-gray-100 text-gray-600 px-2 py-0.5 rounded;
+}
+
+.educator-info {
+  @apply mt-2 md:mt-4;
+}
+
+.actions {
+  @apply mt-4 md:mt-6;
 }
 
 .featured-image img {
@@ -180,8 +208,17 @@ defineEmits<{
   opacity: 0.9;
 }
 
-.featured-image .text-4xl {
-  font-size: 3rem;
+.featured-image .text-8xl {
+  font-size: clamp(3rem, 15vw, 6rem);
   line-height: 1;
+}
+
+.category-badge {
+  @apply text-xs md:text-sm;
+}
+
+/* Ensure the image container doesn't overflow */
+.w-full.h-full {
+  @apply max-w-full;
 }
 </style> 

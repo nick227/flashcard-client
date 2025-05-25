@@ -5,19 +5,19 @@
 
     <!-- Filter & Sort Controls -->
     <section class="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full mb-8 gap-4">
-      <div class="flex flex-wrap reverse sm:flex-row items-center gap-4 w-full sm:w-auto">
-        <select id="category" v-model="selectedCategory" class="w-full" @change="onCategoryChange">
+      <div class="flex flex-wrap flex-row-reverse sm:flex-row items-center gap-4 w-full sm:w-auto">
+        <select id="category" v-model="selectedCategory" class="w-full sm:w-auto" @change="onCategoryChange">
           <option value="">All Categories</option>
           <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
         </select>
 
-        <select id="setType" v-model="selectedSetType" class="w-full" @change="onSetTypeChange">
+        <select id="setType" v-model="selectedSetType" class="w-full sm:w-auto" @change="onSetTypeChange">
           <option value="">All Types</option>
           <option value="free">Free</option>
           <option value="premium">Premium</option>
           <option value="subscriber">Subscriber Only</option>
         </select>
-        <div class="relative w-full">
+        <div class="relative w-full sm:w-auto">
           <input 
             type="text" 
             v-model="searchQuery" 
@@ -41,7 +41,7 @@
         </div>
       </div>
       <div class="flex items-center gap-4 w-full sm:w-auto justify-end">
-        <select id="sort" v-model="sortOrder" class="w-full">
+        <select id="sort" v-model="sortOrder" class="w-full sm:w-auto">
           <option value="featured">Featured</option>
           <option value="newest">Newest</option>
           <option value="oldest">Oldest</option>
@@ -81,7 +81,7 @@
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
       <!-- End of content message -->
-      <div v-if="!hasMore && sets.length" class="text-center text-gray-500 py-8">
+      <div v-if="!hasMore && sets.length" class="text-center text-gray-500 py-8 mb-8">
         <span class="text-2xl">😢</span> That's all the sets we have.
         <div class="w-full h-4 mt-4">
           <button @click="router.push('/create')" class="button button-accent text-white-500">Hey, what if you created one?</button>
