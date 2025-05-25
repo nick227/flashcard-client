@@ -43,7 +43,7 @@ export function useCardGrid(cards: Ref<FlashCard[]>) {
     gridCardStates.value = newStates
   }
 
-  const shuffleCardOrder = (currentIndex: number) => {
+  const shuffleCardOrder = () => {
     // Shuffle using Fisher-Yates
     const shuffledCards = shuffleArray([...cards.value])
     

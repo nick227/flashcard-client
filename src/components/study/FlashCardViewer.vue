@@ -452,8 +452,8 @@ const handleShuffle = () => {
   // Store the current progress position
   const currentProgress = currentIndex.value
   
-  // Get new order and current index from shuffle
-  const { newOrder } = shuffleCardOrder(currentIndex.value)
+  // Get new order from shuffle
+  const { newOrder } = shuffleCardOrder()
   
   // Update cards with new order
   cards.value = [...newOrder]
