@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from 'vue'
+import { ref, watch, computed, nextTick, onMounted } from 'vue'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
 
 type Flashcard = {
@@ -70,9 +70,34 @@ const props = defineProps<{ card: Flashcard, autoFocus?: boolean }>()
 const emit = defineEmits(['update-card', 'delete-card', 'request-delete'])
 
 const localCard = ref({ ...props.card })
+
+// Update watch to handle deep changes and ensure proper sync
 watch(() => props.card, (newCard) => {
-  localCard.value = { ...newCard }
-}, { immediate: true })
+  if (JSON.stringify(newCard) !== JSON.stringify(localCard.value)) {
+    localCard.value = { ...newCard }
+    // Update contenteditable elements with nextTick to ensure DOM is ready
+    nextTick(() => {
+      if (frontRef.value) {
+        frontRef.value.textContent = newCard.front || ''
+      }
+      if (backRef.value) {
+        backRef.value.textContent = newCard.back || ''
+      }
+    })
+  }
+}, { deep: true, immediate: true })
+
+// Initialize contenteditable elements on mount
+onMounted(() => {
+  nextTick(() => {
+    if (frontRef.value) {
+      frontRef.value.textContent = localCard.value.front || ''
+    }
+    if (backRef.value) {
+      backRef.value.textContent = localCard.value.back || ''
+    }
+  })
+})
 
 function emitUpdate() {
   emit('update-card', { ...localCard.value })
@@ -96,14 +121,16 @@ function getFontSize(text: string): string {
 
 function onFrontInput(e: Event) {
   const target = e.target as HTMLElement
-  localCard.value.front = target.textContent || ''
+  const newText = target.textContent || ''
+  localCard.value.front = newText
   adjustCardHeight(target)
   emitUpdate()
 }
 
 function onBackInput(e: Event) {
   const target = e.target as HTMLElement
-  localCard.value.back = target.textContent || ''
+  const newText = target.textContent || ''
+  localCard.value.back = newText
   adjustCardHeight(target)
   emitUpdate()
 }

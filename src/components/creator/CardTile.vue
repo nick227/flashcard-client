@@ -13,15 +13,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 
 const props = defineProps<{ card: any }>()
 const emit = defineEmits(['update-card', 'delete-card', 'request-delete'])
 const localCard = ref({ ...props.card })
-watch(() => props.card, (val) => { localCard.value = { ...val } })
+
+// Update watch to handle deep changes
+watch(() => props.card, (val) => { 
+  localCard.value = { ...val }
+}, { deep: true })
+
 function emitUpdate() {
   emit('update-card', { ...localCard.value })
 }
+
+// Add immediate update on mount
+onMounted(() => {
+  emitUpdate()
+})
+
 function onRequestDelete() {
   emit('request-delete', localCard.value.id)
 }

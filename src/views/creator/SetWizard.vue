@@ -32,7 +32,13 @@
           @update:thumbnail="handleThumbnailUpdate"
         />
         <div class="flex flex-wrap items-center gap-6 mb-8">
+          <!-- View Toggle -->
           <ViewToggle v-model="viewMode" />
+          <!-- Reverse Cards Button -->
+          <button class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600" @click="reverseCards" :disabled="!hasCards">
+            <i class="fa-solid fa-arrows-up-down"></i>
+          </button>
+          <!-- Card Count Indicator -->
           <CardCountIndicator :count="cards.length" />
           <!-- Import Bar -->
           <ImportBar :importFileName="importFileName" @import-csv="onImportCsv" />
@@ -41,7 +47,7 @@
             @add-card="onAddCard" />
           <!-- Submit button -->
           <button class="button button-success" :disabled="submitting" @click="onSubmit">
-            {{ submitting ? submitButtonText : submitButtonText }}
+            {{ submitButtonText }}
           </button>
         </div>
         <div>
@@ -63,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { FlashCard } from '@/types'
 import ImportBar from '@/components/creator/ImportBar.vue'
@@ -173,6 +179,10 @@ async function onImportCsv(file: File) {
   }
 }
 
+function reverseCards() {
+  cards.value.reverse()
+}
+
 function onRequestDelete(id: number) {
   cardToDelete.value = id
   confirmMessage.value = 'Are you sure you want to delete this card?'
@@ -195,7 +205,6 @@ function onConfirm() {
     setThumbnail.value = null
     formSubmitted.value = false
     cardsTouched.value = false
-    importFileName.value = null
   }
   confirmVisible.value = false
 }
@@ -230,14 +239,14 @@ async function onSubmit() {
       await SetService.createSet(formData)
     }
 
-    submitting.value = false
     toast(setId.value ? 'Set updated successfully!' : 'Set created successfully!', 'success')
     setTimeout(() => router.push('/creator'), 1200)
   } catch (e: any) {
     console.error('Error submitting set:', e)
-    submitting.value = false
     const errorMessage = e.response?.data?.message || e.message || 'An unexpected error occurred'
     toast(`Failed to ${setId.value ? 'update' : 'create'} set: ${errorMessage}`, 'error')
+  } finally {
+    submitting.value = false
   }
 }
 

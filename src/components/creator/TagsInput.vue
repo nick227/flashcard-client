@@ -14,6 +14,7 @@
         autocomplete="off"
         maxlength="20"
       />
+      <button v-if="input.length > 0" @click="addTag" class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600">ok</button>
     </div>
     <ul v-if="showSuggestions" class="suggestions-list">
       <li v-for="suggestion in filteredSuggestions" :key="suggestion" @mousedown.prevent="selectSuggestion(suggestion)">
