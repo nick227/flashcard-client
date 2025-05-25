@@ -1,47 +1,41 @@
 <template>
-  <div class="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
+  <div class="bg-white rounded-lg shadow p-4">
     <div class="flex items-center gap-4">
-      <a :href="`/sets/${props.purchase.set?.id}`">
-        <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-          <img 
-            v-if="props.purchase.set?.image && !imageError" 
-            :src="props.purchase.set.image" 
-            :alt="props.purchase.set?.title" 
-            class="w-full h-full object-cover"
-            @error="handleImageError"
-          />
-          <div v-else class="w-full h-full flex items-center justify-center">
-            <span class="text-2xl font-bold text-gray-400">{{ getFirstLetter }}</span>
-          </div>
+      <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+        <img v-if="item.set?.image && !imageError" 
+          :src="item.set.image" 
+          :alt="item.set?.title"
+          class="w-full h-full object-cover"
+          @error="handleImageError" />
+        <div v-else class="w-full h-full flex items-center justify-center">
+          <span class="text-xl font-bold text-gray-400">{{ getFirstLetter }}</span>
         </div>
-      </a>
-      <div>
-        <a :href="`/sets/${props.purchase.set?.id}`"><h3 class="font-semibold">{{ props.purchase.set?.title }}</h3></a>
-        <p class="text-sm text-gray-500">Purchased {{ formatDate(props.purchase.date) }}</p>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-semibold truncate">{{ item.set?.title }}</h3>
+        <p class="text-sm text-gray-500">Purchased {{ formatDate(item.date) }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Purchase } from '@/types/purchase'
 import { ref, computed } from 'vue'
+import type { Purchase } from '@/types/purchase'
 
 const props = defineProps<{
-  purchase: Purchase
+  item: Purchase
 }>()
 
 const imageError = ref(false)
 
-// Get first letter of title for fallback
-const getFirstLetter = computed(() => {
-  if (!props.purchase.set?.title) return '?'
-  return props.purchase.set.title.charAt(0).toUpperCase()
-})
-
 const handleImageError = () => {
   imageError.value = true
 }
+
+const getFirstLetter = computed(() => {
+  return props.item.set?.title?.charAt(0).toUpperCase() || '?'
+})
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('en-US', {

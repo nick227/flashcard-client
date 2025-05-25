@@ -10,6 +10,7 @@ export interface ViewHistory {
     completedAt: string | null
     startedAt: string
     setTitle?: string
+    setThumbnail?: string
     Set?: {
         id: number
         title: string

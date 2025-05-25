@@ -9,11 +9,18 @@
           <!-- Profile image section -->
           <div class="relative flex flex-col gap-4 items-center">
             <div class="group-upload">
-              <img v-if="user.image" @click="triggerFileInput" :src="user.image" alt="avatar"
-                class="w-24 h-24 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity" />
-              <div @click="triggerFileInput" v-else
-                class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors">
-                <i class="fa-solid fa-user text-gray-400 text-3xl"></i>
+              <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                <img v-if="user.image && !imageError" 
+                  @click="triggerFileInput" 
+                  :src="user.image" 
+                  :alt="user.name"
+                  class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                  @error="handleImageError" />
+                <div v-else
+                  @click="triggerFileInput"
+                  class="w-full h-full flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                  <i class="fa-solid fa-user text-gray-400 text-3xl"></i>
+                </div>
               </div>
               <div class="w-full text-center h-8">
                 <a @click="triggerFileInput"
@@ -131,6 +138,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const user = computed(() => auth.user)
 const isAuthenticated = computed(() => auth.isAuthenticated)
+const imageError = ref(false)
 
 // Initialize paginated data
 const favorites = usePaginatedData<Favorite>(apiEndpoints.sets, {
@@ -250,6 +258,14 @@ const updateBio = async () => {
     }
   } catch (err) {
     console.error('Failed to update bio:', err)
+  }
+}
+
+// Handle image load error
+const handleImageError = () => {
+  imageError.value = true
+  if (user.value) {
+    user.value.image = undefined
   }
 }
 </script>
