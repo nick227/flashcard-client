@@ -2,18 +2,24 @@
   <div class="set-preview-card">
     <div class="card-image-container">
       <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })" class="category-badge link">{{ set.category }}</div>
-      <img 
-        @click="goToSet" 
-        v-if="set.thumbnail" 
-        :src="set.thumbnail" 
-        :alt="set.title + ' thumbnail'" 
-        class="card-image link" 
-      />
-      <img 
-        v-else 
-        class="card-image-placeholder" 
-        :src="'http://placehold.co/600x400/white/black?text=' + set.title" 
-      />
+      <div class="image-wrapper">
+        <img 
+          v-if="set.thumbnail && !imageLoadError"
+          @click="goToSet" 
+          :src="set.thumbnail" 
+          :alt="set.title + ' thumbnail'" 
+          class="card-image link"
+          @error="handleImageError"
+          @load="handleImageLoad"
+        />
+        <div 
+          v-else 
+          class="card-image-placeholder"
+          @click="goToSet"
+        >
+        {{ set.title }}
+        </div>
+      </div>
     </div>
     <div class="card-content">
       <div class="card-header w-full text-left">
@@ -81,6 +87,7 @@ const router = useRouter()
 const viewCount = ref(0)
 const likeCount = ref(0)
 const cardCount = ref(0)
+const imageLoadError = ref(false)
 
 const goToSet = () => {
   router.push({ path: '/study/' + props.set.id })
@@ -111,6 +118,19 @@ const fetchSetStats = async () => {
   }
 }
 
+function handleImageError() {
+  imageLoadError.value = true
+}
+
+function handleImageLoad() {
+  imageLoadError.value = false
+}
+
+// Reset error state when set changes
+watch(() => props.set?.thumbnail, () => {
+  imageLoadError.value = false
+})
+
 // Fetch stats when component is mounted
 onMounted(() => {
   if (props.set?.id) {
@@ -135,7 +155,7 @@ watch(() => props.set?.id, (newId) => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  width: 100%;
 }
 
 .set-preview-card:hover {
@@ -148,18 +168,48 @@ watch(() => props.set?.id, (newId) => {
   width: 100%;
   aspect-ratio: 16/9;
   overflow: hidden;
+  background: #f3f4f6;
+}
+
+.image-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
 .card-image,
 .card-image-placeholder {
   width: 100%;
   height: 100%;
-  object-fit: cover;
   transition: transform 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
-.set-preview-card:hover .card-image {
-  transform: scale(1.05);
+.card-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .card-content {

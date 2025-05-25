@@ -33,17 +33,48 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import AuthToggle from '@/components/auth/AuthToggle.vue'
 import AuthForm from '@/components/auth/AuthForm.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 
-const mode = ref<'login' | 'register'>('login')
+const STORAGE_KEY = 'auth_view_mode'
+type AuthMode = 'login' | 'register'
+
+// Validate mode value
+function isValidAuthMode(value: string): value is AuthMode {
+  return value === 'login' || value === 'register'
+}
+
+const mode = ref<AuthMode>('register') // Default to register
 const error = ref('')
 const loading = ref(false)
 const auth = useAuthStore()
 const router = useRouter()
+
+// Load saved mode from localStorage on mount
+onMounted(() => {
+  try {
+    const savedMode = localStorage.getItem(STORAGE_KEY)
+    if (savedMode && isValidAuthMode(savedMode)) {
+      mode.value = savedMode
+    }
+  } catch (err) {
+    console.error('Error loading auth mode from localStorage:', err)
+    // Fallback to default mode if there's an error
+    mode.value = 'register'
+  }
+})
+
+// Watch for mode changes and save to localStorage
+watch(mode, (newMode) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, newMode)
+  } catch (err) {
+    console.error('Error saving auth mode to localStorage:', err)
+  }
+})
 
 const onSubmit = async (formData: { email: string; password: string; name?: string; bio?: string }) => {
   try {
@@ -70,7 +101,6 @@ const onSubmit = async (formData: { email: string; password: string; name?: stri
     loading.value = false
   }
 }
-
 
 const introTexts = [
   'Sign in to access your flashcards and inner peace.',
