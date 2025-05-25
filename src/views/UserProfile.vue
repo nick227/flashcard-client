@@ -69,7 +69,7 @@
           :empty-message="purchases.error.value || 'No purchases yet'" @page-change="handlePurchasesPageChange">
           <template #default="{ items }">
             <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
-              <PurchaseItem v-for="item in items as Purchase[]" :key="item.id" :purchase="item" />
+              <PurchaseItem v-for="item in items as Purchase[]" :key="item.id" :item="item" />
             </div>
           </template>
         </DataGrid>
