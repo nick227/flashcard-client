@@ -449,13 +449,35 @@ onUnmounted(() => {
 })
 
 const handleShuffle = () => {
-  const { newOrder } = shuffleCardOrder()
+  // Store the current progress position
+  const currentProgress = currentIndex.value
   
-  // Reset navigation state
-  resetNavigation()
+  // Get new order and current index from shuffle
+  const { newOrder } = shuffleCardOrder(currentIndex.value)
   
   // Update cards with new order
-  cards.value = newOrder
+  cards.value = [...newOrder]
+  
+  // Update viewed cards array to match new order while preserving state
+  viewedCards.value = newOrder.map(card => {
+    const existingState = viewedCards.value.find(vc => vc.id === card.id)
+    return existingState || {
+      id: card.id,
+      frontViewed: false,
+      backViewed: false
+    }
+  })
+  
+  // Restore the progress position
+  currentIndex.value = currentProgress
+  
+  // Ensure grid states are synced
+  if (showGridView.value) {
+    gridCardStates.value = newOrder.reduce((acc, card) => {
+      acc[card.id] = gridCardStates.value[card.id] || false
+      return acc
+    }, {} as Record<number, boolean>)
+  }
 }
 
 // Update handleCardFlip to track viewed cards

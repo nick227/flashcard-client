@@ -43,22 +43,15 @@ export function useCardGrid(cards: Ref<FlashCard[]>) {
     gridCardStates.value = newStates
   }
 
-  const shuffleCardOrder = () => {
-    // Create a map of current card positions for tracking
-    const cardPositions = new Map(cards.value.map((card, index) => [card.id, index]))
-    
+  const shuffleCardOrder = (currentIndex: number) => {
     // Shuffle using Fisher-Yates
-    const shuffledCards = shuffleArray(cards.value)
+    const shuffledCards = shuffleArray([...cards.value])
     
-    // Update the cards array
-    cards.value = shuffledCards
-
     // Sync grid states with new order
     syncGridStates(shuffledCards)
 
     return {
-      newOrder: shuffledCards,
-      cardPositions
+      newOrder: shuffledCards
     }
   }
 
