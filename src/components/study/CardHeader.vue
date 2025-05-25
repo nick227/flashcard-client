@@ -22,14 +22,14 @@
       <!-- Set thumbnail -->
       <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
         <img 
-          v-if="set.thumbnail" 
+          v-if="set.thumbnail && !thumbnailError" 
           :src="set.thumbnail" 
           :alt="set.title"
           class="w-full h-full object-cover"
           @error="handleThumbnailError"
         />
-        <div v-else class="w-full h-full bg-gray-200 flex items-center justify-center">
-          <i class="fas fa-book text-gray-400"></i>
+        <div v-else class="w-full h-full bg-gray-500 flex items-center justify-center">
+          <span class="text-2xl font-bold text-white">{{ getFirstLetter }}</span>
         </div>
       </div>
       <!-- Set title -->
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FlashCardSet } from '@/types'
 
@@ -77,6 +77,12 @@ const handleAvatarError = () => {
 const handleThumbnailError = () => {
   thumbnailError.value = true
 }
+
+// Get first letter of title for fallback
+const getFirstLetter = computed(() => {
+  if (!props.set.title) return '?'
+  return props.set.title.charAt(0).toUpperCase()
+})
 
 // Update font size based on content length
 const updateTitleSize = () => {
