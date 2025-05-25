@@ -21,7 +21,7 @@
     <!-- Title Row -->
     <div class="title-container mb-2 flex items-start gap-4">
       <!-- Set thumbnail -->
-      <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+      <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gray-100">
         <img 
           v-if="set.thumbnail && !thumbnailError" 
           :src="set.thumbnail" 
@@ -29,8 +29,8 @@
           class="w-full h-full object-cover"
           @error="handleThumbnailError"
         />
-        <div v-else class="w-full h-full bg-gray-500 flex items-center justify-center">
-          <span class="text-2xl font-bold text-white">{{ getFirstLetter }}</span>
+        <div v-else class="w-full h-full flex items-center justify-center">
+          <span class="text-2xl font-bold text-gray-400">{{ getFirstLetter }}</span>
         </div>
       </div>
       <!-- Set title -->
@@ -132,5 +132,29 @@ onMounted(() => {
 
 .link:hover {
   opacity: 0.8;
+}
+
+/* Add new styles for thumbnail fallback */
+.w-16.h-16 {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.w-16.h-16:hover {
+  transform: scale(1.02);
+}
+
+.w-16.h-16 img {
+  transition: opacity 0.2s ease;
+}
+
+.w-16.h-16 img:hover {
+  opacity: 0.9;
+}
+
+/* Ensure the fallback letter is properly centered and sized */
+.w-16.h-16 .text-2xl {
+  font-size: 1.75rem;
+  line-height: 1;
 }
 </style> 

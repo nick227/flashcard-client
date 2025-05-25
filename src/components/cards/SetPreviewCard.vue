@@ -88,15 +88,33 @@ const goToSet = () => {
 const tags = computed(() => props.set.tags || [])
 
 const priceDisplay = computed(() => {
-  if (props.set.price.type === 'free') return 'Free'
-  if (props.set.price.type === 'subscribers') return 'Subscriber Only'
-  return `$${props.set.price.amount}`
+  if (!props.set?.price) return 'Free'
+  
+  switch (props.set.price.type) {
+    case 'free':
+      return 'Free'
+    case 'subscribers':
+      return 'Subscriber Only'
+    case 'premium':
+      return props.set.price.amount ? `$${props.set.price.amount.toFixed(2)}` : 'Free'
+    default:
+      return 'Free'
+  }
 })
 
 const priceClass = computed(() => {
-  if (props.set.price.type === 'free') return 'free'
-  if (props.set.price.type === 'subscribers') return 'subscriber'
-  return 'paid'
+  if (!props.set?.price) return 'free'
+  
+  switch (props.set.price.type) {
+    case 'free':
+      return 'free'
+    case 'subscribers':
+      return 'subscriber'
+    case 'premium':
+      return 'paid'
+    default:
+      return 'free'
+  }
 })
 
 const fetchSetStats = async () => {

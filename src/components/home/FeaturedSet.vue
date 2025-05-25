@@ -2,7 +2,20 @@
   <section v-if="set" class="featured-set">
     <div class="featured-content">
       <div class="featured-image">
-        <a :href="`/sets/${set.id}`"><img :src="set.thumbnail" :alt="set.title + ' Thumbnail'" class="rounded-xl shadow-xl w-full h-full object-cover" /></a>
+        <a :href="`/sets/${set.id}`">
+          <div class="w-full h-full rounded-xl shadow-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+            <img 
+              v-if="set.thumbnail && !thumbnailError" 
+              :src="set.thumbnail" 
+              :alt="set.title + ' Thumbnail'" 
+              class="w-full h-full object-cover"
+              @error="handleThumbnailError"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <span class="text-8xl font-bold text-gray-400">{{ getFirstLetter }}</span>
+            </div>
+          </div>
+        </a>
       </div>
       <div class="featured-info">
         <div class="flex items-center gap-4 mb-4">
@@ -70,6 +83,7 @@ const likesCount = ref(0)
 const viewsCount = ref(0)
 const isLoadingLikes = ref(false)
 const isLoadingViews = ref(false)
+const thumbnailError = ref(false)
 
 const props = defineProps<{
   set: FlashCardSet | null
@@ -79,6 +93,12 @@ const props = defineProps<{
 const educatorImage = computed(() => {
   if (!props.set?.educatorId) return null
   return props.set.educatorImage
+})
+
+// Get first letter of title for fallback
+const getFirstLetter = computed(() => {
+  if (!props.set?.title) return '?'
+  return props.set.title.charAt(0).toUpperCase()
 })
 
 // Watch for changes to the set prop
@@ -130,6 +150,10 @@ function formatDate(date: string) {
   return `${Math.floor(diffInDays / 365)} years ago`
 }
 
+const handleThumbnailError = () => {
+  thumbnailError.value = true
+}
+
 defineEmits<{
   (e: 'view', setId: number): void
 }>()
@@ -146,5 +170,18 @@ defineEmits<{
 
 .featured-image {
   @apply w-full lg:w-1/2 min-h-[400px] lg:h-[500px];
+}
+
+.featured-image img {
+  transition: opacity 0.2s ease;
+}
+
+.featured-image img:hover {
+  opacity: 0.9;
+}
+
+.featured-image .text-4xl {
+  font-size: 3rem;
+  line-height: 1;
 }
 </style> 
