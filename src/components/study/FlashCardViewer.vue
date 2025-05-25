@@ -201,8 +201,7 @@ const {
   isNextDisabled,
   prevCard,
   nextCard: handleNextCard,
-  handleCardFlip: handleCardNavigation,
-  resetNavigation
+  handleCardFlip: handleCardNavigation
 } = useCardNavigation(cards)
 
 const {

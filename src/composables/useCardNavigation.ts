@@ -23,11 +23,6 @@ export function useCardNavigation(cards: Ref<FlashCard[]>) {
     return false
   })
 
-  const resetNavigation = () => {
-    currentIndex.value = 0
-    flipped.value = false
-  }
-
   const nextCard = () => {
     if (currentIndex.value === cards.value.length - 1) {
       if (!flipped.value) {
@@ -90,7 +85,6 @@ export function useCardNavigation(cards: Ref<FlashCard[]>) {
     isPrevDisabled,
     nextCard,
     prevCard,
-    handleCardFlip,
-    resetNavigation
+    handleCardFlip
   }
 } 
