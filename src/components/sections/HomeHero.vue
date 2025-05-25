@@ -1,12 +1,12 @@
 <template>
   <section class="hero">
     <h1 class="hero-title" v-html="heroTitle"></h1>
-    <p class="hero-description">Unlock your learning potential with interactive, beautifully designed flash card sets. Whether you're a student, professional, or lifelong learner, our platform helps you master any subject, faster.</p>
+    <p v-if="isDesktop" class="hero-description">Unlock your learning potential with interactive, beautifully designed flash card sets. Whether you're a student, professional, or lifelong learner, our platform helps you master any subject, faster.</p>
     <div class="hero-actions">
       <button class="button" @click="browseSets">Browse Sets</button>
       <button class="button button-success" @click="startTeaching">Start Teaching</button>
     </div>
-    <div class="hero-subtext">
+    <div v-if="isDesktop" class="hero-subtext">
       <span>Join a global community of learners and educators. Track your progress, earn certificates, and discover new topics every day.</span>
     </div>
   </section>
@@ -14,7 +14,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const router = useRouter()
 
@@ -43,12 +43,13 @@ const heroTitle = computed(() => {
   return listHeroTitles[Math.floor(Math.random() * listHeroTitles.length)]
 })
 
+const isDesktop = ref(window.innerWidth > 768)
+
 </script>
 
 <style scoped>
 .hero {
-  min-height: 520px;
-  padding: 5rem;
+  padding: 3rem 0;
   margin-bottom: 4rem;
   display: flex;
   flex-direction: column;

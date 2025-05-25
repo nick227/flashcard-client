@@ -2,14 +2,26 @@
   <div class="w-full mt-4">
     <!-- Controls -->
     <div class="controls-group mb-8 bg-gray-50 rounded-xl py-8 px-6 border border-gray-200 shadow-sm">
-      <button class="button flex-1 min-w-[120px] py-4 mr-auto" :class="{ 'button-disabled': isPrevDisabled }"
-        :disabled="isPrevDisabled" @click="$emit('prev')" aria-label="Previous card">
-        Prev
-      </button>
-      <button class="button flex-1 min-w-[120px] py-4 ml-auto" :class="{ 'button-disabled': isNextDisabled }"
-        :disabled="isNextDisabled" @click="$emit('next')" aria-label="Next card">
-        Next
-      </button>
+      <div class="flex justify-between items-center gap-4 w-full">
+        <button 
+          class="button flex-1 min-w-[120px] sm:min-w-[200px] py-4 whitespace-nowrap sm:mr-auto" 
+          :class="{ 'button-disabled': isPrevDisabled }"
+          :disabled="isPrevDisabled" 
+          @click="$emit('prev')" 
+          aria-label="Previous card"
+        >
+          Prev
+        </button>
+        <button 
+          class="button flex-1 min-w-[120px] sm:min-w-[200px] py-4 whitespace-nowrap sm:ml-auto" 
+          :class="{ 'button-disabled': isNextDisabled }"
+          :disabled="isNextDisabled" 
+          @click="$emit('next')" 
+          aria-label="Next card"
+        >
+          Next
+        </button>
+      </div>
     </div>
     <!-- Progress Bar -->
     <div class="w-full flex flex-col items-center mb-4">
@@ -17,17 +29,19 @@
         :title="`Progress: ${progressPercent.toFixed(0)}%`">
         <div class="progress-bar-fill h-2 rounded-full transition-all duration-300"
           :class="currentIndex === totalCards - 1 ? 'bg-green-500' : 'bg-blue-500'"
-          :style="{ width: progressPercent + '%' }" :aria-label="`Progress: ${progressPercent.toFixed(0)}%`"></div>
+          :style="{ width: progressPercent + '%' }" 
+          :aria-label="`Progress: ${progressPercent.toFixed(0)}%`"
+        ></div>
       </div>
-      <div class="flex items-center w-full flex justify-end">
+      <div class="flex items-center w-full justify-end">
         <span class="text-black-400">card {{ currentIndex + 1 }} of {{ totalCards }}</span>
-    <button 
-      v-if="showExit" 
-      class="exit-fullscreen-button ml-4"
-      @click.stop="exitFullscreen"
-    >
-      Exit Fullscreen
-    </button>
+        <button 
+          v-if="showExit" 
+          class="exit-fullscreen-button ml-4"
+          @click.stop="exitFullscreen"
+        >
+          Exit Fullscreen
+        </button>
       </div>
     </div>
   </div>
@@ -70,4 +84,18 @@ defineEmits<{
 </script>
 
 <style scoped>
+.controls-group {
+  min-width: 0; /* Prevent flex items from overflowing */
+}
+
+.button {
+  flex: 1 1 0; /* Equal flex basis */
+  min-width: 0; /* Allow button to shrink below min-width if needed */
+}
+
+@media (min-width: 640px) {
+  .button {
+    flex: 1 1 auto; /* Allow buttons to grow more on desktop */
+  }
+}
 </style> 

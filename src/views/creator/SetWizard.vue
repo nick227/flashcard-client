@@ -43,12 +43,14 @@
           <!-- Import Bar -->
           <ImportBar :importFileName="importFileName" @import-csv="onImportCsv" />
           <button class="button button-danger" @click="onReset" :disabled="!hasCards">Reset</button>
+          <div class="flex items-center gap-2 flex-nowrap">
           <AddCardButton :disabled="hasBlankCard" :class="{ 'input-error': cardsTouched && cards.length === 0 }"
             @add-card="onAddCard" />
           <!-- Submit button -->
           <button class="button button-success" :disabled="submitting" @click="onSubmit">
             {{ submitButtonText }}
           </button>
+          </div>
         </div>
         <div>
           <DraggableCardList v-if="viewMode === 'grid'" :cards="cards" :cardComponent="CardTile" layout="grid"

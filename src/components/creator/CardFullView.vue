@@ -7,8 +7,8 @@
       </button>
     </div>
     <div class="card-container">
-      <div v-if="!previewMode" class="flex gap-4 items-start">
-        <div class="flex-1 card-col" style="min-width:0">
+      <div v-if="!previewMode" class="flex flex-col md:flex-row gap-4 items-start">
+        <div class="w-full md:flex-1 card-col" style="min-width:0">
           <label class="block text-gray-500 text-xs mb-1">Front</label>
           <div class="card-preview front">
             <div
@@ -25,7 +25,7 @@
             ></div>
           </div>
         </div>
-        <div class="flex-1 card-col" style="min-width:0">
+        <div class="w-full md:flex-1 card-col" style="min-width:0">
           <label class="block text-gray-500 text-xs mb-1">Back</label>
           <div class="card-preview back">
             <div
@@ -149,10 +149,12 @@ function adjustCardHeight(element: HTMLElement) {
   if (!cardPreview) return
 
   const isOverflowing = element.scrollHeight > element.clientHeight
-  if (isOverflowing) {
+  if (isOverflowing && window.innerWidth >= 768) {
     cardPreview.style.height = `${element.scrollHeight + 80}px` // 40px top + 40px bottom
+    cardPreview.style.aspectRatio = 'auto'
   } else {
-    cardPreview.style.height = '400px' // Reset to default height
+    cardPreview.style.height = ''
+    cardPreview.style.aspectRatio = '16/9'
   }
 }
 
@@ -214,12 +216,20 @@ function handleFlip(newFlippedState: boolean) {
   box-shadow: 0 4px 24px 0 rgba(30,41,59,0.08);
   transition: box-shadow 0.18s, border-color 0.18s;
   box-sizing: border-box;
-  width: 96%;
+  width: 100%;
+  max-width: 100%;
 }
 
 .card-col {
-  width: calc(50% - 0.5rem); /* gap-4 is 1rem, so each side gets half the gap */
+  width: 100%;
   min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .card-col {
+    width: calc(50% - 0.5rem); /* gap-4 is 1rem, so each side gets half the gap */
+  }
 }
 
 .card-full-view:focus-within {
@@ -235,11 +245,14 @@ function handleFlip(newFlippedState: boolean) {
   min-height: 430px;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card-preview {
-  min-height: 400px;
-  height: 400px;
+  min-height: 200px;
+  height: auto;
+  aspect-ratio: 16/9;
   border-radius: 1.5rem;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -248,6 +261,19 @@ function handleFlip(newFlippedState: boolean) {
   justify-content: center;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .card-preview {
+    min-height: 400px;
+    height: 400px;
+    aspect-ratio: auto;
+  }
+  
+  .card-content {
+    padding: 2.5rem;
+  }
 }
 
 .card-preview:hover {
@@ -268,7 +294,7 @@ function handleFlip(newFlippedState: boolean) {
 .card-content {
   width: 100%;
   height: 100%;
-  padding: 2.5rem;
+  padding: 1.5rem;
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
@@ -287,6 +313,7 @@ function handleFlip(newFlippedState: boolean) {
   perspective: 1000px;
   transition: font-size 0.2s ease;
   overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .card-content:empty {

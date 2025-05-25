@@ -2,14 +2,12 @@
   <Draggable
     :list="cards"
     item-key="id"
-    handle=".card-drag-handle"
     @end="onDragEnd"
     :class="layoutClass"
     :ghost-class="'dragging'"
   >
     <template #item="{ element: card }">
       <div :class="itemWrapperClass">
-        <span class="card-drag-handle cursor-move text-gray-400 text-lg pr-1">☰</span>
         <component
           :is="cardComponent"
           :card="card"
@@ -38,8 +36,8 @@ const layoutClass = props.layout === 'grid'
   ? 'grid grid-cols-4 gap-6'
   : 'flex flex-col gap-4'
 const itemWrapperClass = props.layout === 'grid'
-  ? 'flex items-start gap-2'
-  : 'flex items-center gap-2'
+  ? 'flex items-start'
+  : 'flex items-center'
 
 function onDragEnd() {
   emit('update-order', [...props.cards])
@@ -50,5 +48,23 @@ function onDragEnd() {
 .dragging {
   opacity: 0.7;
   box-shadow: 0 4px 24px 0 rgba(30,41,59,0.18);
+}
+
+:deep(.card-full-view),
+:deep(.card-tile) {
+  cursor: grab;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+:deep(.card-full-view:hover),
+:deep(.card-tile:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.card-full-view:active),
+:deep(.card-tile:active) {
+  cursor: grabbing;
+  transform: scale(0.98);
 }
 </style> 

@@ -1,5 +1,5 @@
 <template>
-  <div class="overflow-x-auto">
+  <div class="overflow-x-show -mx-4 sm:mx-0">
     <!-- Loading State -->
     <div v-if="loading" class="flex justify-center items-center py-8">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -22,17 +22,17 @@
             <th 
               v-for="column in columns" 
               :key="column.key" 
-              class="py-3 px-4 font-medium text-sm uppercase tracking-wider"
-              :class="{ 'cursor-pointer hover:bg-gray-100': column.sortable }"
+              class="py-3 px-2 sm:px-4 font-medium text-xs sm:text-sm uppercase tracking-wider whitespace-nowrap"
+              :class="{ 'cursor-pointer hover:bg-gray-100 active:bg-gray-200': column.sortable }"
               @click="handleSort(column)"
             >
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1 sm:gap-2">
                 {{ column.label }}
                 <span v-if="column.sortable" class="text-gray-400">
-                  <svg v-if="sortKey === column.key" class="h-4 w-4" :class="{ 'transform rotate-180': sortOrder === 'desc' }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg v-if="sortKey === column.key" class="h-3 w-3 sm:h-4 sm:w-4" :class="{ 'transform rotate-180': sortOrder === 'desc' }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
                   </svg>
-                  <svg v-else class="h-4 w-4 opacity-0 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg v-else class="h-3 w-3 sm:h-4 sm:w-4 opacity-0 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
                   </svg>
                 </span>
@@ -49,7 +49,7 @@
             <td 
               v-for="column in columns" 
               :key="column.key" 
-              class="py-3 px-4 text-sm"
+              class="py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm"
             >
               <slot :name="column.key" :item="item" :value="item[column.key]">
                 {{ item[column.key] }}
@@ -60,9 +60,9 @@
       </table>
 
       <!-- Enhanced Pagination -->
-      <div v-if="showPagination" class="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-4">
-        <div class="flex items-center">
-          <span class="text-sm text-gray-700">
+      <div v-if="showPagination" class="flex flex-col sm:flex-row items-center justify-between px-2 sm:px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-4 gap-4">
+        <div class="flex items-center text-xs sm:text-sm text-gray-700">
+          <span>
             Showing
             <span class="font-medium">{{ (currentPage - 1) * pageSize + 1 }}</span>
             to
@@ -72,13 +72,13 @@
             results
           </span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 sm:gap-2">
           <button 
-            class="button px-3 py-1 text-sm rounded-md transition-colors duration-150"
+            class="button px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors duration-150"
             :class="[
               currentPage === 1 
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-white text-primary hover:bg-gray-50'
+                : 'bg-white text-primary hover:bg-gray-50 active:bg-gray-100'
             ]"
             :disabled="currentPage === 1"
             @click="$emit('page-change', currentPage - 1)"
@@ -90,11 +90,11 @@
             <button 
               v-for="page in displayedPages" 
               :key="page"
-              class="button px-3 py-1 text-sm rounded-md transition-colors duration-150"
+              class="button px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors duration-150"
               :class="[
                 page === currentPage
                   ? 'bg-primary text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100'
               ]"
               @click="$emit('page-change', page)"
             >
@@ -103,11 +103,11 @@
           </div>
 
           <button 
-            class="button px-3 py-1 text-sm rounded-md transition-colors duration-150"
+            class="button px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-md transition-colors duration-150"
             :class="[
               currentPage === totalPages 
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-white text-primary hover:bg-gray-50'
+                : 'bg-white text-primary hover:bg-gray-50 active:bg-gray-100'
             ]"
             :disabled="currentPage === totalPages"
             @click="$emit('page-change', currentPage + 1)"
@@ -217,5 +217,28 @@ tr {
 
 td, th {
   display: table-cell;
+}
+
+/* Improve touch targets */
+button {
+  min-height: 32px;
+  min-width: 32px;
+}
+
+/* Prevent text selection during touch interactions */
+th, td {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Improve scrolling on mobile */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 </style> 

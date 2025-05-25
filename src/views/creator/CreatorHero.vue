@@ -1,6 +1,6 @@
 <template>
-    <div class="hero flex w-full gap-4 flex-col justify-center items-center">
-        <h2 class="text-3xl font-bold cursive">{{ funnyWelcomeMessage }}, {{ user?.name ?? 'Creator' }}</h2>
+    <div class="hero flex w-full gap-4 flex-col justify-center items-center px-0 py-16">
+        <h2 class="text-3xl font-bold cursive px-4">{{ funnyWelcomeMessage }}, {{ user?.name ?? 'Creator' }}</h2>
         <p>Ready to create your next set?</p>
         <router-link to="/creator/wizard" class="button button-accent mb-6 inline-block w-fit mt-4">+ Create New Set</router-link>
     </div>

@@ -4,7 +4,7 @@
       <div class="hero-text">
         <h1 class="hero-title">{{ currentContent.titles }}</h1>
         <p class="hero-description">{{ currentContent.descriptions }}</p>
-        <div class="hero-stats">
+        <div v-if="isDesktop" class="hero-stats">
           <div class="stat">
             <span class="stat-number">{{ currentContent.statNumbers[0] }}</span>
             <span class="stat-label">{{ currentContent.statLabels[0] }}</span>
@@ -19,7 +19,7 @@
           </div>
         </div>
       </div>
-      <div class="hero-features">
+      <div v-if="isDesktop" class="hero-features">
         <div class="feature">
           <div class="feature-icon">{{ currentContent.icons[0] }}</div>
           <h3>{{ currentContent.featureTitles[0] }}</h3>
@@ -113,6 +113,8 @@ const currentContent = ref({
   featureTitles: [content.featureTitles[0], content.featureTitles[1], content.featureTitles[2]],
   featureDescriptions: [content.featureDescriptions[0], content.featureDescriptions[1], content.featureDescriptions[2]]
 })
+
+const isDesktop = ref(window.innerWidth > 1024)
 
 function getRandomItem(array: string[]): string {
   return array[Math.floor(Math.random() * array.length)]

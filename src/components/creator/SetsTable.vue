@@ -28,30 +28,53 @@
       </span>
     </template>
     <template #actions="{ item }">
-      <div class="flex gap-3 justify-between">
-        <a 
-          class="px-3 py-1 link" 
-          :class="{ 'opacity-50 cursor-not-allowed': loading }"
-          @click="!loading && $emit('edit', item)"
+      <div 
+        class="relative inline-block"
+        @mouseenter="handleMouseEnter(item.id)"
+        @mouseleave="handleMouseLeave(item.id)"
+      >
+        <button 
+          @click="toggleDropdown(item.id)"
+          class="p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
+          :disabled="props.loading"
         >
-          Edit
-        </a>
-        <a 
-          class="px-3 py-1 link" 
-          :class="{ 'opacity-50 cursor-not-allowed': loading }"
-          @click="!loading && $emit('toggle-hidden', item)"
+          Edit Set
+        </button>
+        <div 
+          v-if="activeDropdown === item.id"
+          class="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
+          style="transform: translateY(0);"
         >
-          {{ item.hidden ? 'Show' : 'Hide' }}
-        </a>
-        <a class="px-3 py-1 link" :href="`/sets/${item.id}`" target="_blank">View</a>
-
-        <a 
-          class="px-3 py-1 button button-danger" 
-          :class="{ 'opacity-50 cursor-not-allowed': loading }"
-          @click="!loading && $emit('delete', item)"
-        >
-          Delete
-        </a>
+          <div class="py-1">
+            <a 
+              class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+              :class="{ 'opacity-50 cursor-not-allowed': props.loading }"
+              @click="handleAction('edit', item)"
+            >
+              Edit
+            </a>
+            <a 
+              class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+              :class="{ 'opacity-50 cursor-not-allowed': props.loading }"
+              @click="handleAction('toggle-hidden', item)"
+            >
+              {{ item.hidden ? 'Show' : 'Hide' }}
+            </a>
+            <a 
+              class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+              @click="handleAction('view', item)"
+            >
+              View
+            </a>
+            <a 
+              class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer"
+              :class="{ 'opacity-50 cursor-not-allowed': props.loading }"
+              @click="handleAction('delete', item)"
+            >
+              Delete
+            </a>
+          </div>
+        </div>
       </div>
     </template>
   </DataTable>
@@ -79,12 +102,14 @@ interface Props {
   loading?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   loading: false
 })
 
 const sortKey = ref('createdAt')
 const sortOrder = ref<'asc' | 'desc'>('desc')
+const activeDropdown = ref<number | null>(null)
+const hoverTimeout = ref<number | null>(null)
 
 const emit = defineEmits<{
   (e: 'page-change', page: number): void
@@ -113,4 +138,64 @@ function handleSort(key: string) {
   }
   emit('sort', key, sortOrder.value)
 }
-</script> 
+
+function toggleDropdown(id: number) {
+  activeDropdown.value = activeDropdown.value === id ? null : id
+}
+
+function handleMouseEnter(id: number) {
+  if (hoverTimeout.value) {
+    clearTimeout(hoverTimeout.value)
+    hoverTimeout.value = null
+  }
+  activeDropdown.value = id
+}
+
+function handleMouseLeave(id: number) {
+  hoverTimeout.value = window.setTimeout(() => {
+    if (activeDropdown.value === id) {
+      activeDropdown.value = null
+    }
+  }, 100)
+}
+
+function handleAction(action: string, item: FlashCardSet) {
+  if (props.loading) return;
+  
+  activeDropdown.value = null;
+  
+  switch (action) {
+    case 'edit':
+      emit('edit', item);
+      break;
+    case 'toggle-hidden':
+      emit('toggle-hidden', item);
+      break;
+    case 'view':
+      window.open(`/sets/${item.id}`, '_blank');
+      break;
+    case 'delete':
+      emit('delete', item);
+      break;
+  }
+}
+</script>
+
+<style scoped>
+.relative {
+  position: relative;
+}
+
+/* Ensure dropdown is always visible */
+.absolute {
+  position: absolute;
+  transform: translateY(0);
+  z-index: 50;
+}
+
+/* Prevent text selection during interactions */
+button, a {
+  user-select: none;
+  -webkit-user-select: none;
+}
+</style> 

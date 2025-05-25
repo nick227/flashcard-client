@@ -4,42 +4,44 @@
     <BrowseHero />
 
     <!-- Filter & Sort Controls -->
-    <section class="flex items-center justify-between h-full w-full mb-8">
-      <div class="flex items-center gap-4">
-        <select id="category" v-model="selectedCategory" class="min-w-[140px]" @change="onCategoryChange">
+    <section class="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full mb-8 gap-4">
+      <div class="flex flex-wrap reverse sm:flex-row items-center gap-4 w-full sm:w-auto">
+        <select id="category" v-model="selectedCategory" class="w-full" @change="onCategoryChange">
           <option value="">All Categories</option>
           <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
         </select>
 
-        <select id="setType" v-model="selectedSetType" class="min-w-[140px]" @change="onSetTypeChange">
+        <select id="setType" v-model="selectedSetType" class="w-full" @change="onSetTypeChange">
           <option value="">All Types</option>
           <option value="free">Free</option>
           <option value="premium">Premium</option>
           <option value="subscriber">Subscriber Only</option>
         </select>
-        <input 
-          type="text" 
-          v-model="searchQuery" 
-          placeholder="Search sets..." 
-          class="min-w-[140px] px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          @input="onSearchInput"
-          :disabled="loading"
-        />
-        <button 
-          v-if="searchQuery" 
-          @click="clearSearch" 
-          class="p-2 text-gray-500 hover:text-gray-700"
-          :disabled="loading"
-        >
-          <span class="sr-only">Clear search</span>
-          ✕
-        </button>
+        <div class="relative w-full">
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            placeholder="Search sets..." 
+            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 search-input"
+            @input="onSearchInput"
+            :disabled="loading"
+          />
+          <button 
+            v-if="searchQuery" 
+            @click="clearSearch" 
+            class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700"
+            :disabled="loading"
+          >
+            <span class="sr-only">Clear search</span>
+            ✕
+          </button>
+        </div>
         <div v-if="loading" class="ml-2">
           <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
         </div>
       </div>
-      <div class="flex items-center gap-4">
-        <select id="sort" v-model="sortOrder" class="min-w-[140px]">
+      <div class="flex items-center gap-4 w-full sm:w-auto justify-end">
+        <select id="sort" v-model="sortOrder" class="w-full">
           <option value="featured">Featured</option>
           <option value="newest">Newest</option>
           <option value="oldest">Oldest</option>
@@ -208,5 +210,9 @@ const onSearchInput = (event: Event) => {
 <style scoped>
 .cards-grid {
   @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+.search-input {
+  width: calc(100% - 20px);
 }
 </style> 

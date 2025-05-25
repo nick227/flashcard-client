@@ -18,9 +18,10 @@
         </a>
       </div>
     </div>
-    <div class="title-container mb-4 flex items-center gap-4">
+    <!-- Title Row -->
+    <div class="title-container mb-2 flex items-start gap-4">
       <!-- Set thumbnail -->
-      <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+      <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
         <img 
           v-if="set.thumbnail && !thumbnailError" 
           :src="set.thumbnail" 
@@ -34,17 +35,17 @@
       </div>
       <!-- Set title -->
       <h1 ref="titleElement" class="text-2xl font-bold flex-1 set-title">{{ set.title }}</h1>
-      <!-- Action Buttons -->
-      <div class="flex items-center gap-4 title-buttons">
-        <!-- Download Button -->
-        <a class="link" @click="$emit('download')">
-          <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
-        </a>
-        <!-- Like Button -->
-        <a class="link" @click="$emit('toggle-like')">
-          <i :class="['fa-solid', 'fa-heart', isLiked ? 'text-red-500' : 'text-gray-400', 'text-2xl']"></i>&nbsp; {{ setLikes }}
-        </a>
-      </div>
+    </div>
+    <!-- Action Buttons Row -->
+    <div class="flex items-center justify-end gap-4 title-buttons w-full mb-4">
+      <!-- Download Button -->
+      <a class="link" @click="$emit('download')">
+        <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
+      </a>
+      <!-- Like Button -->
+      <a class="link" @click="$emit('toggle-like')">
+        <i :class="['fa-solid', 'fa-heart', isLiked ? 'text-red-500' : 'text-gray-400', 'text-2xl']"></i>&nbsp; {{ setLikes }}
+      </a>
     </div>
   </div>
 </template>
@@ -105,14 +106,14 @@ onMounted(() => {
 <style scoped>
 .title-container {
   display: flex;
-  align-items: center;
   gap: 1rem;
+  width: 100%;
 }
 
 .set-title {
   font-size: clamp(0.8em, calc(4em - (var(--char-count) * 0.1em)), 4em);
   margin-top: 0;
-  line-height: 1.2;
+  line-height: 1;
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
@@ -120,8 +121,8 @@ onMounted(() => {
 }
 
 .title-buttons {
-  align-self: flex-end;
   flex-shrink: 0;
+  margin-top: 0.5rem;
 }
 
 .link {
