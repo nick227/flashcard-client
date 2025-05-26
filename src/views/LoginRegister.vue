@@ -24,7 +24,10 @@
             <div class="flex-1 h-px bg-gray-200"></div>
             <span class="mx-4 text-gray-400 text-sm">or</span>
             <div class="flex-1 h-px bg-gray-200"></div>
-          </div><GoogleLogin /> 
+          </div>
+          <!--
+          <GoogleLogin /> 
+          -->
           
         </div>
       </div>
