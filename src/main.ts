@@ -30,8 +30,17 @@ const pinia = createPinia()
 pinia.use(piniaPersist)
 
 app.use(pinia)
+
+// Google Sign In Configuration
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1073484039132-kcld0v58e4k7el7hbp16m23j1b5e4joe.apps.googleusercontent.com'
+console.log('=== Google Sign In Configuration ===')
+console.log('Client ID:', GOOGLE_CLIENT_ID)
+console.log('Current origin:', window.location.origin)
+console.log('Full URL:', window.location.href)
+console.log('==================================')
+
 app.use(GoogleSignInPlugin, {
-  clientId: '1073484039132-kcld0v58e4k7el7hbp16m23j1b5e4joe.apps.googleusercontent.com'
+  clientId: GOOGLE_CLIENT_ID
 })
 app.use(router)
 
@@ -75,4 +84,3 @@ watch(
 
 app.mount('#app')
 console.log('App mounted (after app.mount)')
-//1073484039132-kcld0v58e4k7el7hbp16m23j1b5e4joe.apps.googleusercontent.com

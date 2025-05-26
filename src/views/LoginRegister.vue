@@ -19,13 +19,13 @@
               <div v-if="error" class="text-red-600 text-sm mb-2 text-center">{{ error }}</div>
             </template>
           </AuthForm>
-          <!-- 
+          
           <div class="divider my-6 flex items-center w-full">
             <div class="flex-1 h-px bg-gray-200"></div>
             <span class="mx-4 text-gray-400 text-sm">or</span>
             <div class="flex-1 h-px bg-gray-200"></div>
           </div><GoogleLogin /> 
-          -->
+          
         </div>
       </div>
     </div>
