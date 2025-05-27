@@ -73,6 +73,22 @@ watch(() => props.card, () => {
   }, 50)
 })
 
+// Add debug logging to track props and state
+watch(() => props.card, (newCard) => {
+  console.log('Card data changed:', {
+    front: newCard?.front,
+    back: newCard?.back,
+    isFlipped: isFlipped.value
+  })
+}, { immediate: true })
+
+watch(isFlipped, (newValue) => {
+  console.log('Flip state changed:', {
+    isFlipped: newValue,
+    card: props.card
+  })
+})
+
 // Methods
 function handleFlip() {
   if (isFlipping.value || isNavigating.value) return
@@ -218,6 +234,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  transition: transform 0.3s ease;
 }
 
 .card-content.is-flipping {
@@ -237,9 +254,36 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.card-face.front {
+  background: white;
+  transform: rotateY(0deg);
 }
 
 .card-face.back {
+  background: #2563eb;
   transform: rotateY(180deg);
+  color: white;
+}
+
+/* Ensure content is visible on both sides */
+.card-face .formatted-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Ensure images and iframes are properly contained */
+.card-face .formatted-content img,
+.card-face .formatted-content iframe {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 </style>

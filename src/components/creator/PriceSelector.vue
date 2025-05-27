@@ -6,7 +6,7 @@
       <option value="subscribers">Subscribers Only</option>
       <option value="premium">Premium (One-time purchase)</option>
     </select>
-    <div v-if="modelValue.type === 'premium' || modelValue.type === 'subscribers'" class="flex items-center gap-2 mt-1">
+    <div v-if="modelValue.type === 'premium'" class="flex items-center gap-2 mt-1">
       <span class="text-gray-500">$</span>
       <input
         class="input price-input"
@@ -36,8 +36,6 @@ const formattedAmount = computed(() => {
 function onTypeChange(type: string) {
   if (type === 'premium') {
     emit('update:modelValue', { type: 'premium', amount: props.modelValue.amount || 0 })
-  } else if (type === 'subscribers') {
-    emit('update:modelValue', { type: 'subscribers', amount: props.modelValue.amount || 0 })
   } else {
     emit('update:modelValue', { type })
   }

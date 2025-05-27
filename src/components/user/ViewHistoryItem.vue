@@ -2,6 +2,7 @@
   <div class="bg-white rounded-lg shadow p-4">
     <div class="flex items-center gap-4">
       <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+        <a :href="`/sets/${item.Set?.id}`">
         <img v-if="item.setThumbnail && !imageError" 
           :src="item.setThumbnail" 
           :alt="item.setTitle"
@@ -10,9 +11,10 @@
         <div v-else class="w-full h-full flex items-center justify-center">
           <span class="text-xl font-bold text-gray-400">{{ getFirstLetter }}</span>
         </div>
+        </a>
       </div>
       <div class="flex-1 min-w-0">
-        <h3 class="font-semibold truncate">{{ item.setTitle || 'Untitled Set' }}</h3>
+        <a :href="`/sets/${item.Set?.id}`"><h3 class="font-semibold truncate">{{ item.setTitle || 'Untitled Set' }}</h3></a>
         <p class="text-sm text-gray-500">Viewed {{ formatDate(item.startedAt) }}</p>
       </div>
     </div>

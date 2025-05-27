@@ -234,15 +234,17 @@ async function onSubmit() {
       cards: cards.value,
       educatorId: auth.user!.id
     })
-
+    let newSetId = null
     if (setId.value) {
       await SetService.updateSet(Number(setId.value), formData)
+      newSetId = setId.value
     } else {
-      await SetService.createSet(formData)
+      const newSet = await SetService.createSet(formData)
+      newSetId = newSet.id
     }
 
     toast(setId.value ? 'Set updated successfully!' : 'Set created successfully!', 'success')
-    setTimeout(() => router.push('/creator'), 1200)
+    setTimeout(() => router.push('/sets/'+newSetId), 1200)
   } catch (e: any) {
     console.error('Error submitting set:', e)
     const errorMessage = e.response?.data?.message || e.message || 'An unexpected error occurred'

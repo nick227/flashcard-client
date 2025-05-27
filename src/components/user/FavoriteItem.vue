@@ -2,6 +2,7 @@
   <div class="bg-white rounded-lg shadow p-4">
     <div class="flex items-center gap-4">
       <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+        <a :href="`/sets/${item.id}`">
         <img v-if="item.image && !imageError" 
           :src="item.image" 
           :alt="item.title"
@@ -9,10 +10,11 @@
           @error="handleImageError" />
         <div v-else class="w-full h-full flex items-center justify-center">
           <span class="text-xl font-bold text-gray-400">{{ getFirstLetter }}</span>
-        </div>
+        </div>  
+        </a>
       </div>
-      <div class="flex-1 min-w-0">
-        <h3 class="font-semibold truncate">{{ item.title }}</h3>
+      <div class="flex-1 min-w-0">  
+        <a :href="`/sets/${item.id}`"><h3 class="font-semibold truncate">{{ item.title }}</h3></a>
         <p class="text-sm text-gray-500 truncate">{{ item.category }}</p>
       </div>
     </div>

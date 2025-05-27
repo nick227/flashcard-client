@@ -2,6 +2,7 @@
   <div class="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
     <div class="flex items-center gap-4">
       <div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+        <a :href="`/u/${props.subscription.subscriber?.id}`">
         <img v-if="props.subscription.subscriber?.image && !imageError" 
           :src="props.subscription.subscriber.image" 
           :alt="props.subscription.subscriberName"
@@ -10,9 +11,10 @@
         <div v-else class="w-full h-full flex items-center justify-center">
           <span class="text-xl font-bold text-gray-400">{{ getFirstLetter }}</span>
         </div>
+        </a>
       </div>
       <div>
-        <a :href="`/users/${props.subscription.subscriber?.id}`"><h3 class="font-semibold">{{ props.subscription.subscriberName }}</h3></a>
+        <a :href="`/u/${props.subscription.subscriber?.id}`"><h3 class="font-semibold">{{ props.subscription.subscriberName }}</h3></a>
         <p class="text-sm text-gray-500">Subscribed since {{ formatDate(props.subscription.createdAt) }}</p>
       </div>
     </div>

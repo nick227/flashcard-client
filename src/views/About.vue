@@ -29,21 +29,21 @@
                         <i class="fas fa-user-circle"></i>
                     </div>
                     <h3>Nick</h3>
-                    <p>Site Founder</p>
+                    <p>Founder</p>
                 </div>
                 <div class="team-member">
                     <div class="member-avatar">
                         <i class="fas fa-user-circle"></i>
                     </div>
-                    <h3>Julian</h3>
-                    <p>Content Editor</p>
+                    <h3>Jake</h3>
+                    <p>Content</p>
                 </div>
                 <div class="team-member">
                     <div class="member-avatar">
                         <i class="fas fa-user-circle"></i>
                     </div>
-                    <h3>Mike Rodriguez</h3>
-                    <p>Marketing Director</p>
+                    <h3>Mike</h3>
+                    <p>Marketing</p>
                 </div>
             </div>
         </section>

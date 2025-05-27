@@ -51,10 +51,12 @@
               <i class="fas" :class="checkoutLoading ? 'fa-spinner fa-spin' : 'fa-shopping-cart'"></i>
               <span class="ml-2">{{ checkoutLoading ? 'Processing...' : 'Purchase Set' }}</span>
             </button>
-            <button v-if="accessDetails?.setType === 'subscriber'" @click="redirectToCheckout(setId)"
-              class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg transition-colors flex items-center">
-              <i class="fas fa-user-plus mr-2"></i>
-              Subscribe to Educator
+            <button v-if="accessDetails?.setType === 'subscriber'" 
+              @click="subscribeToUnlockSet(set?.educatorId)"
+              :disabled="subscribeLoading"
+              class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+              <i class="fas" :class="subscribeLoading ? 'fa-spinner fa-spin' : 'fa-user-plus'"></i>
+              <span class="ml-2">{{ subscribeLoading ? 'Processing...' : 'Subscribe to Educator' }}</span>
             </button>
           </div>
         </div>
@@ -186,6 +188,7 @@ const router = useRouter()
 const { toast, toasts, remove } = useToaster()
 const loading = ref(true)
 const checkoutLoading = ref(false)
+const subscribeLoading = ref(false)
 const cards = ref<FlashCard[]>([])
 const set = ref<FlashCardSet | null>(null)
 const unauthorized = ref(false)
@@ -396,6 +399,30 @@ const redirectToCheckout = async (setId: number | string) => {
   }
 }
 
+const subscribeToUnlockSet = async (userId: number | string) => {
+  if (subscribeLoading.value) return
+  subscribeLoading.value = true
+  loading.value = true // Add loading state for set refresh
+  try {
+    const res = await api.post(`${apiEndpoints.subscriptions}/${userId}`)
+    if (res.status === 201 || res.status === 200) {
+      toast('Successfully subscribed!', 'success')
+      // Reset state before fetching
+      unauthorized.value = false
+      accessDetails.value = null
+      // Refresh the set data to update access
+      await fetchSet()
+    }
+  } catch (error: any) {
+    console.error('Failed to subscribe:', error)
+    const errorMessage = error.response?.data?.error || 'Failed to subscribe. Please try again.'
+    toast(errorMessage, 'error')
+  } finally {
+    subscribeLoading.value = false
+    loading.value = false // Ensure loading state is cleared
+  }
+}
+
 // Keyboard navigation
 const handleKeyDown = (e: KeyboardEvent) => {
   if (e.key === 'Escape' && isFullScreen.value) {
@@ -479,10 +506,28 @@ const handleShuffle = () => {
   }
 }
 
-// Update handleCardFlip to track viewed cards
+// Add debug logging to track card data
+watch(() => cards.value, (newCards) => {
+  console.log('Cards data updated:', {
+    currentIndex: currentIndex.value,
+    currentCard: newCards[currentIndex.value],
+    flipped: flipped.value
+  })
+}, { deep: true })
+
+watch([currentIndex, flipped], ([newIndex, newFlipped]) => {
+  console.log('Card state changed:', {
+    index: newIndex,
+    flipped: newFlipped,
+    currentCard: cards.value[newIndex]
+  })
+})
+
+// Update handleCardFlip to log state
 const handleCardFlip = async () => {
-    console.log('Card flipped, current state:', {
+    console.log('Card flip triggered:', {
         currentIndex: currentIndex.value,
+        currentCard: cards.value[currentIndex.value],
         flipped: flipped.value,
         viewedCards: viewedCards.value
     })
