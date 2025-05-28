@@ -24,7 +24,7 @@
               </span>
             </div>
             <div v-if="accessDetails?.setType === 'premium'" class="text-xl font-bold text-green-600">
-            ${{ formatPrice(set?.price?.amount) }}
+              ${{ formatPrice(set?.price?.amount) }}
             </div>
           </div>
 
@@ -51,8 +51,7 @@
               <i class="fas" :class="checkoutLoading ? 'fa-spinner fa-spin' : 'fa-shopping-cart'"></i>
               <span class="ml-2">{{ checkoutLoading ? 'Processing...' : 'Purchase Set' }}</span>
             </button>
-            <button v-if="accessDetails?.setType === 'subscriber'" 
-              @click="subscribeToUnlockSet(set?.educatorId)"
+            <button v-if="accessDetails?.setType === 'subscriber'" @click="subscribeToUnlockSet(set?.educatorId)"
               :disabled="subscribeLoading"
               class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
               <i class="fas" :class="subscribeLoading ? 'fa-spinner fa-spin' : 'fa-user-plus'"></i>
@@ -110,7 +109,8 @@
         @toggle-like="toggleLikeSet" />
 
       <!-- Main Card Area -->
-      <div class="main-card-area flex-1 min-h-[600px] flex flex-col" tabindex="0" :class="{ 'fullscreen': isFullScreen }">
+      <div class="main-card-area flex-1 min-h-[600px] flex flex-col" tabindex="0"
+        :class="{ 'fullscreen': isFullScreen }">
         <!-- Single Card View -->
         <div class="flex-1 flex flex-col">
           <div class="flex-1 flex items-center justify-center">
@@ -120,42 +120,32 @@
               No cards available to display
             </div>
           </div>
-          <CardControls 
-            v-if="cards && cards.length > 0" 
-            :current-index="currentIndex" 
-            :total-cards="cards.length"
-            :is-prev-disabled="isPrevDisabled" 
-            :is-next-disabled="isNextDisabled" 
-            :progress-percent="progressPercent"
-            :show-exit="isFullScreen"
-            mode="view"
-            @prev="prevCard" 
-            @next="handleNextCardWithHistory" 
-          />
+          <CardControls v-if="cards && cards.length > 0" :current-index="currentIndex" :total-cards="cards.length"
+            :is-prev-disabled="isPrevDisabled" :is-next-disabled="isNextDisabled" :progress-percent="progressPercent"
+            :show-exit="isFullScreen" mode="view" @prev="prevCard" @next="handleNextCardWithHistory" />
         </div>
       </div>
 
       <!-- Bottom Controls -->
       <div class="flex justify-center w-full mb-4">
         <div class="flex gap-2">
-          <a @click="handleShuffle" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-shuffle"></i> Shuffle Cards</a>
-          <a @click="toggleGridView" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-table-cells"></i> Grid View</a>
-          <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-expand"></i> Full-Screen</a>
+          <a @click="handleShuffle" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-shuffle"></i>
+            Shuffle Cards</a>
+          <a @click="toggleGridView" class="button-round" href="javascript:void(0)"><i
+              class="fa-solid fa-table-cells"></i> Grid View</a>
+          <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-expand"></i>
+            Full-Screen</a>
         </div>
         <CardHint v-if="cards[currentIndex]?.hint" :hint="cards[currentIndex].hint || ''" @show-hint="showHintToast" />
       </div>
-
-      <!-- Grid View -->
-      <div v-if="showGridView" class="mt-4">
-        <CardGrid 
-          :cards="cards" 
-          :grid-card-states="gridCardStates" 
-          :flipped="gridFlipped"
-          :current-flip="gridCurrentFlip"
-          @card-flip="handleGridCardFlip" 
-        />
-      </div>
     </div>
+
+    <!-- Grid View -->
+    <div v-if="showGridView" class="mt-4 w-full">
+      <CardGrid :cards="cards" :grid-card-states="gridCardStates" :flipped="gridFlipped" :current-flip="gridCurrentFlip"
+        @card-flip="handleGridCardFlip" />
+    </div>
+
     <Toaster :toasts="toasts" @remove="remove" />
   </div>
 </template>
@@ -286,62 +276,62 @@ function formatPrice(price: number | undefined): string {
 }
 
 const {
-    loading: historyLoading,
-    error: historyError,
-    initializeHistory,
-    updateCardsViewed,
-    markAsCompleted
+  loading: historyLoading,
+  error: historyError,
+  initializeHistory,
+  updateCardsViewed,
+  markAsCompleted
 } = useViewHistory(Number(props.setId))
 
 const fetchSet = async () => {
-    if (!props.setId) {
-        console.error('No setId provided to fetchSet!')
-        return
+  if (!props.setId) {
+    console.error('No setId provided to fetchSet!')
+    return
+  }
+  try {
+    const res = await axios.get(`${apiEndpoints.sets}/${props.setId}`)
+    set.value = res.data
+
+    // Check for access information
+    if (res.data.access && !res.data.access.hasAccess) {
+      unauthorized.value = true
+      accessDetails.value = res.data.access
+      cards.value = []
+    } else {
+      unauthorized.value = false
+      accessDetails.value = null
+
+      const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
+      cards.value = cardsData.map((card: { id: number; setId: number; front: string; back: string; hint?: string }) => ({
+        id: card.id,
+        setId: card.setId,
+        front: card.front || '',
+        back: card.back || '',
+        hint: card.hint || ''
+      }))
+
+      // Initialize history tracking
+      await initializeHistory()
+
+      // Reset state
+      currentIndex.value = 0
+      flipped.value = false
+      showHint.value = false
+      currentFlip.value = 0
+
+      // Initialize viewed cards
+      viewedCards.value = cards.value.map(card => ({
+        id: card.id,
+        frontViewed: false,
+        backViewed: false
+      }))
     }
-    try {
-        const res = await axios.get(`${apiEndpoints.sets}/${props.setId}`)
-        set.value = res.data
-
-        // Check for access information
-        if (res.data.access && !res.data.access.hasAccess) {
-            unauthorized.value = true
-            accessDetails.value = res.data.access
-            cards.value = []
-        } else {
-            unauthorized.value = false
-            accessDetails.value = null
-
-            const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
-            cards.value = cardsData.map((card: { id: number; setId: number; front: string; back: string; hint?: string }) => ({
-                id: card.id,
-                setId: card.setId,
-                front: card.front || '',
-                back: card.back || '',
-                hint: card.hint || ''
-            }))
-
-            // Initialize history tracking
-            await initializeHistory()
-
-            // Reset state
-            currentIndex.value = 0
-            flipped.value = false
-            showHint.value = false
-            currentFlip.value = 0
-
-            // Initialize viewed cards
-            viewedCards.value = cards.value.map(card => ({
-                id: card.id,
-                frontViewed: false,
-                backViewed: false
-            }))
-        }
-    } catch (err) {
-        console.error('FlashCardViewer - Failed to fetch set:', err)
-        error.value = 'Failed to load flashcard set'
-    } finally {
-        loading.value = false
-    }
+  } catch (err) {
+    console.error('FlashCardViewer - Failed to fetch set:', err)
+    error.value = 'Failed to load flashcard set'
+  } finally {
+    loading.value = false
+  }
 }
 
 const downloadSet = async () => {
@@ -353,7 +343,7 @@ const downloadSet = async () => {
       `"${card.front.replace(/"/g, '""')}"`,
       `"${card.back.replace(/"/g, '""')}"`
     ])
-    
+
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(','))
@@ -367,11 +357,11 @@ const downloadSet = async () => {
     link.download = `${set.value?.title || 'flashcards'}.csv`
     document.body.appendChild(link)
     link.click()
-    
+
     // Cleanup
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-    
+
     toast('Flashcards downloaded successfully', 'success')
   } catch (error) {
     console.error('Failed to download flashcards:', error)
@@ -477,13 +467,13 @@ onUnmounted(() => {
 const handleShuffle = () => {
   // Store the current progress position
   const currentProgress = currentIndex.value
-  
+
   // Get new order from shuffle
   const { newOrder } = shuffleCardOrder()
-  
+
   // Update cards with new order
   cards.value = [...newOrder]
-  
+
   // Update viewed cards array to match new order while preserving state
   viewedCards.value = newOrder.map(card => {
     const existingState = viewedCards.value.find(vc => vc.id === card.id)
@@ -493,10 +483,10 @@ const handleShuffle = () => {
       backViewed: false
     }
   })
-  
+
   // Restore the progress position
   currentIndex.value = currentProgress
-  
+
   // Ensure grid states are synced
   if (showGridView.value) {
     gridCardStates.value = newOrder.reduce((acc, card) => {
@@ -525,53 +515,53 @@ watch([currentIndex, flipped], ([newIndex, newFlipped]) => {
 
 // Update handleCardFlip to log state
 const handleCardFlip = async () => {
-    console.log('Card flip triggered:', {
-        currentIndex: currentIndex.value,
-        currentCard: cards.value[currentIndex.value],
-        flipped: flipped.value,
-        viewedCards: viewedCards.value
-    })
+  console.log('Card flip triggered:', {
+    currentIndex: currentIndex.value,
+    currentCard: cards.value[currentIndex.value],
+    flipped: flipped.value,
+    viewedCards: viewedCards.value
+  })
 
-    // Call the navigation handler first
-    handleCardNavigation(!flipped.value)
+  // Call the navigation handler first
+  handleCardNavigation(!flipped.value)
 
-    // Update viewed cards state
-    if (cards.value[currentIndex.value]) {
-        const cardId = cards.value[currentIndex.value].id
-        const cardState = viewedCards.value.find(state => state.id === cardId)
-        if (cardState) {
-            if (!flipped.value) {
-                cardState.frontViewed = true
-            } else {
-                cardState.backViewed = true
-            }
-        }
+  // Update viewed cards state
+  if (cards.value[currentIndex.value]) {
+    const cardId = cards.value[currentIndex.value].id
+    const cardState = viewedCards.value.find(state => state.id === cardId)
+    if (cardState) {
+      if (!flipped.value) {
+        cardState.frontViewed = true
+      } else {
+        cardState.backViewed = true
+      }
     }
+  }
 
-    // Update history with number of cards viewed
-    const uniqueViewedCards = viewedCards.value.filter(card => card.frontViewed || card.backViewed).length
-    console.log('Updating cards viewed:', uniqueViewedCards)
-    await updateCardsViewed(uniqueViewedCards)
+  // Update history with number of cards viewed
+  const uniqueViewedCards = viewedCards.value.filter(card => card.frontViewed || card.backViewed).length
+  console.log('Updating cards viewed:', uniqueViewedCards)
+  await updateCardsViewed(uniqueViewedCards)
 
-    // Check if this is the last card and both sides have been viewed
-    if (currentIndex.value === cards.value.length - 1 && 
-        flipped.value && 
-        viewedCards.value.every(card => card.frontViewed && card.backViewed)) {
-        console.log('Marking set as completed')
-        await markAsCompleted()
-    }
+  // Check if this is the last card and both sides have been viewed
+  if (currentIndex.value === cards.value.length - 1 &&
+    flipped.value &&
+    viewedCards.value.every(card => card.frontViewed && card.backViewed)) {
+    console.log('Marking set as completed')
+    await markAsCompleted()
+  }
 }
 
 // Update nextCard to check for completion
 const handleNextCardWithHistory = async () => {
-    if (isNextDisabled.value) return
+  if (isNextDisabled.value) return
 
-    // Call the navigation handler first
-    handleNextCard()
+  // Call the navigation handler first
+  handleNextCard()
 
-    // If we're at the last card and it's flipped, mark as completed
-    if (currentIndex.value === cards.value.length - 1 && flipped.value) {
-        await markAsCompleted()
-    }
+  // If we're at the last card and it's flipped, mark as completed
+  if (currentIndex.value === cards.value.length - 1 && flipped.value) {
+    await markAsCompleted()
+  }
 }
 </script>

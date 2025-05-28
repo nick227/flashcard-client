@@ -36,7 +36,7 @@ const layoutClass = props.layout === 'grid'
   ? 'grid grid-cols-4 gap-6'
   : 'flex flex-col gap-4'
 const itemWrapperClass = props.layout === 'grid'
-  ? 'flex items-start'
+  ? 'flex items-start mb-4'
   : 'flex items-center'
 
 function onDragEnd() {

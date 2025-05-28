@@ -8,7 +8,7 @@
     <label class="block text-gray-500 text-xs mb-1">Back</label>
     <textarea class="input" v-model="localCard.back" @input="emitUpdate" maxlength="2000" placeholder="Back text..."></textarea>
     <label class="block text-gray-500 text-xs mb-1">Hint</label>
-    <textarea class="input w-full" v-model="localCard.hint" @input="emitUpdate" placeholder="Hint..."></textarea>
+    <textarea class="input" v-model="localCard.hint" @input="emitUpdate" placeholder="Hint..."></textarea>
   </div>
 </template>
 
@@ -48,6 +48,7 @@ function onRequestDelete() {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  width: 100%;
 }
 .button.button-danger {
   background: #ef4444;

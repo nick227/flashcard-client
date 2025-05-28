@@ -7,7 +7,7 @@
     
     <main class="container flex-1">
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-3xl font-bold flex w-full items-center justify-center cursive">Create Set</h2>
+        <h2 class="text-3xl font-bold flex w-full items-center justify-center cursive">{{ setId ? 'Edit Set' : 'Create Set' }}</h2>
       </div>
 
       <!-- Set Info Form -->
