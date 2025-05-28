@@ -32,7 +32,7 @@ interface UseSetsReturn {
 export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
   const {
     initialCategory = '',
-    initialSortOrder = 'featured',
+    initialSortOrder = 'newest',
     initialSetType = '',
     pageSize = 12,
     autoLoad = true
@@ -107,7 +107,7 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
       }
 
       if (categories.value.length === 0) {
-        const categoriesRes = await fetchCategories()
+        const categoriesRes = await fetchCategories(true)
         categories.value = categoriesRes.map(c => typeof c === 'string' ? c : c.name)
       }
     } catch (err: any) {

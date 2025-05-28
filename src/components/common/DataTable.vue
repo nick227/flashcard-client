@@ -78,7 +78,7 @@
             :class="[
               currentPage === 1 
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-white text-primary hover:bg-gray-50 active:bg-gray-100'
+                : 'bg-white text-black hover:bg-gray-50 active:bg-gray-100'
             ]"
             :disabled="currentPage === 1"
             @click="$emit('page-change', currentPage - 1)"
@@ -107,7 +107,7 @@
             :class="[
               currentPage === totalPages 
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                : 'bg-white text-primary hover:bg-gray-50 active:bg-gray-100'
+                : 'bg-white text-black hover:bg-gray-50 active:bg-gray-100'
             ]"
             :disabled="currentPage === totalPages"
             @click="$emit('page-change', currentPage + 1)"

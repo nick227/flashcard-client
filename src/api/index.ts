@@ -153,11 +153,19 @@ export async function updateSetWithCards(setId: number, formData: FormData) {
 }
 
 /**
- * Fetch unique categories from sets.
+ * Fetch categories from the backend.
+ * @param inUseOnly - Optional parameter to fetch only categories that are in use by sets. Defaults to false (all categories).
+ * @returns Promise with array of categories { id: number, name: string }
  */
-export async function fetchCategories(): Promise<{ id: number; name: string }[]> {
-  const res = await api.get('/categories');
-  return res.data;
+export async function fetchCategories(inUseOnly: boolean = false): Promise<{ id: number; name: string }[]> {
+  try {
+    const params = inUseOnly ? { inUse: 'true' } : undefined;
+    const res = await api.get('/categories', { params });
+    return res.data;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    throw new Error('Failed to fetch categories');
+  }
 }
 
 /**

@@ -35,7 +35,7 @@
           <!-- View Toggle -->
           <ViewToggle v-model="viewMode" />
           <!-- Reverse Cards Button -->
-          <button class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600" @click="reverseCards" :disabled="!hasCards">
+          <button title="Reverse Card Order" class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600" @click="reverseCards" :disabled="!hasCards">
             <i class="fa-solid fa-arrows-up-down"></i>
           </button>
           <!-- Card Count Indicator -->

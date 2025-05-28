@@ -7,15 +7,31 @@
           class="w-full rounded-lg overflow-hidden cursor-pointer transition-all duration-200 hover:opacity-90 flex items-center justify-center m-h-[480px]"
           @click="() => fileInputRef?.click()">
           <!-- Thumbnail preview area -->
-          <div class="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 max-w-[400px]">
-            <img v-if="thumbnailPreview" :src="thumbnailPreview" alt="Thumbnail" class="w-full m-h-[480px] object-cover"
-              :class="{ 'opacity-50': isUploading }" />
-            <!-- Placeholder when no image -->
-            <div v-else class="flex items-center justify-center h-full w-full">
-              <div class="flex items-center justify-center h-full w-full">
-                <div class="w-12 h-48 g-gray-200 flex items-center justify-center flex-col gap-2">
-                  <i class="fa-solid fa-image text-gray-400 text-2xl"></i>
-                  <p class="text-gray-400 text-sm">Upload a thumbnail</p>
+          <div class="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 max-w-[400px] min-h-[480px] border border-gray-300">
+            <img 
+              v-if="thumbnailPreview" 
+              :src="thumbnailPreview" 
+              alt="Thumbnail" 
+              class="w-full m-h-[480px] object-cover"
+              :class="{ 'opacity-50': isUploading }"
+              @error="handleImageError"
+            />
+            <!-- Placeholder when no image or image failed to load -->
+            <div v-if="!thumbnailPreview || imageLoadError" class="flex items-center justify-center h-full w-full">
+              <div class="flex flex-col items-center justify-center h-full w-full gap-4 p-8 text-center">
+                <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
+                  <i class="fa-solid fa-image text-gray-400 text-3xl"></i>
+                </div>
+                <div class="space-y-2">
+                  <p class="text-gray-600 font-medium">
+                    {{ imageLoadError ? 'Failed to load image' : 'Upload a thumbnail' }}
+                  </p>
+                  <p class="text-gray-500 text-sm">
+                    {{ imageLoadError ? 'Please try uploading again' : 'Click to upload an image (JPEG, PNG, GIF)' }}
+                  </p>
+                  <p class="text-gray-400 text-xs">
+                    Max file size: 5MB
+                  </p>
                 </div>
               </div>
             </div>
@@ -117,6 +133,7 @@ const thumbnailPreview = ref<string | null>(props.thumbnail || null)
 const thumbnailError = ref<string | null>(null)
 const thumbnailFile = ref<File | null>(null)
 const isUploading = ref(false)
+const imageLoadError = ref(false)
 
 // Constants for file validation
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -138,6 +155,14 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
+// Handle image load error
+function handleImageError() {
+  imageLoadError.value = true
+  thumbnailPreview.value = null
+  thumbnailFile.value = null
+  emit('update:thumbnail', null)
+}
+
 // Handle thumbnail file selection
 async function handleThumbnailChange(event: Event) {
   const input = event.target as HTMLInputElement
@@ -146,6 +171,7 @@ async function handleThumbnailChange(event: Event) {
   const file = input.files[0]
   thumbnailError.value = null
   isUploading.value = true
+  imageLoadError.value = false
 
   try {
     // Validate file size
@@ -184,6 +210,7 @@ function removeThumbnail() {
   thumbnailPreview.value = null
   thumbnailFile.value = null
   thumbnailError.value = null
+  imageLoadError.value = false
   emit('update:thumbnail', null)
   const input = document.getElementById('thumbnail') as HTMLInputElement
   if (input) input.value = ''

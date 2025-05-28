@@ -14,7 +14,14 @@
     @sort="handleSort"
   >
     <template #title="{ item }">
-      <span class="font-semibold">{{ item.title }}</span>
+      <a 
+        :href="`/sets/${item.id}`"
+        target="_blank"
+        class="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+        :aria-label="`View set: ${item.title}`"
+      >
+        {{ item.title }}
+      </a>
     </template>
     <template #price="{ item }">
       {{ item.price === 0 ? 'Free' : `$${item.price}` }}
@@ -23,58 +30,35 @@
       {{ formatDate(item.createdAt) }}
     </template>
     <template #hidden="{ item }">
-      <span :class="item.hidden ? 'text-red-500' : 'text-green-600'">
+      <button
+        @click="handleAction('toggle-hidden', item)"
+        :disabled="props.loading"
+        class="text-sm font-medium hover:underline focus:outline-none"
+        :class="item.hidden ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'"
+        :title="`Click to ${item.hidden ? 'show' : 'hide'} this set`"
+        :aria-label="`${item.hidden ? 'Show' : 'Hide'} set: ${item.title}`"
+      >
         {{ item.hidden ? 'Hidden' : 'Visible' }}
-      </span>
+      </button>
     </template>
     <template #actions="{ item }">
-      <div 
-        class="relative inline-block"
-        @mouseenter="handleMouseEnter(item.id)"
-        @mouseleave="handleMouseLeave(item.id)"
-      >
-        <button 
-          @click="toggleDropdown(item.id)"
-          class="p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
+      <div class="flex space-x-4">
+        <button
+          @click="handleAction('edit', item)"
           :disabled="props.loading"
+          class="text-blue-600 hover:text-blue-800 hover:underline focus:outline-none"
+          :aria-label="`Edit set: ${item.title}`"
         >
-          Edit Set
+          Edit
         </button>
-        <div 
-          v-if="activeDropdown === item.id"
-          class="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-50 border border-gray-200"
-          style="transform: translateY(0);"
+        <button
+          @click="handleAction('delete', item)"
+          :disabled="props.loading"
+          class="text-red-600 hover:text-red-800 hover:underline focus:outline-none"
+          :aria-label="`Delete set: ${item.title}`"
         >
-          <div class="py-1">
-            <a 
-              class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-              :class="{ 'opacity-50 cursor-not-allowed': props.loading }"
-              @click="handleAction('edit', item)"
-            >
-              Edit
-            </a>
-            <a 
-              class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-              :class="{ 'opacity-50 cursor-not-allowed': props.loading }"
-              @click="handleAction('toggle-hidden', item)"
-            >
-              {{ item.hidden ? 'Show' : 'Hide' }}
-            </a>
-            <a 
-              class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-              @click="handleAction('view', item)"
-            >
-              View
-            </a>
-            <a 
-              class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer"
-              :class="{ 'opacity-50 cursor-not-allowed': props.loading }"
-              @click="handleAction('delete', item)"
-            >
-              Delete
-            </a>
-          </div>
-        </div>
+          Delete
+        </button>
       </div>
     </template>
   </DataTable>
@@ -108,8 +92,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const sortKey = ref('createdAt')
 const sortOrder = ref<'asc' | 'desc'>('desc')
-const activeDropdown = ref<number | null>(null)
-const hoverTimeout = ref<number | null>(null)
 
 const emit = defineEmits<{
   (e: 'page-change', page: number): void
@@ -139,30 +121,8 @@ function handleSort(key: string) {
   emit('sort', key, sortOrder.value)
 }
 
-function toggleDropdown(id: number) {
-  activeDropdown.value = activeDropdown.value === id ? null : id
-}
-
-function handleMouseEnter(id: number) {
-  if (hoverTimeout.value) {
-    clearTimeout(hoverTimeout.value)
-    hoverTimeout.value = null
-  }
-  activeDropdown.value = id
-}
-
-function handleMouseLeave(id: number) {
-  hoverTimeout.value = window.setTimeout(() => {
-    if (activeDropdown.value === id) {
-      activeDropdown.value = null
-    }
-  }, 100)
-}
-
 function handleAction(action: string, item: FlashCardSet) {
   if (props.loading) return;
-  
-  activeDropdown.value = null;
   
   switch (action) {
     case 'edit':
@@ -170,9 +130,6 @@ function handleAction(action: string, item: FlashCardSet) {
       break;
     case 'toggle-hidden':
       emit('toggle-hidden', item);
-      break;
-    case 'view':
-      window.open(`/sets/${item.id}`, '_blank');
       break;
     case 'delete':
       emit('delete', item);
@@ -182,17 +139,6 @@ function handleAction(action: string, item: FlashCardSet) {
 </script>
 
 <style scoped>
-.relative {
-  position: relative;
-}
-
-/* Ensure dropdown is always visible */
-.absolute {
-  position: absolute;
-  transform: translateY(0);
-  z-index: 50;
-}
-
 /* Prevent text selection during interactions */
 button, a {
   user-select: none;

@@ -51,7 +51,7 @@ const fetchSets = async () => {
     const res = await api.get('/sets', {
       params: {
         page: 1,
-        limit: 10,
+        limit: 9,
         sortOrder: 'newest'
       }
     })
@@ -60,14 +60,8 @@ const fetchSets = async () => {
     const { items, pagination } = res.data
     sets.value = items || []
     
-    // Debug logs
-    console.log('API Response:', res.data)
-    console.log('Sets:', sets.value)
-    console.log('Pagination:', pagination)
-    
     // Find a featured set or use the first one
     featuredSet.value = sets.value[0] || null
-    console.log('Featured set:', featuredSet.value)
   } catch (err: any) {
     console.error('Error fetching sets:', err)
     error.value = err.message || 'Failed to load sets'
