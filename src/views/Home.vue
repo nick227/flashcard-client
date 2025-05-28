@@ -57,7 +57,7 @@ const fetchSets = async () => {
     })
     
     // Handle paginated response format
-    const { items, pagination } = res.data
+    const { items } = res.data
     sets.value = items || []
     
     // Find a featured set or use the first one

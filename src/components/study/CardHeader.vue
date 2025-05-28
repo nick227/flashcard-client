@@ -4,14 +4,15 @@
       <!-- Creator Info with Avatar -->
       <div class="flex items-center gap-3 mb-4">
         <img 
-          v-if="set.educatorImage" 
+          v-if="set.educatorImage && !avatarError" 
           :src="set.educatorImage" 
           :alt="set.educatorName"
           class="w-8 h-8 rounded-full object-cover"
           @error="handleAvatarError"
+          @load="handleAvatarLoad"
         />
-        <div v-else class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-          <i class="fas fa-user text-gray-400"></i>
+        <div v-else class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+          {{ getEducatorInitials }}
         </div>
         <a @click="router.push(`/u/${set.educatorName}`)" class="link">
           <h3 class="my-0">{{ set.educatorName }}</h3>
@@ -76,6 +77,42 @@ defineEmits<{
 const handleAvatarError = () => {
   avatarError.value = true
 }
+
+const handleAvatarLoad = () => {
+  avatarError.value = false
+}
+
+const getEducatorInitials = computed(() => {
+  if (!props.set.educatorName) return 'U'
+  
+  // Clean and normalize the input
+  const cleanName = props.set.educatorName
+    .replace(/[^a-zA-Z\s]/g, '') // Remove special characters
+    .trim()
+    .split(/\s+/) // Split on any whitespace
+    
+  if (cleanName.length === 0) return 'U'
+  
+  // Get initials, handling single names
+  const initials = cleanName.length === 1
+    ? cleanName[0].slice(0, 2).toUpperCase()
+    : cleanName
+        .slice(0, 2)
+        .map(word => word.charAt(0))
+        .join('')
+        .toUpperCase()
+  
+  return initials || 'U'
+})
+
+// Reset avatar error state when educator changes
+watch(
+  () => [props.set.educatorId, props.set.educatorImage],
+  () => {
+    avatarError.value = false
+  },
+  { deep: true }
+)
 
 const handleThumbnailError = () => {
   thumbnailError.value = true
