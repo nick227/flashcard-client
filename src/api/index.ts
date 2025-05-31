@@ -15,20 +15,20 @@ console.log('API Base URL:', BASE_URL); // Debug log
 
 export const apiEndpoints = {
   baseUrl: BASE_URL,
-  sets: `${BASE_URL}/sets`,
-  cards: `${BASE_URL}/cards`,
-  users: `${BASE_URL}/users`,
-  userLikes: `${BASE_URL}/userLikes`,
-  purchases: `${BASE_URL}/purchases`,
-  subscriptions: `${BASE_URL}/subscriptions`,
-  checkout: `${BASE_URL}/checkout`,
-  sales: `${BASE_URL}/sales`,
-  history: `${BASE_URL}/history`,
+  sets: `${BASE_URL}/api/sets`,
+  cards: `${BASE_URL}/api/cards`,
+  users: `${BASE_URL}/api/users`,
+  userLikes: `${BASE_URL}/api/userLikes`,
+  purchases: `${BASE_URL}/api/purchases`,
+  subscriptions: `${BASE_URL}/api/subscriptions`,
+  checkout: `${BASE_URL}/api/checkout`,
+  sales: `${BASE_URL}/api/sales`,
+  history: `${BASE_URL}/api/history`,
 };
 
 // Create axios instance with proper configuration
 export const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: `${BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'

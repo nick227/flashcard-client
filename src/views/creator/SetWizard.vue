@@ -44,6 +44,12 @@
           <ImportBar :importFileName="importFileName" @import-csv="onImportCsv" />
           <button class="button button-danger" @click="onReset" :disabled="!hasCards">Reset</button>
           <div class="flex items-center gap-2 flex-nowrap">
+          <AISetGenerator 
+            :disabled="SetInfoFormComplete" 
+            :title="setTitle"
+            :description="setDescription"
+            :class="{ 'input-error': cardsTouched && cards.length === 0 }"
+            @add-set="onAddSet" />
           <AddCardButton :disabled="hasBlankCard" :class="{ 'input-error': cardsTouched && cards.length === 0 }"
             @add-card="onAddCard" />
           <!-- Submit button -->
@@ -79,6 +85,7 @@ import SetInfoForm from '@/components/creator/SetInfoForm.vue'
 import ViewToggle from '@/components/creator/ViewToggle.vue'
 import CardCountIndicator from '@/components/creator/CardCountIndicator.vue'
 import AddCardButton from '@/components/creator/AddCardButton.vue'
+import AISetGenerator from '@/components/creator/AISetGenerator.vue'
 import DraggableCardList from '@/components/creator/DraggableCardList.vue'
 import CardTile from '@/components/creator/CardTile.vue'
 import CardFullView from '@/components/creator/CardFullView.vue'
@@ -110,6 +117,9 @@ const error = ref<string | null>(null)
 const setId = computed(() => Number(route.params.setId) || 0)
 const submitButtonText = computed(() => setId.value ? 'Save Changes' : 'Submit Set')
 const hasCards = computed(() => cards.value.length > 0)
+const SetInfoFormComplete = computed(() => {
+  return setTitle.value && setDescription.value && typeof setCategoryId.value === 'number'
+})
 
 const {
   setTitle,
@@ -137,6 +147,17 @@ const handleThumbnailUpdate = (file: File) => {
 function onReset() {
   confirmMessage.value = 'Are you sure you want to remove all cards?'
   confirmVisible.value = true
+}
+
+function onAddSet(newCards: FlashCard[]) {
+  cards.value = [...cards.value, ...newCards]
+  cardsTouched.value = true
+  setTimeout(() => {
+    window.scrollTo({
+      top: 640,
+      behavior: 'smooth'
+    })
+  }, 300)
 }
 
 function onAddCard() {

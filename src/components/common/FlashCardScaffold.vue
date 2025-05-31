@@ -4,6 +4,7 @@
     :tabindex="editable ? -1 : 0"
     :aria-label="editable ? 'Edit flash card' : 'Flash card'"
     @click="onCardClick"
+    @dblclick="onDoubleClick"
     @keydown.space.prevent="!editable && handleFlip()"
     @keydown.enter.prevent="!editable && handleFlip()"
     :style="{ cursor: editable ? 'default' : 'pointer' }"
@@ -48,48 +49,59 @@ const emit = defineEmits<{
   'prev': []
 }>()
 
+// State management
 const localFlipped = ref(false)
 const isFlipping = ref(false)
 const flipTimeout = ref<number | null>(null)
 const isNavigating = ref(false)
+const lastClickTime = ref(0)
+const clickTimeout = ref<number | null>(null)
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const isSwiping = ref(false)
+
+// Constants
+const SWIPE_THRESHOLD = 50
+const CLICK_DELAY = 300
+const FLIP_ANIMATION_DURATION = 300
 
 // Computed properties
-const isFlipped = computed(() => {
-  return props.flipped !== undefined ? props.flipped : localFlipped.value
-})
+const isFlipped = computed(() => props.flipped !== undefined ? props.flipped : localFlipped.value)
 
 // Reset flip state when card changes
 watch(() => props.card, () => {
-  if (flipTimeout.value) {
-    clearTimeout(flipTimeout.value)
-  }
+  clearTimeouts()
   isNavigating.value = true
   localFlipped.value = false
   isFlipping.value = false
   
-  // Reset navigation state after a short delay
   setTimeout(() => {
     isNavigating.value = false
   }, 50)
 })
 
-// Add debug logging to track props and state
-watch(() => props.card, (newCard) => {
-  console.log('Card data changed:', {
-    front: newCard?.front,
-    back: newCard?.back,
-    isFlipped: isFlipped.value
-  })
-}, { immediate: true })
+// Click handling
+function onCardClick() {
+  const now = Date.now()
+  const timeSinceLastClick = now - lastClickTime.value
+  
+  if (timeSinceLastClick < CLICK_DELAY) {
+    clearClickTimeout()
+    return
+  }
+  
+  lastClickTime.value = now
+  
+  if (!props.editable) {
+    clickTimeout.value = window.setTimeout(handleFlip, CLICK_DELAY)
+  }
+}
 
-watch(isFlipped, (newValue) => {
-  console.log('Flip state changed:', {
-    isFlipped: newValue,
-    card: props.card
-  })
-})
+function onDoubleClick() {
+  clearClickTimeout()
+}
 
-// Methods
+// Flip handling
 function handleFlip() {
   if (isFlipping.value || isNavigating.value) return
   
@@ -103,30 +115,18 @@ function handleFlip() {
     emit('flip', localFlipped.value)
   }
   
-  // Reset flipping state after animation
   flipTimeout.value = window.setTimeout(() => {
     isFlipping.value = false
-  }, 300) // Match this with CSS transition duration
+  }, FLIP_ANIMATION_DURATION)
 }
 
-function onCardClick() {
-  if (!props.editable) {
-    handleFlip()
-  }
-}
-
-// Swipe gestures
-const touchStartX = ref(0)
-const touchStartY = ref(0)
-const isSwiping = ref(false)
-const swipeThreshold = 50
-
+// Swipe handling
 const isHorizontalSwipe = (diffX: number, diffY: number): boolean => {
   return Math.abs(diffX) > Math.abs(diffY)
 }
 
 const handleSwipeEnd = (diffX: number, diffY: number) => {
-  if (Math.abs(diffX) > swipeThreshold && isHorizontalSwipe(diffX, diffY)) {
+  if (Math.abs(diffX) > SWIPE_THRESHOLD && isHorizontalSwipe(diffX, diffY)) {
     emit('flip', false)
     diffX < 0 ? emit('next') : emit('prev')
   }
@@ -160,7 +160,23 @@ const onMouseUp = (e: MouseEvent) => {
   handleSwipeEnd(diffX, diffY)
 }
 
-// Simplified touch handling
+// Utility functions
+function clearClickTimeout() {
+  if (clickTimeout.value) {
+    clearTimeout(clickTimeout.value)
+    clickTimeout.value = null
+  }
+}
+
+function clearTimeouts() {
+  if (flipTimeout.value) {
+    clearTimeout(flipTimeout.value)
+    flipTimeout.value = null
+  }
+  clearClickTimeout()
+}
+
+// Touch handling
 onMounted(() => {
   const element = document.querySelector('.flashcard-scaffold')
   if (element) {
@@ -177,23 +193,20 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (flipTimeout.value) {
-    clearTimeout(flipTimeout.value)
-  }
+  clearTimeouts()
   const element = document.querySelector('.flashcard-scaffold')
   if (element) {
     element.removeEventListener('touchmove', () => {})
   }
 })
-
 </script>
 
 <style scoped>
 .flashcard-scaffold {
   touch-action: pan-y pinch-zoom;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
+  user-select: text; /* Changed from none to allow text selection */
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
   border-radius: 1rem;
   width: 100%;
   height: 400px;
@@ -202,10 +215,11 @@ onUnmounted(() => {
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   position: relative;
   perspective: 1000px;
+  will-change: transform; /* Performance optimization */
 }
 
 .fullscreen .flashcard-scaffold {
-  height: 70%;
+  height: 70vh; /* Changed from 70% to vh for better responsiveness */
 }
 
 .formatted-content {
@@ -216,17 +230,7 @@ onUnmounted(() => {
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
-}
-
-/* Debug info */
-.debug-info {
-  position: absolute;
-  top: -20px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 12px;
-  color: #666;
+  user-select: text; /* Explicitly allow text selection */
 }
 
 .card-content {
@@ -235,6 +239,7 @@ onUnmounted(() => {
   height: 100%;
   transform-style: preserve-3d;
   transition: transform 0.3s ease;
+  will-change: transform; /* Performance optimization */
 }
 
 .card-content.is-flipping {
@@ -269,7 +274,6 @@ onUnmounted(() => {
   color: white;
 }
 
-/* Ensure content is visible on both sides */
 .card-face .formatted-content {
   width: 100%;
   height: 100%;
@@ -279,11 +283,21 @@ onUnmounted(() => {
   padding: 2rem;
 }
 
-/* Ensure images and iframes are properly contained */
 .card-face .formatted-content img,
 .card-face .formatted-content iframe {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+
+/* Add focus styles for better accessibility */
+.flashcard-scaffold:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Add hover effect for better interactivity */
+.flashcard-scaffold:not(.editable):hover {
+  box-shadow: 0 6px 8px -1px rgb(0 0 0 / 0.15), 0 3px 6px -3px rgb(0 0 0 / 0.15);
 }
 </style>
