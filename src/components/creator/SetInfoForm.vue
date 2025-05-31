@@ -7,7 +7,7 @@
           class="w-full rounded-lg overflow-hidden cursor-pointer transition-all duration-200 hover:opacity-90 flex items-center justify-center m-h-[480px]"
           @click="() => fileInputRef?.click()">
           <!-- Thumbnail preview area -->
-          <div class="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 max-w-[400px] min-h-[480px] border border-gray-300">
+          <div class="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 max-w-[400px] min-h-[320px] border border-gray-300">
             <img 
               v-if="thumbnailPreview" 
               :src="thumbnailPreview" 

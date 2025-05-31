@@ -205,7 +205,6 @@ async function onSubmit() {
 
 <style scoped>
 .input {
-  width: calc(100% - 2.4em);
   padding: 0.9em 1.2em;
   border-radius: 0.7em;
   border: 1.5px solid var(--color-border);
