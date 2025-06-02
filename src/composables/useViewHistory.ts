@@ -45,15 +45,32 @@ export function useViewHistory(setId: number) {
             } else {
                 // Create new history record if none exists
                 const newHistory = await api.post('/history', {
-                    setId
+                    set_id: setId,
+                    user_id: user.value.id
                 })
                 history.value = newHistory.data
                 lastUpdatedCards.value = 0
             }
-        } catch (err) {
-            error.value = 'Failed to initialize view history'
-            console.error('Failed to initialize view history:', err)
-            toast('Failed to initialize view history', 'error')
+        } catch (err: any) {
+            if (err.response?.status === 404) {
+                // If history not found, create new one
+                try {
+                    const newHistory = await api.post('/history', {
+                        set_id: setId,
+                        user_id: user.value.id
+                    })
+                    history.value = newHistory.data
+                    lastUpdatedCards.value = 0
+                } catch (createErr) {
+                    error.value = 'Failed to create view history'
+                    console.error('Failed to create view history:', createErr)
+                    toast('Failed to create view history', 'error')
+                }
+            } else {
+                error.value = 'Failed to initialize view history'
+                console.error('Failed to initialize view history:', err)
+                toast('Failed to initialize view history', 'error')
+            }
         } finally {
             loading.value = false
         }
@@ -82,9 +99,9 @@ export function useViewHistory(setId: number) {
         })
 
         try {
-            const res = await api.post('/history', {
-                setId,
-                cardsViewed: numCards
+            const res = await api.patch(`/history/${history.value.id}`, {
+                num_cards_viewed: numCards,
+                user_id: user.value.id
             })
             history.value = res.data
             lastUpdatedCards.value = numCards
