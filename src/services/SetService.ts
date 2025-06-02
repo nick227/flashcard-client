@@ -1,5 +1,4 @@
-import { apiEndpoints } from '@/api'
-import axios, { AxiosError } from 'axios'
+import { api } from '@/api'
 import type { FlashCard, SetPrice } from '@/types'
 
 export interface SetFormData {
@@ -29,41 +28,49 @@ export class SetService {
 
   static async createSet(formData: FormData) {
     try {
-      const response = await axios.post(apiEndpoints.sets, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const response = await api.post('/sets', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       })
       return response.data
     } catch (error) {
-      this.handleError(error)
+      console.error('Error creating set:', error)
+      throw error
     }
   }
 
   static async updateSet(setId: number, formData: FormData) {
     try {
-      const response = await axios.patch(`${apiEndpoints.sets}/${setId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const response = await api.patch(`/sets/${setId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       })
       return response.data
     } catch (error) {
-      this.handleError(error)
+      console.error('Error updating set:', error)
+      throw error
     }
   }
 
   static async fetchSet(setId: number) {
     try {
-      const response = await axios.get(`${apiEndpoints.sets}/${setId}`)
+      const response = await api.get(`/sets/${setId}`)
       return response.data
     } catch (error) {
-      this.handleError(error)
+      console.error('Error fetching set:', error)
+      throw error
     }
   }
 
   static async fetchSetCards(setId: number) {
     try {
-      const response = await axios.get(`${apiEndpoints.cards}?setId=${setId}`)
+      const response = await api.get(`/cards?setId=${setId}`)
       return response.data
     } catch (error) {
-      this.handleError(error)
+      console.error('Error fetching set cards:', error)
+      throw error
     }
   }
 

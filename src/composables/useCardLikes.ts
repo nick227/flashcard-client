@@ -1,90 +1,79 @@
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
-import { apiEndpoints } from '@/api/index'
-import { useAuthStore } from '@/stores/auth'
+import { ref } from 'vue'
+import { api } from '@/api'
 
-export function useCardLikes(setId: number | string) {
-  const isLiked = ref(false)
-  const setLikes = ref(0)
-  const auth = useAuthStore()
+export function useCardLikes(setId: number) {
+  const likes = ref(0)
+  const userLiked = ref(false)
+  const loading = ref(false)
+
+  const fetchLikes = async () => {
+    try {
+      loading.value = true
+      const [likesRes, userLikesRes] = await Promise.all([
+        api.get(`/sets/${setId}/likes`),
+        api.get(`/sets/${setId}/likes/user`)
+      ])
+      likes.value = likesRes.data.count || 0
+      userLiked.value = userLikesRes.data.liked || false
+      console.log('Fetched likes state:', { likes: likes.value, userLiked: userLiked.value })
+    } catch (err) {
+      console.error('Error fetching likes:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const toggleLike = async () => {
+    try {
+      loading.value = true
+      const res = await api.post(`/sets/${setId}/like`)
+      likes.value = res.data.likes || 0
+      userLiked.value = res.data.liked || false
+      console.log('Toggled like state:', { likes: likes.value, userLiked: userLiked.value })
+      return res.data
+    } catch (err) {
+      console.error('Error toggling like:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
 
   const fetchUserLikeForSet = async () => {
-    if (!setId) {
-      console.error('No setId provided to fetchUserLikeForSet!')
-      return
-    }
-    if (!auth.user?.id) {
-      console.error('No user ID available for fetchUserLikeForSet!')
-      return
-    }
     try {
-      const res = await axios.get(`${apiEndpoints.sets}/${setId}/likes/user`)
-      isLiked.value = res.data.liked || false
+      const res = await api.get(`/sets/${setId}/likes/user`)
+      userLiked.value = res.data.liked || false
+      console.log('Fetched user like state:', userLiked.value)
+      return res.data
     } catch (err) {
-      console.error('Failed to fetch user like:', err)
-      isLiked.value = false
+      console.error('Error fetching user like:', err)
+      userLiked.value = false
+      return { liked: false }
     }
   }
 
   const fetchSetLikes = async () => {
-    if (!setId) {
-      console.error('No setId provided to fetchSetLikes!')
-      return
-    }
     try {
-      const res = await axios.get(`${apiEndpoints.sets}/${setId}/likes`)
-      setLikes.value = res.data.count || 0
+      const res = await api.get(`/sets/${setId}/likes`)
+      likes.value = res.data.count || 0
+      console.log('Fetched set likes:', likes.value)
+      return res.data
     } catch (err) {
-      console.error('Failed to fetch set likes:', err)
-      setLikes.value = 0
+      console.error('Error fetching set likes:', err)
+      likes.value = 0
+      return { count: 0 }
     }
   }
 
-  const toggleLikeSet = async () => {
-    if (!setId) {
-      console.error('No setId provided to toggleLikeSet!')
-      return
-    }
-    if (!auth.user?.id) {
-      console.error('No user ID available for toggleLikeSet!')
-      return
-    }
-
-    const originalLikeState = isLiked.value
-    const originalLikeCount = setLikes.value
-
-    try {
-      isLiked.value = !isLiked.value
-      setLikes.value = isLiked.value ? setLikes.value + 1 : Math.max(0, setLikes.value - 1)
-
-      const res = await axios.post(`${apiEndpoints.sets}/${setId}/like`)
-      const serverLikeState = res.data.liked
-
-      if (serverLikeState !== isLiked.value) {
-        isLiked.value = serverLikeState
-        setLikes.value = serverLikeState ? originalLikeCount + 1 : Math.max(0, originalLikeCount - 1)
-      }
-    } catch (err) {
-      console.error('Failed to toggle like:', err)
-      isLiked.value = originalLikeState
-      setLikes.value = originalLikeCount
-    }
-  }
-
-  // Fetch initial like status
-  onMounted(async () => {
-    if (auth.user?.id) {
-      await Promise.all([
-        fetchUserLikeForSet(),
-        fetchSetLikes()
-      ])
-    }
-  })
+  // Initialize likes state
+  fetchLikes()
 
   return {
-    isLiked,
-    setLikes,
-    toggleLikeSet,
+    likes,
+    userLiked,
+    loading,
+    fetchLikes,
+    toggleLike,
     fetchUserLikeForSet,
     fetchSetLikes
   }

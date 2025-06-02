@@ -1,7 +1,6 @@
 import { ref, type Ref } from 'vue'
 import type { FlashCardSet } from '@/types'
-import axios from 'axios'
-import { apiEndpoints, fetchCategories } from '@/api/index'
+import { api, fetchCategories } from '@/api/index'
 
 interface UseSetsOptions {
   initialCategory?: string
@@ -91,7 +90,7 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
       }
 
       console.log('Fetching sets with params:', params.toString())
-      const setsRes = await axios.get(`${apiEndpoints.sets}?${params.toString()}`)
+      const setsRes = await api.get(`/sets?${params.toString()}`)
       console.log('Search response:', setsRes.data)
       const { items, pagination } = setsRes.data
 

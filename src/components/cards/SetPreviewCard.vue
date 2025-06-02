@@ -65,8 +65,7 @@
 import { useRouter } from 'vue-router'
 import { computed, ref, onMounted, watch } from 'vue'
 import TagsList from '@/components/common/TagsList.vue'
-import axios from 'axios'
-import { apiEndpoints } from '@/api'
+import { api } from '@/api'
 import type { FlashCardSet } from '@/types'
 
 const props = defineProps<{
@@ -119,24 +118,19 @@ const priceClass = computed(() => {
 
 const fetchSetStats = async () => {
   try {
-    // Fetch views count
-    const viewsRes = await axios.get(`${apiEndpoints.sets}/${props.set.id}/views`);
-    viewCount.value = viewsRes.data.count || 0;
-    
-    // Fetch likes count
-    const likesRes = await axios.get(`${apiEndpoints.sets}/${props.set.id}/likes`);
-    likeCount.value = likesRes.data.count || 0;
-    
-    // Fetch cards count
-    const cardsRes = await axios.get(`${apiEndpoints.sets}/${props.set.id}/cards`);
-    cardCount.value = cardsRes.data.count || 0;
-    
+    const [viewsRes, likesRes, cardsRes] = await Promise.all([
+      api.get(`/sets/${props.set.id}/views`),
+      api.get(`/sets/${props.set.id}/likes`),
+      api.get(`/sets/${props.set.id}/cards`)
+    ])
+    viewCount.value = viewsRes.data.count || 0
+    likeCount.value = likesRes.data.count || 0
+    cardCount.value = cardsRes.data.length || 0
   } catch (err) {
-    console.error('Failed to fetch set stats:', err);
-    // Set default values on error
-    viewCount.value = 0;
-    likeCount.value = 0;
-    cardCount.value = 0;
+    console.error('Error fetching set stats:', err)
+    viewCount.value = 0
+    likeCount.value = 0
+    cardCount.value = 0
   }
 }
 

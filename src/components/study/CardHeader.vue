@@ -45,9 +45,7 @@
           <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
         </a>
         <!-- Like Button -->
-        <a class="link" @click="$emit('toggle-like')">
-          <i :class="['fa-solid', 'fa-heart', isLiked ? 'text-red-500' : 'text-gray-400', 'text-2xl']"></i>&nbsp; {{ setLikes }}
-        </a>
+        <LikeButton :set-id="set.id" />
       </div>
     </div>
   </div>
@@ -57,6 +55,7 @@
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FlashCardSet } from '@/types'
+import LikeButton from './LikeButton.vue'
 
 const router = useRouter()
 const avatarError = ref(false)
@@ -65,13 +64,10 @@ const titleElement = ref<HTMLElement | null>(null)
 
 const props = defineProps<{
   set: FlashCardSet
-  isLiked: boolean
-  setLikes: number
 }>()
 
 defineEmits<{
   (e: 'download'): void
-  (e: 'toggle-like'): void
 }>()
 
 const handleAvatarError = () => {
@@ -185,5 +181,29 @@ onMounted(() => {
 .w-16.h-16 .text-2xl {
   font-size: 1.75rem;
   line-height: 1;
+}
+
+/* Add styles to prevent layout shift */
+.like-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 3rem;
+  justify-content: center;
+}
+
+.likes-count {
+  min-width: 1.5rem;
+  text-align: center;
+  display: inline-block;
+}
+
+/* Smooth transitions for like button */
+.like-button i {
+  transition: color 0.2s ease;
+}
+
+.like-button:hover i {
+  transform: scale(1.1);
 }
 </style> 

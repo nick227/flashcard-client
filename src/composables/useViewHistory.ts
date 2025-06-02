@@ -1,8 +1,18 @@
 import { ref, computed, onUnmounted } from 'vue'
-import { historyService, type ViewHistory } from '@/services/historyService'
+import { api } from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useToaster } from '@/composables/useToaster'
 import debounce from 'lodash/debounce'
+
+interface ViewHistory {
+  id: number
+  userId: number
+  setId: number
+  numCardsViewed: number
+  completed: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 export function useViewHistory(setId: number) {
     const auth = useAuthStore()
@@ -26,14 +36,18 @@ export function useViewHistory(setId: number) {
 
         try {
             // Try to get existing history
-            const existingHistory = await historyService.getHistoryBySetId(setId)
+            const res = await api.get(`/history/${setId}`)
+            const existingHistory = res.data
             
             if (existingHistory) {
                 history.value = existingHistory
                 lastUpdatedCards.value = existingHistory.numCardsViewed
             } else {
                 // Create new history record if none exists
-                history.value = await historyService.startViewing(setId)
+                const newHistory = await api.post('/history', {
+                    setId
+                })
+                history.value = newHistory.data
                 lastUpdatedCards.value = 0
             }
         } catch (err) {
@@ -68,9 +82,11 @@ export function useViewHistory(setId: number) {
         })
 
         try {
-            history.value = await historyService.updateProgress(history.value.id, {
-                numCardsViewed: numCards
+            const res = await api.post('/history', {
+                setId,
+                cardsViewed: numCards
             })
+            history.value = res.data
             lastUpdatedCards.value = numCards
             console.log('Successfully updated history:', history.value)
         } catch (err) {
@@ -89,9 +105,12 @@ export function useViewHistory(setId: number) {
         if (!history.value || !user.value?.id || isCompleted.value) return
 
         try {
-            history.value = await historyService.updateProgress(history.value.id, {
-                completed: true
+            const res = await api.post('/history/complete', {
+                setId
             })
+            if (res.data) {
+                history.value = res.data
+            }
         } catch (err) {
             console.error('Failed to mark set as completed:', err)
             toast('Failed to mark set as completed', 'error')

@@ -66,9 +66,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import axios from 'axios'
+import { api } from '@/api/index'
 import { useAuthStore } from '@/stores/auth'
-import { apiEndpoints } from '@/api/index'
 import { useRouter } from 'vue-router'
 import type { User, FlashCardSet, Sale, Subscription } from '@/types'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
@@ -108,7 +107,7 @@ const totalSubs = ref(0)
 const fetchSets = async () => {
   loading.value = true
   try {
-    const res = await axios.get(`${apiEndpoints.sets}?showHidden=true&educatorId=${LOGGED_IN_USER_ID}&page=${setsPage.value}&limit=${PAGE_SIZE}`)
+    const res = await api.get(`/sets?showHidden=true&educatorId=${LOGGED_IN_USER_ID}&page=${setsPage.value}&limit=${PAGE_SIZE}`)
     console.log('Client: Fetched sets:', res.data)
     // Handle new paginated response format
     sets.value = res.data.items || res.data
@@ -123,7 +122,7 @@ const fetchSets = async () => {
 
 const fetchUsers = async () => {
   try {
-    const res = await axios.get(apiEndpoints.users)
+    const res = await api.get('/users')
     users.value = res.data
   } catch (err) {
     console.error('Error fetching users:', err)
@@ -133,7 +132,7 @@ const fetchUsers = async () => {
 const fetchSales = async () => {
   salesLoading.value = true
   try {
-    const res = await axios.get(`${apiEndpoints.sales}?page=${salesPage.value}&limit=${PAGE_SIZE}`)
+    const res = await api.get(`/sales?page=${salesPage.value}&limit=${PAGE_SIZE}`)
     // Handle potential paginated response
     const sales = res.data.items || res.data
     allSales.value = sales.map((sale: any) => ({
@@ -153,7 +152,7 @@ const fetchSales = async () => {
 const fetchSubs = async () => {
   subsLoading.value = true
   try {
-    const res = await axios.get(`${apiEndpoints.subscriptions}?educatorId=${LOGGED_IN_USER_ID}&page=${subsPage.value}&limit=${PAGE_SIZE}`)
+    const res = await api.get(`/subscriptions?educatorId=${LOGGED_IN_USER_ID}&page=${subsPage.value}&limit=${PAGE_SIZE}`)
     // Handle potential paginated response
     const subscriptions = res.data.items || res.data
     allSubs.value = subscriptions.map((sub: any) => {
@@ -186,7 +185,7 @@ const toggleHideSet = async (set: FlashCardSet) => {
   if (actionLoading.value) return
   actionLoading.value = true
   try {
-    await axios.post(`${apiEndpoints.sets}/${set.id}/toggle-hidden`)
+    await api.post(`/sets/${set.id}/toggle-hidden`)
     set.hidden = !set.hidden
   } catch (error) {
     console.error('Failed to toggle set visibility:', error)
@@ -204,7 +203,7 @@ const confirmDelete = async () => {
   if (!setToDelete.value || actionLoading.value) return
   actionLoading.value = true
   try {
-    await axios.delete(`${apiEndpoints.sets}/${setToDelete.value.id}`)
+    await api.delete(`/sets/${setToDelete.value.id}`)
     sets.value = sets.value.filter(s => s.id !== setToDelete.value!.id)
     setToDelete.value = null
   } catch (error) {
@@ -232,7 +231,7 @@ const handleSubsPageChange = (newPage: number) => {
 
 const handleSort = async (key: string, order: 'asc' | 'desc') => {
   try {
-    const res = await axios.get(`${apiEndpoints.sets}?showHidden=true&educatorId=${LOGGED_IN_USER_ID}&page=${setsPage.value}&limit=${PAGE_SIZE}&sortBy=${key}&sortOrder=${order.toUpperCase()}`)
+    const res = await api.get(`/sets?showHidden=true&educatorId=${LOGGED_IN_USER_ID}&page=${setsPage.value}&limit=${PAGE_SIZE}&sortBy=${key}&sortOrder=${order.toUpperCase()}`)
     sets.value = res.data.items || res.data
     setsTotalPages.value = Math.ceil(res.data.pagination?.total / PAGE_SIZE) || 1
     totalSets.value = res.data.pagination?.total || sets.value.length
@@ -243,7 +242,7 @@ const handleSort = async (key: string, order: 'asc' | 'desc') => {
 
 const handleSalesSort = async (key: string, order: 'asc' | 'desc') => {
   try {
-    const res = await axios.get(`${apiEndpoints.sales}?page=${salesPage.value}&limit=${PAGE_SIZE}&sortBy=${key}&sortOrder=${order.toUpperCase()}`)
+    const res = await api.get(`/sales?page=${salesPage.value}&limit=${PAGE_SIZE}&sortBy=${key}&sortOrder=${order.toUpperCase()}`)
     const sales = res.data.items || res.data
     allSales.value = sales.map((sale: any) => ({
       ...sale,
@@ -257,7 +256,7 @@ const handleSalesSort = async (key: string, order: 'asc' | 'desc') => {
 
 const handleSubsSort = async (key: string, order: 'asc' | 'desc') => {
   try {
-    const res = await axios.get(`${apiEndpoints.subscriptions}?educatorId=${LOGGED_IN_USER_ID}&page=${subsPage.value}&limit=${PAGE_SIZE}&sortBy=${key}&sortOrder=${order.toUpperCase()}`)
+    const res = await api.get(`/subscriptions?educatorId=${LOGGED_IN_USER_ID}&page=${subsPage.value}&limit=${PAGE_SIZE}&sortBy=${key}&sortOrder=${order.toUpperCase()}`)
     const subscriptions = res.data.items || res.data
     allSubs.value = subscriptions.map((sub: any) => {
       const user = users.value.find((u: any) => String(u.id) === String(sub.userId))

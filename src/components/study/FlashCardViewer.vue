@@ -105,8 +105,14 @@
     <!-- Card Area -->
     <div v-else class="w-full max-w-3xl mx-auto flex flex-col">
       <!-- Header with Download and Like -->
-      <CardHeader v-if="set" :set="set" :is-liked="isLiked" :set-likes="setLikes" @download="downloadSet"
-        @toggle-like="toggleLikeSet" />
+      <CardHeader 
+        v-if="set && !likesLoading" 
+        :set="set" 
+        :is-liked="isLiked || false" 
+        :set-likes="setLikes || 0" 
+        @download="downloadSet"
+        @toggle-like="toggleLike" 
+      />
 
       <!-- Main Card Area -->
       <div class="main-card-area flex-1 min-h-[600px] flex flex-col" tabindex="0"
@@ -152,8 +158,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
-import { apiEndpoints, api } from '@/api'
+import { api } from '@/api'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
 import CardControls from './CardControls.vue'
 import CardGrid from './CardGrid.vue'
@@ -202,12 +207,13 @@ const {
 } = useCardProgress(cards, currentFlip)
 
 const {
-  isLiked,
-  setLikes,
-  toggleLikeSet,
+  likes: setLikes,
+  userLiked: isLiked,
+  loading: likesLoading,
+  toggleLike,
   fetchUserLikeForSet,
   fetchSetLikes
-} = useCardLikes(props.setId)
+} = useCardLikes(Number(props.setId))
 
 const {
   showGridView,
@@ -289,7 +295,7 @@ const fetchSet = async () => {
     return
   }
   try {
-    const res = await axios.get(`${apiEndpoints.sets}/${props.setId}`)
+    const res = await api.get(`/sets/${props.setId}`)
     set.value = res.data
 
     // Check for access information
@@ -327,7 +333,7 @@ const fetchSet = async () => {
       }))
     }
   } catch (err) {
-    console.error('FlashCardViewer - Failed to fetch set:', err)
+    console.error('Error fetching set:', err)
     error.value = 'Failed to load flashcard set'
   } finally {
     loading.value = false
@@ -377,7 +383,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 const redirectToCheckout = async (setId: number | string) => {
   checkoutLoading.value = true
   try {
-    const { data } = await api.get(`${apiEndpoints.checkout}/${setId}`)
+    const { data } = await api.get(`/checkout/${setId}`)
     const stripe = await stripePromise
     if (data.url && stripe) {
       window.location.href = data.url
@@ -394,7 +400,7 @@ const subscribeToUnlockSet = async (userId: number | string) => {
   subscribeLoading.value = true
   loading.value = true // Add loading state for set refresh
   try {
-    const res = await api.post(`${apiEndpoints.subscriptions}/${userId}`)
+    const res = await api.post(`/subscriptions/${userId}`)
     if (res.status === 201 || res.status === 200) {
       toast('Successfully subscribed!', 'success')
       // Reset state before fetching
@@ -404,7 +410,7 @@ const subscribeToUnlockSet = async (userId: number | string) => {
       await fetchSet()
     }
   } catch (error: any) {
-    console.error('Failed to subscribe:', error)
+    console.error('Error handling subscription:', error)
     const errorMessage = error.response?.data?.error || 'Failed to subscribe. Please try again.'
     toast(errorMessage, 'error')
   } finally {
@@ -435,7 +441,34 @@ const handleKeyDown = (e: KeyboardEvent) => {
   }
 }
 
-// Check for canceled checkout
+// Initialize likes state
+const initializeLikes = async () => {
+  try {
+    await Promise.all([
+      fetchUserLikeForSet(),
+      fetchSetLikes()
+    ])
+  } catch (err) {
+    console.error('Error initializing likes:', err)
+  }
+}
+
+// Watch for setId changes and fetch data
+watch(() => props.setId, async (newId) => {
+  if (newId) {
+    loading.value = true
+    try {
+      await fetchSet()
+      await initializeLikes()
+    } catch (err) {
+      console.error('Error fetching set data:', err)
+    } finally {
+      loading.value = false
+    }
+  }
+}, { immediate: true })
+
+// Initialize likes state on mount
 onMounted(async () => {
   if (route.query.canceled === 'true') {
     toast('Checkout was canceled. You can try again when you\'re ready.', 'info')
@@ -444,19 +477,10 @@ onMounted(async () => {
 
   // Add global keyboard listener
   window.addEventListener('keydown', handleKeyDown)
-})
 
-// Watch for setId changes and fetch data
-watch(() => props.setId, async (newId) => {
-  if (newId) {
-    loading.value = true
-    await fetchSet()
-    await Promise.all([
-      fetchUserLikeForSet(),
-      fetchSetLikes()
-    ])
-  }
-}, { immediate: true })
+  // Initialize likes state
+  await initializeLikes()
+})
 
 // Cleanup
 onUnmounted(() => {

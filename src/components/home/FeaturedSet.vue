@@ -75,8 +75,7 @@
 import type { FlashCardSet } from '@/types'
 import { useRouter } from 'vue-router'
 import { ref, watch, computed } from 'vue'
-import { apiEndpoints } from '@/api'
-import axios from 'axios'
+import { api } from '@/api'
 
 const router = useRouter()
 const likesCount = ref(0)
@@ -104,36 +103,22 @@ const getFirstLetter = computed(() => {
 // Watch for changes to the set prop
 watch(() => props.set, async (newSet) => {
   if (newSet) {
-    await Promise.all([
-      fetchLikesCount(newSet.id),
-      fetchViewsCount(newSet.id)
-    ])
+    await fetchStats(newSet.id)
   }
 }, { immediate: true })
 
-async function fetchLikesCount(setId: number) {
-  isLoadingLikes.value = true
+const fetchStats = async (setId: number) => {
   try {
-    const response = await axios.get(`${apiEndpoints.sets}/${setId}/likes`)
-    likesCount.value = response.data.count || 0
-  } catch (error) {
-    console.error('Error fetching likes count:', error)
+    const [likesRes, viewsRes] = await Promise.all([
+      api.get(`/sets/${setId}/likes`),
+      api.get(`/sets/${setId}/views`)
+    ])
+    likesCount.value = likesRes.data.count || 0
+    viewsCount.value = viewsRes.data.count || 0
+  } catch (err) {
+    console.error('Error fetching stats:', err)
     likesCount.value = 0
-  } finally {
-    isLoadingLikes.value = false
-  }
-}
-
-async function fetchViewsCount(setId: number) {
-  isLoadingViews.value = true
-  try {
-    const response = await axios.get(`${apiEndpoints.sets}/${setId}/views`)
-    viewsCount.value = response.data.count || 0
-  } catch (error) {
-    console.error('Error fetching views count:', error)
     viewsCount.value = 0
-  } finally {
-    isLoadingViews.value = false
   }
 }
 

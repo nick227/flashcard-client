@@ -119,7 +119,7 @@
 import { useAuthStore } from '@/stores/auth'
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { api, apiEndpoints } from '@/api/index'
+import { api } from '@/api'
 import DataGrid from '@/components/common/DataGrid.vue'
 import { usePaginatedData } from '@/composables/usePaginatedData'
 import FavoriteItem from '@/components/user/FavoriteItem.vue'
@@ -240,24 +240,12 @@ const handleViewHistoryPageChange = (page: number) => {
 }
 
 // Bio update handler
-const updateBio = async () => {
+const updateBio = async (bio: string) => {
   try {
-    const token = auth.jwt
-    if (!token) throw new Error('No authentication token found')
-
-    const res = await api.patch(`${apiEndpoints.users}/${user.value?.id}/bio`, {
-      bio: user.value?.bio
-    }, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-
-    if (user.value && res.data.bio) {
-      user.value.bio = res.data.bio
-    }
+    const res = await api.patch(`${apiEndpoints.users}/${user.value?.id}/bio`, { bio })
+    user.value = res.data
   } catch (err) {
-    console.error('Failed to update bio:', err)
+    console.error('Error updating bio:', err)
   }
 }
 

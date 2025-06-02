@@ -41,8 +41,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToaster } from '@/composables/useToaster'
 import SetPreviewCard from '@/components/cards/SetPreviewCard.vue'
-import axios from 'axios'
-import { apiEndpoints } from '@/api/index'
+import { api } from '@/api'
 import type { User, FlashCardSet } from '@/types'
 
 const route = useRoute()
@@ -56,49 +55,27 @@ const sets = ref<FlashCardSet[]>([])
 const loading = ref(true)
 const error = ref('')
 
-const fetchEducatorProfile = async () => {
+const fetchEducator = async () => {
   try {
-    // Find the educator by their name
-    const res = await axios.get(`${apiEndpoints.users}?name=${targetEducatorName}`)
-    console.log('Educator data:', res.data) // Debug log
-    if (res.data.length === 0) {
-      error.value = 'Educator not found'
-      toast('Educator not found', 'error')
-      router.push('/')
-      return
-    }
-    educator.value = res.data[0]
-    if (educator.value) {
-      console.log('Educator bio:', educator.value.bio) // Debug log
-    }
+    const res = await api.get(`/users?name=${targetEducatorName}`)
+    educator.value = res.data
   } catch (err) {
-    console.error('Failed to fetch educator:', err)
-    error.value = 'Failed to load profile'
-    toast('Failed to load profile', 'error')
+    console.error('Error fetching educator:', err)
   }
 }
 
-const fetchEducatorSets = async () => {
-  if (!educator.value) return
+const fetchSets = async () => {
   try {
-    // Get all non-hidden sets for this educator with pagination
     const params = new URLSearchParams({
-      educatorId: educator.value.id.toString(),
-      page: '1',
-      limit: '50',
-      sortOrder: 'newest'
+      educatorId: educator.value?.id.toString() || '',
+      page: currentPage.value.toString(),
+      limit: pageSize.toString()
     })
-    
-    console.log('Fetching sets with params:', params.toString())
-    const res = await axios.get(`${apiEndpoints.sets}?${params.toString()}`)
-    console.log('Sets response:', res.data)
-    sets.value = res.data.items || res.data
-  } catch (err: any) {
-    console.error('Failed to fetch sets:', err)
-    if (err.response) {
-      console.error('Error response:', err.response.data)
-    }
-    error.value = 'Failed to load sets'
+    const res = await api.get(`/sets?${params.toString()}`)
+    sets.value = res.data.items
+    totalPages.value = res.data.pagination.totalPages
+  } catch (err) {
+    console.error('Error fetching sets:', err)
   }
 }
 
@@ -108,8 +85,8 @@ const viewSet = (setId: number) => {
 
 onMounted(async () => {
   loading.value = true
-  await fetchEducatorProfile()
-  await fetchEducatorSets()
+  await fetchEducator()
+  await fetchSets()
   loading.value = false
 })
 </script>
