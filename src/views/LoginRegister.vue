@@ -85,21 +85,43 @@ const onSubmit = async (formData: { email: string; password: string; name?: stri
     error.value = ''
 
     if (mode.value === 'login') {
-      await auth.login(formData.email, formData.password)
+      await handleLogin(formData)
     } else {
-      await auth.register({
-        name: formData.name || '',
-        email: formData.email,
-        password: formData.password,
-        role_id: 2, // Default to user role
-        bio: formData.bio || ''
-      })
+      await handleRegister(formData)
     }
-
-    router.push('/profile')
   } catch (err: any) {
     console.error('Auth error:', err)
     error.value = err.response?.data?.error || err.message || 'Authentication failed'
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleLogin = async (formData: { email: string; password: string }) => {
+  try {
+    await auth.login({ email: formData.email, password: formData.password })
+    router.push('/')
+  } catch (error) {
+    console.error('Login error:', error)
+  }
+}
+
+const handleRegister = async (formData: { email: string; password: string; name?: string; bio?: string }) => {
+  if (!formData.name || !formData.email || !formData.password) {
+    error.value = 'All fields are required'
+    return
+  }
+
+  try {
+    loading.value = true
+    await auth.register({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password
+    })
+    router.push('/')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Registration failed'
   } finally {
     loading.value = false
   }

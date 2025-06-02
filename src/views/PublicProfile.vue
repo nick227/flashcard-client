@@ -39,14 +39,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useToaster } from '@/composables/useToaster'
 import SetPreviewCard from '@/components/cards/SetPreviewCard.vue'
 import { api } from '@/api'
 import type { User, FlashCardSet } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
-const { toast } = useToaster()
 
 // The userName from the URL is the target educator's name
 const targetEducatorName = route.params.userName as string
@@ -54,6 +52,10 @@ const educator = ref<User | null>(null)
 const sets = ref<FlashCardSet[]>([])
 const loading = ref(true)
 const error = ref('')
+
+const currentPage = ref(1)
+const pageSize = ref(12)
+const totalPages = ref(1)
 
 const fetchEducator = async () => {
   try {
@@ -66,13 +68,14 @@ const fetchEducator = async () => {
 
 const fetchSets = async () => {
   try {
-    const params = new URLSearchParams({
-      educatorId: educator.value?.id.toString() || '',
-      page: currentPage.value.toString(),
-      limit: pageSize.toString()
+    const res = await api.get(`/sets`, {
+      params: {
+        educatorId: educator.value?.id,
+        page: currentPage.value.toString(),
+        limit: pageSize.value.toString()
+      }
     })
-    const res = await api.get(`/sets?${params.toString()}`)
-    sets.value = res.data.items
+    sets.value = res.data.sets
     totalPages.value = res.data.pagination.totalPages
   } catch (err) {
     console.error('Error fetching sets:', err)

@@ -45,10 +45,9 @@
           <button class="button button-danger" @click="onReset" :disabled="!hasCards">Reset</button>
           <div class="flex items-center gap-2 flex-nowrap">
           <AISetGenerator 
-            :disabled="SetInfoFormComplete" 
+            :disabled="!!SetInfoFormComplete"
             :title="setTitle"
             :description="setDescription"
-            :class="{ 'input-error': cardsTouched && cards.length === 0 }"
             @add-set="onAddSet" />
           <AddCardButton :disabled="hasBlankCard" :class="{ 'input-error': cardsTouched && cards.length === 0 }"
             @add-card="onAddCard" />
@@ -111,9 +110,6 @@ const categories = ref<{ id: number, name: string }[]>([])
 const availableTags = ref<string[]>([])
 const cardToDelete = ref<number | null>(null)
 const submitting = ref(false)
-const loading = ref(false)
-const error = ref<string | null>(null)
-
 const setId = computed(() => Number(route.params.setId) || 0)
 const submitButtonText = computed(() => setId.value ? 'Save Changes' : 'Submit Set')
 const hasCards = computed(() => cards.value.length > 0)
@@ -127,7 +123,6 @@ const {
   setCategoryId,
   setTags,
   setPrice,
-  thumbnailFile,
   setThumbnail,
   cards,
   formSubmitted,

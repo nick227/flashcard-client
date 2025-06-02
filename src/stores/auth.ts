@@ -28,70 +28,54 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    setAuth(user: User, token: string, refreshToken: string) {
+    setUser(user: User | null) {
       this.user = user
-      this.jwt = token
-      this.refreshToken = refreshToken
     },
 
-    clearAuth() {
-      this.user = null
-      this.jwt = null
-      this.refreshToken = null
+    setJwt(jwt: string | null) {
+      this.jwt = jwt
+    },
+
+    setRefreshToken(refreshToken: string | null) {
+      this.refreshToken = refreshToken
     },
 
     setMessage(message: string) {
       this.message = message
     },
 
-    clearMessage() {
-      this.message = ''
-    },
-
-    async login(email: string, password: string) {
+    async login(credentials: { email: string; password: string }) {
       try {
-        this.loading = true
-        this.error = null
-        const res = await api.post('/auth/login', { email, password })
-        this.setAuth(res.data.user, res.data.accessToken, res.data.refreshToken)
-        this.clearMessage()
+        const res = await api.post('/auth/login', credentials)
+        this.setUser(res.data.user)
+        this.setJwt(res.data.token)
+        this.setRefreshToken(res.data.refreshToken)
+        this.setMessage('')
         return res.data
-      } catch (err: any) {
-        this.error = err.response?.data?.error || 'Login failed'
-        throw err
-      } finally {
-        this.loading = false
+      } catch (error) {
+        this.error = 'Login failed. Please check your credentials.'
+        throw error
       }
     },
 
-    async refreshToken() {
-      if (!this.refreshToken) {
-        throw new Error('No refresh token available')
-      }
-
+    async register(userData: { name: string; email: string; password: string }) {
       try {
-        const res = await api.post('/auth/refresh-token', {
-          refreshToken: this.refreshToken
-        })
-        this.jwt = res.data.accessToken
-        this.refreshToken = res.data.refreshToken
+        const res = await api.post('/auth/register', userData)
+        this.setUser(res.data.user)
+        this.setJwt(res.data.token)
+        this.setRefreshToken(res.data.refreshToken)
         return res.data
-      } catch (err: any) {
-        this.clearAuth()
-        throw err
+      } catch (error) {
+        this.error = 'Registration failed. Please try again.'
+        throw error
       }
     },
 
-    async logout() {
-      console.log('AuthStore: logout called')
-      try {
-        await api.post('/auth/logout')
-      } catch (err) {
-        console.error('Logout error:', err)
-      } finally {
-        this.clearAuth()
-        this.setMessage('Logged out.')
-      }
+    logout() {
+      this.setUser(null)
+      this.setJwt(null)
+      this.setRefreshToken(null)
+      this.setMessage('')
     },
 
     async fetchUser() {

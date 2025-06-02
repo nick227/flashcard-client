@@ -42,7 +42,7 @@
             <p class="text-gray-500">{{ user.role }}</p>
             <div class="mt-2">
               <textarea v-model="user.bio" class="w-full p-2 border rounded-lg" placeholder="Add a bio..." rows="3"
-                @blur="updateBio"></textarea>
+                @blur="handleBioUpdate"></textarea>
             </div>
           </div>
         </div>
@@ -116,16 +116,16 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '@/stores/auth'
-import { computed, ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '@/api'
+import { api, apiEndpoints } from '@/api'
 import DataGrid from '@/components/common/DataGrid.vue'
 import { usePaginatedData } from '@/composables/usePaginatedData'
 import FavoriteItem from '@/components/user/FavoriteItem.vue'
 import PurchaseItem from '@/components/user/PurchaseItem.vue'
 import SubscriptionItem from '@/components/user/SubscriptionItem.vue'
 import ViewHistoryItem from '@/components/user/ViewHistoryItem.vue'
+import { useAuthStore } from '@/stores/auth'
 
 // TypeScript interfaces
 import type { Favorite } from '@/types'
@@ -139,6 +139,7 @@ const auth = useAuthStore()
 const user = computed(() => auth.user)
 const isAuthenticated = computed(() => auth.isAuthenticated)
 const imageError = ref(false)
+const uploading = ref(false)
 
 // Initialize paginated data
 const favorites = usePaginatedData<Favorite>(apiEndpoints.sets, {
@@ -164,9 +165,6 @@ const subscriptions = usePaginatedData<Subscription>(apiEndpoints.subscriptions,
 const viewHistory = usePaginatedData<ViewHistory>(apiEndpoints.history, {
   pageSize: 6
 })
-
-// Upload state
-const uploading = ref(false)
 
 // Logout handler
 const logout = () => {
@@ -196,7 +194,7 @@ const updateUserImage = async (event: Event) => {
     })
 
     if (user.value && res.data.image) {
-      user.value.image = res.data.image
+      auth.setUser({ ...user.value, image: res.data.image })
     }
   } catch (err) {
     console.error('Failed to upload image:', err)
@@ -240,12 +238,16 @@ const handleViewHistoryPageChange = (page: number) => {
 }
 
 // Bio update handler
-const updateBio = async (bio: string) => {
+const handleBioUpdate = async (event: FocusEvent) => {
+  const target = event.target as HTMLTextAreaElement
+  const bio = target.value
   try {
-    const res = await api.patch(`${apiEndpoints.users}/${user.value?.id}/bio`, { bio })
-    user.value = res.data
-  } catch (err) {
-    console.error('Error updating bio:', err)
+    const res = await api.patch(`/users/${user.value?.id}/bio`, { bio })
+    if (user.value) {
+      auth.setUser({ ...user.value, bio: res.data.bio })
+    }
+  } catch (error) {
+    console.error('Error updating bio:', error)
   }
 }
 

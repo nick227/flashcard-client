@@ -1,3 +1,4 @@
+import axios, { AxiosError } from 'axios'
 import { api } from '@/api'
 import type { FlashCard, SetPrice } from '@/types'
 
@@ -18,10 +19,16 @@ export interface CardData {
   hint: string | null
 }
 
+interface ErrorResponse {
+  error: string;
+  message?: string;
+}
+
 export class SetService {
   private static handleError(error: unknown): never {
-    if (error instanceof AxiosError) {
-      throw new Error(error.response?.data?.message || error.message || 'An unexpected error occurred')
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError<ErrorResponse>
+      throw new Error(axiosError.response?.data?.error || axiosError.message || 'An unexpected error occurred')
     }
     throw error
   }
@@ -35,8 +42,7 @@ export class SetService {
       })
       return response.data
     } catch (error) {
-      console.error('Error creating set:', error)
-      throw error
+      return SetService.handleError(error)
     }
   }
 
@@ -49,8 +55,7 @@ export class SetService {
       })
       return response.data
     } catch (error) {
-      console.error('Error updating set:', error)
-      throw error
+      return SetService.handleError(error)
     }
   }
 
@@ -59,8 +64,7 @@ export class SetService {
       const response = await api.get(`/sets/${setId}`)
       return response.data
     } catch (error) {
-      console.error('Error fetching set:', error)
-      throw error
+      return SetService.handleError(error)
     }
   }
 
@@ -69,8 +73,7 @@ export class SetService {
       const response = await api.get(`/cards?setId=${setId}`)
       return response.data
     } catch (error) {
-      console.error('Error fetching set cards:', error)
-      throw error
+      return SetService.handleError(error)
     }
   }
 

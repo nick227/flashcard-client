@@ -2,22 +2,22 @@
   <form class="grid gap-4 mb-8">
     <!-- Thumbnail upload section -->
     <ThumbnailUploader
-      :title="title"
-      :description="description"
-      :thumbnail="thumbnail"
-      :disabled="isSubmitting"
+      :title="props.title"
+      :description="props.description"
+      :thumbnail="props.thumbnail"
+      :disabled="props.isSubmitting"
       @update:thumbnail="$emit('update:thumbnail', $event)"
     />
 
     <!-- Set title input -->
     <FormInput
       type="text"
-      :modelValue="title"
+      :modelValue="props.title"
       @update:modelValue="$emit('update:title', $event)"
       placeholder="Set Title"
-      :error="formSubmitted && !title ? 'Title is required.' : undefined"
+      :error="props.formSubmitted && !props.title ? 'Title is required.' : undefined"
       :required="true"
-      :disabled="isSubmitting"
+      :disabled="props.isSubmitting"
       ariaLabel="Set title"
       id="set-title"
     />
@@ -25,12 +25,12 @@
     <!-- Set description input -->
     <FormInput
       type="textarea"
-      :modelValue="description"
+      :modelValue="props.description"
       @update:modelValue="$emit('update:description', $event)"
       placeholder="Description"
-      :error="formSubmitted && !description ? 'Description is required.' : undefined"
+      :error="props.formSubmitted && !props.description ? 'Description is required.' : undefined"
       :required="true"
-      :disabled="isSubmitting"
+      :disabled="props.isSubmitting"
       ariaLabel="Set description"
       id="set-description"
     />
@@ -38,29 +38,29 @@
     <!-- Category selection -->
     <FormInput
       type="select"
-      :modelValue="category"
+      :modelValue="props.category"
       @update:modelValue="$emit('update:category', Number($event))"
-      :error="formSubmitted && !category ? 'Category is required.' : undefined"
+      :error="props.formSubmitted && !props.category ? 'Category is required.' : undefined"
       :required="true"
-      :disabled="isSubmitting"
+      :disabled="props.isSubmitting"
       ariaLabel="Set category"
       id="set-category"
     >
       <option value="" disabled>Select Category</option>
-      <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+      <option v-for="cat in props.categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
     </FormInput>
 
     <!-- Tags and price components -->
     <TagsInput 
-      :availableTags="availableTags" 
-      :modelValue="tags" 
-      :setId="setId"
-      :disabled="isSubmitting"
+      :availableTags="props.availableTags" 
+      :modelValue="props.tags" 
+      :setId="props.setId"
+      :disabled="props.isSubmitting"
       @update:modelValue="$emit('update:tags', $event)" 
     />
     <PriceSelector 
-      :modelValue="price" 
-      :disabled="isSubmitting"
+      :modelValue="props.price" 
+      :disabled="props.isSubmitting"
       @update:modelValue="$emit('update:price', $event)" 
     />
   </form>
@@ -74,16 +74,16 @@ import FormInput from '../common/FormInput.vue'
 
 // Component props definition
 const props = defineProps<{
-  title: string,
-  description: string,
-  category: number | null,
-  tags: string[],
-  price: any,
-  categories: { id: number, name: string }[],
-  availableTags: string[],
-  formSubmitted?: boolean,
-  thumbnail?: string | null,
-  setId: number,
+  title: string
+  description: string
+  category: number | null
+  tags: string[]
+  price: any
+  categories: { id: number, name: string }[]
+  availableTags: string[]
+  formSubmitted?: boolean
+  thumbnail?: string | null
+  setId: number
   isSubmitting: boolean
 }>()
 
