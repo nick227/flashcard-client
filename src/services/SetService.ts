@@ -8,7 +8,7 @@ export interface SetFormData {
   categoryId: number
   price: SetPrice
   tags: string[]
-  thumbnail: File | null
+  thumbnail: string | null
   cards: FlashCard[]
   educatorId: number
 }
@@ -93,8 +93,12 @@ export class SetService {
       formData.append('tags', JSON.stringify(data.tags))
     }
 
+    // Handle thumbnail URL
     if (data.thumbnail) {
-      formData.append('thumbnail', data.thumbnail)
+      console.log('SetService.prepareFormData - Adding thumbnail URL:', data.thumbnail)
+      formData.append('thumbnailUrl', data.thumbnail)
+    } else {
+      console.log('SetService.prepareFormData - No thumbnail URL provided')
     }
 
     const cardsData: CardData[] = data.cards.map(card => ({

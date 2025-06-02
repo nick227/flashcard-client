@@ -51,22 +51,15 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor for better error handling
+// Add response interceptor to handle 401 errors
 api.interceptors.response.use(
-  (response) => {
-    // Check if response is HTML instead of JSON
-    const contentType = response.headers['content-type'];
-    if (contentType && contentType.includes('text/html')) {
-      console.error('Received HTML instead of JSON:', response.data);
-      throw new Error('Invalid API response format');
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('API Response Error:', error);
-    if (error.response) {
-      console.error('Error Response:', error.response.data);
-      console.error('Error Status:', error.response.status);
+    if (error.response?.status === 401) {
+      const auth = useAuthStore();
+      auth.logout();
+      auth.setMessage('Session expired. Please log in again.');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

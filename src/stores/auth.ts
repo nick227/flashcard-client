@@ -5,6 +5,7 @@ import type { User } from '@/types'
 interface AuthState {
   user: User | null
   jwt: string | null
+  refreshToken: string | null
   loading: boolean
   error: string | null
   message: string
@@ -14,6 +15,7 @@ export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
     jwt: null,
+    refreshToken: null,
     loading: false,
     error: null,
     message: ''
@@ -26,66 +28,70 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    setAuth(user: User, token: string) {
+    setAuth(user: User, token: string, refreshToken: string) {
       this.user = user
       this.jwt = token
+      this.refreshToken = refreshToken
     },
 
     clearAuth() {
       this.user = null
       this.jwt = null
+      this.refreshToken = null
+    },
+
+    setMessage(message: string) {
+      this.message = message
+    },
+
+    clearMessage() {
+      this.message = ''
     },
 
     async login(email: string, password: string) {
       try {
-        this.loading = true;
-        this.error = null;
-        const res = await api.post('/auth/login', { email, password });
-        this.setAuth(res.data.user, res.data.accessToken);
-        this.clearMessage();
-        return res.data;
+        this.loading = true
+        this.error = null
+        const res = await api.post('/auth/login', { email, password })
+        this.setAuth(res.data.user, res.data.accessToken, res.data.refreshToken)
+        this.clearMessage()
+        return res.data
       } catch (err: any) {
-        this.error = err.response?.data?.error || 'Login failed';
-        throw err;
+        this.error = err.response?.data?.error || 'Login failed'
+        throw err
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
 
-    async register(userData: any) {
+    async refreshToken() {
+      if (!this.refreshToken) {
+        throw new Error('No refresh token available')
+      }
+
       try {
-        this.loading = true;
-        this.error = null;
-        const res = await api.post('/auth/register', userData);
-        this.setAuth(res.data.user, res.data.accessToken);
-        this.clearMessage();
-        return res.data;
+        const res = await api.post('/auth/refresh-token', {
+          refreshToken: this.refreshToken
+        })
+        this.jwt = res.data.accessToken
+        this.refreshToken = res.data.refreshToken
+        return res.data
       } catch (err: any) {
-        this.error = err.response?.data?.error || 'Registration failed';
-        throw err;
-      } finally {
-        this.loading = false;
+        this.clearAuth()
+        throw err
       }
     },
 
     async logout() {
       console.log('AuthStore: logout called')
       try {
-        await api.post('/auth/logout');
+        await api.post('/auth/logout')
       } catch (err) {
-        console.error('Logout error:', err);
+        console.error('Logout error:', err)
       } finally {
-        this.clearAuth();
-        this.setMessage('Logged out.');
+        this.clearAuth()
+        this.setMessage('Logged out.')
       }
-    },
-
-    setMessage(msg: string) {
-      this.message = msg
-    },
-
-    clearMessage() {
-      this.message = ''
     },
 
     async fetchUser() {
@@ -103,7 +109,7 @@ export const useAuthStore = defineStore('auth', {
         console.error('AuthStore: /users/me failed', e)
         this.logout()
       }
-    },
+    }
   },
   persist: {
     key: 'auth',

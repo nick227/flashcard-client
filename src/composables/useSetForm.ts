@@ -38,6 +38,7 @@ export function useSetForm() {
       return { isValid: false, error: 'Set category is required.' }
     }
 
+    // Validate thumbnail if it's a File object
     if (thumbnailFile.value) {
       if (!VALIDATION_LIMITS.THUMBNAIL.ALLOWED_TYPES.includes(thumbnailFile.value.type as typeof VALIDATION_LIMITS.THUMBNAIL.ALLOWED_TYPES[number])) {
         return { isValid: false, error: 'Thumbnail must be a valid image file (JPEG, PNG, GIF, or WebP).' }

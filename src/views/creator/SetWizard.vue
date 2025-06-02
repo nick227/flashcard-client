@@ -22,8 +22,8 @@
           :availableTags="availableTags"
           :thumbnail="setThumbnail"
           :setId="setId || 0"
-          :loading="loading"
-          :error="error"
+          :isSubmitting="submitting"
+          :formSubmitted="formSubmitted"
           @update:title="setTitle = $event"
           @update:description="setDescription = $event"
           @update:category="setCategoryId = $event"
@@ -140,8 +140,8 @@ const {
   updateOrder
 } = useSetForm()
 
-const handleThumbnailUpdate = (file: File) => {
-  thumbnailFile.value = file
+const handleThumbnailUpdate = (thumbnail: string | null) => {
+  setThumbnail.value = thumbnail
 }
 
 function onReset() {
@@ -149,8 +149,13 @@ function onReset() {
   confirmVisible.value = true
 }
 
-function onAddSet(newCards: FlashCard[]) {
-  cards.value = [...cards.value, ...newCards]
+function onAddSet(newCards: Array<{ id: number, front: string, back: string, hint: string | null }>) {
+  const cardsWithSetId = newCards.map(card => ({
+    ...card,
+    setId: setId.value || 0,
+    hint: card.hint || undefined
+  }))
+  cards.value = [...cards.value, ...cardsWithSetId]
   cardsTouched.value = true
   setTimeout(() => {
     window.scrollTo({
@@ -251,7 +256,7 @@ async function onSubmit() {
       categoryId: setCategoryId.value!,
       price: setPrice.value,
       tags: setTags.value,
-      thumbnail: thumbnailFile.value,
+      thumbnail: setThumbnail.value,
       cards: cards.value,
       educatorId: auth.user!.id
     })
