@@ -35,6 +35,8 @@ class AISocketService {
             return
         }
 
+        console.log('Initializing socket connection to:', baseUrl)
+
         this.socket = io(baseUrl, {
             auth: {
                 token: auth.jwt
@@ -56,12 +58,13 @@ class AISocketService {
         if (!this.socket) return
 
         this.socket.on('connect', () => {
-            console.log('Socket connected')
+            console.log('Socket connected successfully')
             this.isConnected = true
             this.reconnectAttempts = 0
             
             // If we have an active generation, restart it
             if (this.activeGenerationId) {
+                console.log('Restarting active generation after reconnection')
                 this.socket?.emit('startGeneration', {
                     title: this.currentTitle,
                     description: this.currentDescription
@@ -75,6 +78,7 @@ class AISocketService {
             
             // If the disconnection was not initiated by the client
             if (reason !== 'io client disconnect') {
+                console.log('Attempting to reconnect...')
                 this.handleReconnection()
             }
         })

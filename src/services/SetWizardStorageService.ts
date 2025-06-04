@@ -75,9 +75,7 @@ export class SetWizardStorageService {
       typeof state === 'object' &&
       state !== null &&
       typeof state.title === 'string' &&
-      state.title.length > 0 &&
       typeof state.description === 'string' &&
-      state.description.length > 0 &&
       (typeof state.categoryId === 'number' || state.categoryId === null) &&
       Array.isArray(state.tags) &&
       state.tags.every(tag => typeof tag === 'string') &&
