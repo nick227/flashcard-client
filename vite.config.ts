@@ -21,10 +21,5 @@ export default defineConfig({
     },
     chunkSizeWarningLimit: 1000,
     sourcemap: true
-  },
-  server: {
-    headers: {
-      'Content-Type': 'application/javascript'
-    }
   }
 })
