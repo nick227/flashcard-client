@@ -28,6 +28,7 @@ class AISocketService {
     private initialize() {
         const auth = useAuthStore()
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+        const isDev = import.meta.env.DEV
 
         // Ensure we have a JWT before connecting
         if (!auth.jwt) {
@@ -35,7 +36,11 @@ class AISocketService {
             return
         }
 
-        console.log('Initializing socket connection to:', baseUrl, 'with JWT:', auth.jwt.substring(0, 10) + '...')
+        console.log('Initializing socket connection:', {
+            baseUrl,
+            isDev,
+            hasJwt: !!auth.jwt
+        })
 
         try {
             this.socket = io(baseUrl, {
@@ -45,10 +50,11 @@ class AISocketService {
                 reconnection: true,
                 reconnectionAttempts: this.maxReconnectAttempts,
                 reconnectionDelay: this.reconnectDelay,
-                timeout: 10000, // 10 second connection timeout
-                transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
-                path: '/socket.io/', // Explicitly set socket.io path
-                withCredentials: true // Enable credentials
+                timeout: 10000,
+                transports: ['websocket', 'polling'],
+                path: '/socket.io/',
+                withCredentials: true,
+                forceNew: true
             })
 
             // Add beforeunload handler
