@@ -98,10 +98,17 @@ export class SetService {
     formData.append('title', data.title.trim())
     formData.append('description', data.description.trim())
     formData.append('categoryId', data.categoryId.toString())
-    formData.append('price', JSON.stringify(data.price))
+    
+    // Handle price based on type
+    const priceAmount = data.price.type === 'free' || data.price.type === 'subscribers' 
+      ? 0 
+      : data.price.amount || 0
+    formData.append('price', priceAmount.toString())
+    formData.append('isSubscriberOnly', data.price.type === 'subscribers' ? 'true' : 'false')
+    
     formData.append('tags', JSON.stringify(data.tags))
     if (data.thumbnail) {
-      formData.append('thumbnail', data.thumbnail)
+      formData.append('thumbnailUrl', data.thumbnail)
     }
     formData.append('cards', JSON.stringify(data.cards.map(card => ({
       front: {

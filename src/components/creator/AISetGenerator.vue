@@ -37,11 +37,11 @@ const generating = ref(false)
 const generationId = ref<string | null>(null)
 
 // Watch loading state and emit to parent
-watch(loading, (newValue) => {
+watch(loading, (newValue: boolean) => {
   emit('update:generating', newValue)
   if (!newValue) {
     // Clear any pending toast timeouts when generation completes
-    toastTimeouts.value.forEach(timeout => clearTimeout(timeout))
+    toastTimeouts.value.forEach((timeout: number) => clearTimeout(timeout))
     toastTimeouts.value = []
   }
 })
@@ -49,6 +49,7 @@ watch(loading, (newValue) => {
 const generateSet = async () => {
   if (!props.title || !props.description) return
   
+  loading.value = true
   generating.value = true
   emit('update:generating', true)
   
@@ -59,7 +60,7 @@ const generateSet = async () => {
       props.title,
       props.description,
       {
-        onCardGenerated: (card) => {
+        onCardGenerated: (card: Card) => {
           console.log('AISetGenerator received card:', {
             id: card.id,
             front: { text: card.front.text, imageUrl: card.front.imageUrl },
@@ -81,13 +82,15 @@ const generateSet = async () => {
         },
         onComplete: () => {
           console.log('Generation complete, total cards:', cards.length)
+          loading.value = false
           generating.value = false
           emit('update:generating', false)
           toast(`Successfully generated ${cards.length} cards!`, 'success')
         },
-        onError: (error) => {
+        onError: (error: string) => {
           console.error('Generation error:', error)
           toast(error, 'error')
+          loading.value = false
           generating.value = false
           emit('update:generating', false)
         }
@@ -97,6 +100,7 @@ const generateSet = async () => {
   } catch (error) {
     console.error('Generation error:', error)
     toast('Failed to generate cards', 'error')
+    loading.value = false
     generating.value = false
     emit('update:generating', false)
     generationId.value = null

@@ -50,11 +50,12 @@ class AISocketService {
                 reconnection: true,
                 reconnectionAttempts: this.maxReconnectAttempts,
                 reconnectionDelay: this.reconnectDelay,
-                timeout: 10000,
+                timeout: 20000, // Increased timeout to 20 seconds
                 transports: ['websocket', 'polling'],
                 path: '/socket.io/',
                 withCredentials: true,
-                forceNew: true
+                forceNew: true,
+                autoConnect: true
             })
 
             // Add beforeunload handler
@@ -167,9 +168,15 @@ class AISocketService {
         console.log('Setting up generation with ID:', generationId)
 
         // Set up event listeners
-        this.addListener('cardGenerated', (data: { generationId: string, card: any }) => {
+        this.addListener('cardGenerated', (data: { generationId: string, card: any }, callback: (ack: any) => void) => {
+            console.log('Received cardGenerated event:', {
+                eventGenerationId: data.generationId,
+                currentGenerationId: generationId,
+                card: data.card
+            })
+            
             if (data.generationId === generationId) {
-                console.log('Socket received raw card data:', data.card)
+                console.log('Processing card for current generation')
                 // Ensure proper card structure
                 const card: Card = {
                     id: Date.now(),
@@ -184,58 +191,82 @@ class AISocketService {
                     },
                     hint: data.card.hint || null
                 }
-                console.log('Socket transformed card:', {
-                    id: card.id,
-                    front: { text: card.front.text, imageUrl: card.front.imageUrl },
-                    back: { text: card.back.text, imageUrl: card.back.imageUrl },
-                    hint: card.hint
-                })
+                console.log('Emitting transformed card to callbacks')
                 callbacks.onCardGenerated(card)
+                // Acknowledge receipt of card
+                if (callback) {
+                    console.log('Acknowledging card receipt')
+                    callback({ received: true })
+                }
+            } else {
+                console.log('Ignoring card for different generation')
             }
         })
 
-        this.addListener('generationComplete', (data: { generationId: string }) => {
+        this.addListener('generationComplete', (data: { generationId: string }, callback: (ack: any) => void) => {
+            console.log('Received generationComplete event:', {
+                eventGenerationId: data.generationId,
+                currentGenerationId: generationId
+            })
+            
             if (data.generationId === generationId) {
-                console.log('Generation complete for ID:', generationId)
+                console.log('Processing completion for current generation')
                 callbacks.onComplete()
                 this.cleanupListeners()
                 // Clear current generation details
                 this.currentTitle = null
                 this.currentDescription = null
+                // Acknowledge completion
+                if (callback) {
+                    console.log('Acknowledging completion')
+                    callback({ received: true })
+                }
+            } else {
+                console.log('Ignoring completion for different generation')
             }
         })
 
-        this.addListener('generationError', (data: { generationId: string, error: string }) => {
+        this.addListener('generationError', (data: { generationId: string, error: string }, callback: (ack: any) => void) => {
+            console.log('Received generationError event:', {
+                eventGenerationId: data.generationId,
+                currentGenerationId: generationId,
+                error: data.error
+            })
+            
             if (data.generationId === generationId) {
-                console.error('Generation error for ID:', generationId, 'Error:', data.error)
+                console.log('Processing error for current generation')
                 callbacks.onError(data.error)
                 this.cleanupListeners()
                 // Clear current generation details
                 this.currentTitle = null
                 this.currentDescription = null
+                // Acknowledge error
+                if (callback) {
+                    console.log('Acknowledging error')
+                    callback({ received: true })
+                }
+            } else {
+                console.log('Ignoring error for different generation')
             }
         })
 
-        // Add timeout for no response
-        const timeoutId = setTimeout(() => {
-            if (this.activeGenerationId === generationId) {
-                console.error('No response from server within timeout period')
-                callbacks.onError('Server did not respond within expected time')
-                this.cleanupListeners()
-            }
-        }, 30000) // 30 second timeout
-
         // Start generation
-        console.log('Emitting startGeneration event with:', { title, description })
+        console.log('Emitting startGeneration event with:', { 
+            title, 
+            description,
+            generationId 
+        })
         this.socket.emit('startGeneration', {
             title,
-            description
+            description,
+            generationId
         }, (error: any) => {
             if (error) {
                 console.error('Error from startGeneration callback:', error)
                 callbacks.onError(error.message || 'Failed to start generation')
                 this.cleanupListeners()
-                clearTimeout(timeoutId)
+            } else {
+                console.log('StartGeneration acknowledged by server')
             }
         })
 
@@ -243,13 +274,24 @@ class AISocketService {
     }
 
     private addListener(event: string, callback: SocketEventListener) {
-        if (!this.socket) return
+        if (!this.socket) {
+            console.error('Cannot add listener: socket is null')
+            return
+        }
 
+        console.log(`Adding listener for event: ${event}`)
+        
         if (!this.eventListeners.has(event)) {
             this.eventListeners.set(event, new Set())
         }
         this.eventListeners.get(event)?.add(callback)
+        
+        // Remove any existing listeners for this event to prevent duplicates
+        this.socket.off(event)
+        
+        // Add the new listener
         this.socket.on(event, callback)
+        console.log(`Listener added for event: ${event}`)
     }
 
     private cleanupListeners() {

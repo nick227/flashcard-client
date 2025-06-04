@@ -22,8 +22,24 @@ export default defineConfig({
         sourcemap: true
     },
     server: {
-        headers: {
-            'Content-Type': 'application/javascript'
+        port: 5173,
+        strictPort: true,
+        proxy: {
+            '/api': {
+                target: 'http://localhost:5000',
+                changeOrigin: true
+            },
+            '/socket.io': {
+                target: 'http://localhost:5000',
+                changeOrigin: true,
+                ws: true
+            }
         }
+    },
+    optimizeDeps: {
+        include: ['vue', 'vue-router', 'pinia', 'socket.io-client']
+    },
+    esbuild: {
+        target: 'esnext'
     }
 });
