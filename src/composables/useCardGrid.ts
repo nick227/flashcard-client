@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
-import type { FlashCard } from '@/types'
+import type { Card } from '@/types/card'
 
 interface CardViewState {
   id: number
@@ -8,7 +8,7 @@ interface CardViewState {
   backViewed: boolean
 }
 
-export function useCardGrid(cards: Ref<FlashCard[]>) {
+export function useCardGrid(cards: Ref<Card[]>) {
   const showGridView = ref(false)
   const gridCardStates = ref<Record<number, boolean>>({})
   const viewedCards = ref<CardViewState[]>([])
@@ -26,7 +26,7 @@ export function useCardGrid(cards: Ref<FlashCard[]>) {
   }
 
   // Fisher-Yates shuffle algorithm
-  const shuffleArray = (array: FlashCard[]) => {
+  const shuffleArray = (array: Card[]) => {
     const newArray = [...array]
     for (let i = newArray.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -35,7 +35,7 @@ export function useCardGrid(cards: Ref<FlashCard[]>) {
     return newArray
   }
 
-  const syncGridStates = (newCards: FlashCard[]) => {
+  const syncGridStates = (newCards: Card[]) => {
     const newStates: Record<number, boolean> = {}
     newCards.forEach(card => {
       newStates[card.id] = gridCardStates.value[card.id] || false

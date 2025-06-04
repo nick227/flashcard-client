@@ -13,10 +13,10 @@
 
 <script setup lang="ts">
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
-import type { FlashCard } from '@/types'
+import type { Card } from '@/types/card'
 
 defineProps<{
-  cards: FlashCard[]
+  cards: Card[]
   gridCardStates: Record<number, boolean>
 }>()
 

@@ -1,4 +1,4 @@
-import type { FlashCard } from '@/types'
+import type { Card } from '@/types/card'
 import { VALIDATION_LIMITS } from '@/constants/validation'
 
 export class CardService {
@@ -6,28 +6,38 @@ export class CardService {
     return Date.now() + Math.floor(Math.random() * 1000)
   }
 
-  static createNewCard(): FlashCard {
+  static createNewCard(): Card {
     return {
       id: this.generateId(),
-      front: '',
-      back: '',
+      front: {
+        text: '',
+        imageUrl: null
+      },
+      back: {
+        text: '',
+        imageUrl: null
+      },
+      hint: null,
       setId: 0 // Temporary ID until saved
     }
   }
 
-  static validateCards(cards: FlashCard[]): { isValid: boolean; error?: string } {
+  static validateCards(cards: Card[]): { isValid: boolean; error?: string } {
     if (cards.length === 0) {
       return { isValid: false, error: 'At least one card is required.' }
     }
 
-    const hasBlankCard = cards.some(card => !card.front.trim() || !card.back.trim())
+    const hasBlankCard = cards.some(card => 
+      (!card.front.text && !card.front.imageUrl) || 
+      (!card.back.text && !card.back.imageUrl)
+    )
     if (hasBlankCard) {
-      return { isValid: false, error: 'All cards must have both front and back.' }
+      return { isValid: false, error: 'All cards must have both front and back content.' }
     }
 
     const hasLongContent = cards.some(card => 
-      card.front.length > VALIDATION_LIMITS.CARD.MAX_CHARS || 
-      card.back.length > VALIDATION_LIMITS.CARD.MAX_CHARS ||
+      (card.front.text && card.front.text.length > VALIDATION_LIMITS.CARD.MAX_CHARS) || 
+      (card.back.text && card.back.text.length > VALIDATION_LIMITS.CARD.MAX_CHARS) ||
       (card.hint && card.hint.length > VALIDATION_LIMITS.CARD.MAX_CHARS)
     )
     if (hasLongContent) {
@@ -37,15 +47,15 @@ export class CardService {
     return { isValid: true }
   }
 
-  static updateCard(cards: FlashCard[], updatedCard: FlashCard): FlashCard[] {
+  static updateCard(cards: Card[], updatedCard: Card): Card[] {
     return cards.map(card => card.id === updatedCard.id ? { ...updatedCard } : card)
   }
 
-  static deleteCard(cards: FlashCard[], id: number): FlashCard[] {
+  static deleteCard(cards: Card[], id: number): Card[] {
     return cards.filter(card => card.id !== id)
   }
 
-  static reorderCards(_cards: FlashCard[], newOrder: FlashCard[]): FlashCard[] {
+  static reorderCards(_cards: Card[], newOrder: Card[]): Card[] {
     return newOrder
   }
 } 

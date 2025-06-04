@@ -3,7 +3,7 @@
     <div class="relative group">
       <div
         class="w-full rounded-lg overflow-hidden cursor-pointer transition-all duration-200 hover:opacity-90 flex items-center justify-center m-h-[480px]"
-        @click="!disabled && !isGeneratingThumbnail && fileInputRef?.click()"
+        @click="handleUploadAreaClick"
         :class="{ 'opacity-50 cursor-not-allowed': disabled }"
         role="button"
         :aria-label="disabled ? 'Thumbnail upload disabled' : 'Click to upload thumbnail'"
@@ -33,7 +33,7 @@
               </div>
               <div class="space-y-2">
                 <p class="text-gray-700 font-medium text-lg">Generating AI Thumbnail</p>
-                <p class="text-gray-500 text-sm">This may take a few moments...</p>
+                <p class="text-gray-500 text-sm mb-4">This may take a few moments...</p>
                 <!-- Loading dots animation -->
                 <div class="flex justify-center space-x-1">
                   <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
@@ -72,6 +72,7 @@
                   @click="handleGenerateClick"
                   class="button button-secondary"
                   :disabled="disabled || !canGenerate"
+                  :title="disabled || !canGenerate ? 'Complete Title and Description to Use' : 'Generate thumbnail using AI'"
                   :class="{ 'opacity-50 cursor-not-allowed': disabled || !canGenerate }">
                   <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </button>
@@ -95,12 +96,20 @@
       </div>
       <!-- Thumbnail controls -->
       <div class="flex items-center gap-2 mt-2 justify-center w-full">
-        <input ref="fileInputRef" type="file" id="thumbnail" @change="handleThumbnailChange"
-          accept="image/jpeg,image/png,image/gif" :disabled="disabled || isUploading" class="hidden" />
+        <input 
+          ref="fileInputRef" 
+          type="file" 
+          id="thumbnail" 
+          @change="handleThumbnailChange"
+          @click.stop
+          accept="image/jpeg,image/png,image/gif" 
+          :disabled="disabled || isUploading" 
+          class="hidden" 
+        />
         <button 
           v-if="thumbnailFile || thumbnailPreview" 
           type="button" 
-          @click="handleRemoveClick" 
+          @click.prevent="handleRemoveClick" 
           class="button button-danger"
           :disabled="disabled || isUploading"
           :aria-label="disabled ? 'Remove thumbnail disabled' : 'Remove thumbnail'">
@@ -166,6 +175,9 @@ function handleGenerateClick() {
 
 // Handle thumbnail file selection
 async function handleThumbnailChange(event: Event) {
+  event.preventDefault()
+  event.stopPropagation()
+  
   const input = event.target as HTMLInputElement
   if (!input.files?.length) return
 
@@ -194,10 +206,12 @@ async function handleThumbnailChange(event: Event) {
     })
 
     thumbnailPreview.value = url
+    thumbnailFile.value = file
     emit('update:thumbnail', url)
   } catch (err) {
     thumbnailError.value = err instanceof Error ? err.message : 'Failed to process file'
     thumbnailPreview.value = null
+    thumbnailFile.value = null
     input.value = ''
   } finally {
     isUploading.value = false
@@ -277,6 +291,14 @@ function handleRemoveClick() {
   if (!props.disabled) {
     removeThumbnail()
   }
+}
+
+// Update the click handler for the upload area
+function handleUploadAreaClick(event: Event) {
+  if (props.disabled || isGeneratingThumbnail.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  fileInputRef.value?.click()
 }
 </script>
 

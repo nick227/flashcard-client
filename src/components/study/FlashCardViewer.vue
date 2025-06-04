@@ -168,7 +168,8 @@ import { useCardNavigation } from '@/composables/useCardNavigation.ts'
 import { useCardProgress } from '@/composables/useCardProgress.ts'
 import { useCardLikes } from '@/composables/useCardLikes.ts'
 import { useCardGrid } from '@/composables/useCardGrid.ts'
-import type { FlashCard, FlashCardSet } from '@/types'
+import type { Card } from '@/types/card'
+import type { FlashCardSet } from '@/types'
 import { useRouter, useRoute } from 'vue-router'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/common/Toaster.vue'
@@ -184,7 +185,7 @@ const { toast, toasts, remove } = useToaster()
 const loading = ref(true)
 const checkoutLoading = ref(false)
 const subscribeLoading = ref(false)
-const cards = ref<FlashCard[]>([])
+const cards = ref<Card[]>([])
 const set = ref<FlashCardSet | null>(null)
 const unauthorized = ref(false)
 const accessDetails = ref<any>(null)
@@ -296,25 +297,36 @@ const fetchSet = async () => {
   }
   try {
     const res = await api.get(`/sets/${props.setId}`)
+    console.log('Raw API response:', res.data)
     set.value = res.data
 
-    // Check for access information
     if (res.data.access && !res.data.access.hasAccess) {
       unauthorized.value = true
       accessDetails.value = res.data.access
       cards.value = []
     } else {
-      unauthorized.value = false
-      accessDetails.value = null
-
       const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
-      cards.value = cardsData.map((card: { id: number; setId: number; front: string; back: string; hint?: string }) => ({
-        id: card.id,
-        setId: card.setId,
-        front: card.front || '',
-        back: card.back || '',
-        hint: card.hint || ''
-      }))
+      console.log('Raw cards data:', cardsData)
+      
+      cards.value = cardsData.map((card: any) => {
+        const transformedCard = {
+          id: card.id,
+          setId: card.setId,
+          front: {
+            text: card.front?.text || '',
+            imageUrl: card.front?.imageUrl || null
+          },
+          back: {
+            text: card.back?.text || '',
+            imageUrl: card.back?.imageUrl || null
+          },
+          hint: card.hint || null
+        }
+        console.log('Transformed card:', transformedCard)
+        return transformedCard
+      })
+
+      console.log('Final cards array:', cards.value)
 
       // Initialize history tracking
       await initializeHistory()
@@ -343,12 +355,23 @@ const fetchSet = async () => {
 const downloadSet = async () => {
   try {
     // Create CSV content with headers
-    const headers = ['Front', 'Back']
-    const rows = cards.value.map(card => [
-      // Escape quotes and wrap in quotes to handle commas and newlines
-      `"${card.front.replace(/"/g, '""')}"`,
-      `"${card.back.replace(/"/g, '""')}"`
-    ])
+    const headers = ['Front', 'Back', 'Hint', 'Front Image', 'Back Image']
+    const rows = cards.value.map(card => {
+      // Helper to safely format CSV field
+      const formatField = (value: string | null | undefined): string => {
+        if (!value) return '""'
+        // Escape quotes and wrap in quotes
+        return `"${value.replace(/"/g, '""')}"`
+      }
+
+      return [
+        formatField(card.front.text),
+        formatField(card.back.text),
+        formatField(card.hint),
+        formatField(card.front.imageUrl),
+        formatField(card.back.imageUrl)
+      ]
+    })
 
     const csvContent = [
       headers.join(','),
@@ -520,24 +543,7 @@ const handleShuffle = () => {
   }
 }
 
-// Add debug logging to track card data
-watch(() => cards.value, (newCards) => {
-  console.log('Cards data updated:', {
-    currentIndex: currentIndex.value,
-    currentCard: newCards[currentIndex.value],
-    flipped: flipped.value
-  })
-}, { deep: true })
-
-watch([currentIndex, flipped], ([newIndex, newFlipped]) => {
-  console.log('Card state changed:', {
-    index: newIndex,
-    flipped: newFlipped,
-    currentCard: cards.value[newIndex]
-  })
-})
-
-// Update handleCardFlip to log state
+// Update handleCardFlip to properly track progress
 const handleCardFlip = async () => {
   console.log('Card flip triggered:', {
     currentIndex: currentIndex.value,
@@ -588,4 +594,44 @@ const handleNextCardWithHistory = async () => {
     await markAsCompleted()
   }
 }
+
+// Reset state when cards change
+watch(() => cards.value, (newCards) => {
+  if (newCards && newCards.length > 0) {
+    // Reset navigation state
+    currentIndex.value = 0
+    flipped.value = false
+    currentFlip.value = 0
+
+    // Reset viewed cards tracking
+    viewedCards.value = newCards.map(card => ({
+      id: card.id,
+      frontViewed: false,
+      backViewed: false
+    }))
+  }
+}, { immediate: true })
+
+// Add debug logging to track card data
+watch(() => cards.value, (newCards) => {
+  console.log('Cards data updated:', {
+    currentIndex: currentIndex.value,
+    currentCard: newCards[currentIndex.value],
+    flipped: flipped.value,
+    totalCards: newCards.length,
+    isNextDisabled: isNextDisabled.value,
+    isPrevDisabled: isPrevDisabled.value
+  })
+}, { deep: true })
+
+watch([currentIndex, flipped], ([newIndex, newFlipped]) => {
+  console.log('Card state changed:', {
+    index: newIndex,
+    flipped: newFlipped,
+    currentCard: cards.value[newIndex],
+    totalCards: cards.value.length,
+    isNextDisabled: isNextDisabled.value,
+    isPrevDisabled: isPrevDisabled.value
+  })
+})
 </script>

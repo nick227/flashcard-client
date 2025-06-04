@@ -14,11 +14,6 @@ export function usePaginatedData<T>(endpoint: string, options: {
   const pageSize = options.pageSize || 10
 
   const totalPages = computed(() => {
-    console.log('usePaginatedData - Total Pages Calculation:', {
-      totalItems: totalItems.value,
-      pageSize,
-      calculatedPages: Math.max(1, Math.ceil(totalItems.value / pageSize))
-    })
     return Math.max(1, Math.ceil(totalItems.value / pageSize))
   })
 
@@ -39,21 +34,9 @@ export function usePaginatedData<T>(endpoint: string, options: {
         queryParams.userId = options.userId
       }
 
-      console.log('usePaginatedData - Fetching data:', {
-        endpoint,
-        queryParams,
-        page,
-        pageSize
-      })
-
+      console.log('Fetching data from:', endpoint, 'with params:', queryParams)
       const res = await api.get(endpoint, { params: queryParams })
-      
-      console.log('usePaginatedData - Response:', {
-        data: res.data,
-        hasPagination: !!res.data?.pagination,
-        itemsLength: res.data?.items?.length || 0,
-        totalItems: res.data?.pagination?.total || 0
-      })
+      console.log('API response:', res.data)
 
       // Handle history endpoint response structure
       if (endpoint === apiEndpoints.history) {
@@ -71,6 +54,11 @@ export function usePaginatedData<T>(endpoint: string, options: {
         const reportedTotal = res.data.pagination.total || 0
         const actualItems = items.value.length
         totalItems.value = actualItems < reportedTotal ? actualItems : reportedTotal
+        console.log('Processed paginated data:', {
+          items: items.value,
+          total: totalItems.value,
+          page: currentPage.value
+        })
       }
       // Handle array response
       else if (Array.isArray(res.data)) {
@@ -88,13 +76,6 @@ export function usePaginatedData<T>(endpoint: string, options: {
         totalItems.value = 0
       }
 
-      console.log('usePaginatedData - Updated state:', {
-        itemsLength: items.value.length,
-        totalItems: totalItems.value,
-        currentPage: currentPage.value,
-        totalPages: totalPages.value,
-        items: items.value
-      })
     } catch (err) {
       error.value = 'Failed to fetch data'
       console.error('Error fetching data:', err)

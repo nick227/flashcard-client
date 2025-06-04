@@ -44,17 +44,23 @@
           <ImportBar :importFileName="importFileName" @import-csv="onImportCsv" />
           <button class="button button-danger" @click="onReset" :disabled="!hasCards">Reset</button>
           <div class="flex items-center gap-2 flex-nowrap">
-          <AISetGenerator 
-            :disabled="!!SetInfoFormComplete"
-            :title="setTitle"
-            :description="setDescription"
-            @add-set="onAddSet" />
-          <AddCardButton :disabled="hasBlankCard" :class="{ 'input-error': cardsTouched && cards.length === 0 }"
-            @add-card="onAddCard" />
-          <!-- Submit button -->
-          <button class="button button-success" :disabled="submitting" @click="onSubmit">
-            {{ submitButtonText }}
-          </button>
+            <AISetGenerator 
+              :disabled="isAIGeneratorDisabled"
+              :title="setTitle"
+              :description="setDescription"
+              @add-set="onAddSet"
+              @update:generating="setGenerating = $event" />
+            <AddCardButton 
+              :disabled="isAddCardDisabled" 
+              :class="{ 'input-error': cardsTouched && cards.length === 0 }"
+              @add-card="onAddCard" />
+            <!-- Submit button -->
+            <button 
+              class="button button-success" 
+              :disabled="isSubmitDisabled" 
+              @click="onSubmit">
+              {{ submitButtonText }}
+            </button>
           </div>
         </div>
         <div>
@@ -76,9 +82,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { FlashCard } from '@/types'
+import type { FlashCard } from '@/types/card'
+import type { Card } from '@/types/card'
 import ImportBar from '@/components/creator/ImportBar.vue'
 import SetInfoForm from '@/components/creator/SetInfoForm.vue'
 import ViewToggle from '@/components/creator/ViewToggle.vue'
@@ -96,7 +103,9 @@ import { parseFlashCardCsv } from '@/utils/csvParser'
 import { fetchCategories, fetchTags } from '@/api/index'
 import { SetService } from '@/services/SetService'
 import { CardService } from '@/services/CardService'
+import { SetWizardStorageService } from '@/services/SetWizardStorageService'
 import { useAuthStore } from '@/stores/auth'
+import { HistoryService, type HistoryState } from '@/services/historyService'
 
 const router = useRouter()
 const route = useRoute()
@@ -113,9 +122,6 @@ const submitting = ref(false)
 const setId = computed(() => Number(route.params.setId) || 0)
 const submitButtonText = computed(() => setId.value ? 'Save Changes' : 'Submit Set')
 const hasCards = computed(() => cards.value.length > 0)
-const SetInfoFormComplete = computed(() => {
-  return setTitle.value && setDescription.value && typeof setCategoryId.value === 'number'
-})
 
 const {
   setTitle,
@@ -128,6 +134,7 @@ const {
   formSubmitted,
   cardsTouched,
   hasBlankCard,
+  setGenerating,
   validateForm,
   addCard,
   updateCard,
@@ -135,33 +142,157 @@ const {
   updateOrder
 } = useSetForm()
 
+const historyService = new HistoryService()
+
+// Save progress whenever form state changes
+watch(
+  [
+    setTitle,
+    setDescription,
+    setCategoryId,
+    setTags,
+    setPrice,
+    setThumbnail,
+    cards
+  ],
+  () => {
+    if (setId.value) return // Don't save progress for existing sets
+    SetWizardStorageService.saveProgress({
+      title: setTitle.value,
+      description: setDescription.value,
+      categoryId: setCategoryId.value,
+      tags: setTags.value,
+      price: setPrice.value,
+      thumbnail: setThumbnail.value,
+      cards: cards.value
+    })
+  },
+  { deep: true }
+)
+
+// Computed properties for button states
+const isAIGeneratorDisabled = computed(() => {
+  return setGenerating.value || !setTitle.value || !setDescription.value
+})
+
+const isAddCardDisabled = computed(() => {
+  return hasBlankCard.value
+})
+
+const isSubmitDisabled = computed(() => {
+  return submitting.value || 
+         setGenerating.value || 
+         !setTitle.value || 
+         !setDescription.value || 
+         !setCategoryId.value || 
+         !hasCards.value
+})
+
 const handleThumbnailUpdate = (thumbnail: string | null) => {
   setThumbnail.value = thumbnail
 }
 
+// Add keyboard shortcut handling
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.ctrlKey || e.metaKey) { // metaKey for Mac
+    if (e.key === 'z') {
+      e.preventDefault()
+      if (e.shiftKey) {
+        // Ctrl+Shift+Z or Cmd+Shift+Z for redo
+        const state = historyService.redo()
+        if (state) {
+          applyHistoryState(state)
+        }
+      } else {
+        // Ctrl+Z or Cmd+Z for undo
+        const state = historyService.undo()
+        if (state) {
+          applyHistoryState(state)
+        }
+      }
+    } else if (e.key === 'y') {
+      // Ctrl+Y or Cmd+Y for redo (alternative)
+      e.preventDefault()
+      const state = historyService.redo()
+      if (state) {
+        applyHistoryState(state)
+      }
+    }
+  }
+}
+
+const applyHistoryState = (state: HistoryState) => {
+  setTitle.value = state.title
+  setDescription.value = state.description
+  setCategoryId.value = state.categoryId
+  setTags.value = state.tags
+  setPrice.value = state.price
+  setThumbnail.value = state.thumbnail
+  cards.value = state.cards
+}
+
+// Take snapshots before major operations
+const takeSnapshot = () => {
+  if (setId.value) return // Don't track history for existing sets
+  historyService.takeSnapshot({
+    title: setTitle.value,
+    description: setDescription.value,
+    categoryId: setCategoryId.value,
+    tags: setTags.value,
+    price: setPrice.value,
+    thumbnail: setThumbnail.value,
+    cards: cards.value
+  })
+}
+
 function onReset() {
+  takeSnapshot()
   confirmMessage.value = 'Are you sure you want to remove all cards?'
   confirmVisible.value = true
 }
 
-function onAddSet(newCards: Array<{ id: number, front: string, back: string, hint: string | null }>) {
-  const cardsWithSetId = newCards.map(card => ({
-    ...card,
+function onAddSet(newCards: Card[]) {
+  setGenerating.value = true
+  if (!Array.isArray(newCards)) {
+    console.error('Invalid cards data received:', newCards)
+    toast('Failed to generate cards: Invalid response', 'error')
+    setGenerating.value = false
+    return
+  }
+
+  // Validate and structure cards
+  const validatedCards = newCards.map(card => ({
+    id: CardService.generateId(),
     setId: setId.value || 0,
-    hint: card.hint || undefined
+    front: {
+      text: card.front.text || '',
+      imageUrl: card.front.imageUrl || null
+    },
+    back: {
+      text: card.back.text || '',
+      imageUrl: card.back.imageUrl || null
+    },
+    hint: card.hint || null
   }))
-  cards.value = [...cards.value, ...cardsWithSetId]
+
+  console.log('Adding validated cards:', validatedCards)
+
+  // Add cards to the set
+  cards.value = [...validatedCards, ...cards.value]
   cardsTouched.value = true
+  
   setTimeout(() => {
     window.scrollTo({
       top: 640,
       behavior: 'smooth'
     })
   }, 300)
+  setGenerating.value = false
 }
 
 function onAddCard() {
   if (hasBlankCard.value) return
+  takeSnapshot()
   addCard()
   setTimeout(() => {
     window.scrollTo({
@@ -172,15 +303,42 @@ function onAddCard() {
 }
 
 function onEditCard(updatedCard: FlashCard) {
-  updateCard(updatedCard)
+  takeSnapshot()
+  // Transform the card to match the expected type
+  const transformedCard: FlashCard = {
+    ...updatedCard,
+    front: {
+      text: updatedCard.front.text || '',
+      imageUrl: updatedCard.front.imageUrl || null
+    },
+    back: {
+      text: updatedCard.back.text || '',
+      imageUrl: updatedCard.back.imageUrl || null
+    }
+  }
+  updateCard(transformedCard)
 }
 
 function onDeleteCard(id: number) {
+  takeSnapshot()
   deleteCard(id)
 }
 
 function onUpdateOrder(newOrder: FlashCard[]) {
-  updateOrder(newOrder)
+  takeSnapshot()
+  // Transform the cards to match the expected type
+  const transformedOrder = newOrder.map(card => ({
+    ...card,
+    front: {
+      text: card.front.text || '',
+      imageUrl: card.front.imageUrl || null
+    },
+    back: {
+      text: card.back.text || '',
+      imageUrl: card.back.imageUrl || null
+    }
+  }))
+  updateOrder(transformedOrder)
 }
 
 async function onImportCsv(file: File) {
@@ -188,16 +346,54 @@ async function onImportCsv(file: File) {
   try {
     const text = await file.text()
     const result = parseFlashCardCsv(text)
+    
     if (result.error) {
       toast(result.error, 'error')
       return
     }
-    cards.value = result.cards.map(card => ({
-      ...card,
-      id: CardService.generateId(),
-      setId: 0
-    }))
+
+    const warnings = result.warnings || []
+    if (warnings.length) {
+      // Show first warning as a toast
+      toast(warnings[0], 'info')
+      
+      // If there are more warnings, show a summary
+      if (warnings.length > 1) {
+        setTimeout(() => {
+          toast(`${warnings.length - 1} more issues found. Check the console for details.`, 'info')
+          console.warn('CSV Import Warnings:', warnings)
+        }, 2000)
+      }
+    }
+
+    if (result.cards.length > 0) {
+      // Take a snapshot before importing
+      takeSnapshot()
+      
+      // Map the cards and ensure proper structure
+      const importedCards = result.cards.map(card => ({
+        id: CardService.generateId(),
+        setId: 0,
+        front: {
+          text: card.front.text || '',
+          imageUrl: card.front.imageUrl || null
+        },
+        back: {
+          text: card.back.text || '',
+          imageUrl: card.back.imageUrl || null
+        },
+        hint: card.hint || null
+      }))
+
+      // Add the imported cards
+      cards.value = [...importedCards, ...cards.value]
+      cardsTouched.value = true
+      
+      // Show success message with card count
+      toast(`Successfully imported ${result.cards.length} cards`, 'success')
+    }
   } catch (e) {
+    console.error('CSV import error:', e)
     toast('Failed to read file.', 'error')
   }
 }
@@ -255,17 +451,15 @@ async function onSubmit() {
       cards: cards.value,
       educatorId: auth.user!.id
     })
-    let newSetId = null
-    if (setId.value) {
-      await SetService.updateSet(Number(setId.value), formData)
-      newSetId = setId.value
-    } else {
-      const newSet = await SetService.createSet(formData)
-      newSetId = newSet.id
-    }
+    const newSet = await SetService.createSet(formData)
+
+    // Clear saved progress after successful submission
+    SetWizardStorageService.clearProgress()
 
     toast(setId.value ? 'Set updated successfully!' : 'Set created successfully!', 'success')
-    setTimeout(() => router.push('/sets/'+newSetId), 1200)
+    setTimeout(() => router.push('/sets/'+newSet.id), 1200)
+
+    historyService.clearHistory() // Clear history after successful submission
   } catch (e: any) {
     console.error('Error submitting set:', e)
     const errorMessage = e.response?.data?.message || e.message || 'An unexpected error occurred'
@@ -287,6 +481,7 @@ onMounted(async () => {
   } catch (e) {
     toast('Failed to load tags.', 'error')
   }
+
   if (setId.value) {
     try {
       const set = await SetService.fetchSet(Number(setId.value))
@@ -312,6 +507,28 @@ onMounted(async () => {
       toast('Failed to load set for editing.', 'error')
       router.push('/creator')
     }
+  } else {
+    // Try to restore saved progress for new sets
+    const savedProgress = SetWizardStorageService.loadProgress()
+    if (savedProgress) {
+      setTitle.value = savedProgress.title
+      setDescription.value = savedProgress.description
+      setCategoryId.value = savedProgress.categoryId
+      setTags.value = savedProgress.tags
+      setPrice.value = savedProgress.price
+      setThumbnail.value = savedProgress.thumbnail
+      cards.value = savedProgress.cards
+      
+      // Show a toast to inform the user
+      toast('Restored your previous progress', 'info')
+    }
   }
+
+  // Add keyboard event listener
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
 })
 </script>

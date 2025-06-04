@@ -15,21 +15,27 @@
   >
     <div class="card-content" :class="{ 'is-flipped': isFlipped, 'is-flipping': isFlipping }">
       <div v-show="!isFlipped" class="card-face front">
-        <div class="text-2xl font-semibold formatted-content" v-html="card?.front || 'No front content'"></div>
+        <div class="text-2xl font-semibold formatted-content">
+          <img v-if="card?.front?.imageUrl" :src="card.front.imageUrl" :alt="card.front.text" class="max-w-full max-h-full object-contain" @error="(e) => console.error('Front image failed to load:', card.front.imageUrl, e)" />
+          <div v-if="card?.front?.text" class="card-text">{{ card.front.text }}</div>
+        </div>
       </div>
       <div v-show="isFlipped" class="card-face back">
-        <div class="text-2xl font-semibold formatted-content" v-html="card?.back || 'No back content'"></div>
+        <div class="text-2xl font-semibold formatted-content">
+          <img v-if="card?.back?.imageUrl" :src="card.back.imageUrl" :alt="card.back.text" class="max-w-full max-h-full object-contain" @error="(e) => console.error('Back image failed to load:', card.back.imageUrl, e)" />
+          <div v-if="card?.back?.text" class="card-text">{{ card.back.text }}</div>
+        </div>
       </div>
     </div>
     <slot name="controls"></slot>
     <button v-if="editable && showControls" class="button button-danger absolute top-4 right-4 z-10" @click.stop="$emit('delete')">Delete</button>
-    <div v-if="showHint && card?.hint" class="hint-text text-base text-gray-700 mt-4 w-full text-left px-2" v-html="card.hint"></div>
+    <div v-if="showHint && card?.hint" class="hint-text text-base text-gray-700 mt-4 w-full text-left px-2">{{ card.hint }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import type { FlashCard } from '@/types'
+import type { FlashCard } from '@/types/card'
 
 const props = defineProps<{
   card: FlashCard
@@ -67,6 +73,18 @@ const FLIP_ANIMATION_DURATION = 300
 
 // Computed properties
 const isFlipped = computed(() => props.flipped !== undefined ? props.flipped : localFlipped.value)
+
+// Add debug logging
+watch(() => props.card, (newCard) => {
+  console.log('FlashCardScaffold received card:', {
+    front: newCard?.front,
+    back: newCard?.back,
+    hasFrontImage: !!newCard?.front?.imageUrl,
+    hasBackImage: !!newCard?.back?.imageUrl,
+    frontText: newCard?.front?.text,
+    backText: newCard?.back?.text
+  })
+}, { immediate: true })
 
 // Reset flip state when card changes
 watch(() => props.card, () => {
@@ -230,7 +248,24 @@ onUnmounted(() => {
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
-  user-select: text; /* Explicitly allow text selection */
+  user-select: text;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.formatted-content img {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-face.back .formatted-content img {
+  box-shadow: 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 
 .card-content {

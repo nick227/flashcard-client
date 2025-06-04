@@ -1,11 +1,10 @@
 export interface Subscription {
   id: number
-  userId: number
-  educatorId: number
-  createdAt: string
-  subscriberName?: string
+  user_id: number
+  educator_id: number
+  created_at: string
   date?: string
-  subscriber?: {
+  educator?: {
     id: number
     name: string
     image?: string

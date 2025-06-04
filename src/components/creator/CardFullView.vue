@@ -14,17 +14,18 @@
         <div class="w-full md:flex-1 card-col" style="min-width:0">
           <label class="block text-gray-500 text-xs mb-1">Front</label>
           <div class="card-preview front">
-            <div v-if="!frontEmbedHtml" ref="frontRef" class="card-content"
-              :class="{ 'input-error': !localCard.front.trim() && touchedFront, 'hidden-input': frontEmbedHtml }"
+            <div v-if="!localCard.front.imageUrl" ref="frontRef" class="card-content"
+              :class="{ 'input-error': !localCard.front.text && touchedFront }"
               contenteditable="true" @input="onFrontInput" @focus="focusedField = 'front'"
               @blur="touchedFront = true; focusedField = null" @keydown.tab.prevent="focusBack"
               @keydown="onFrontKeydown" :data-placeholder="'Front text...'"
-              :style="{ fontSize: getFontSize(localCard.front) }"></div>
-            <div v-else-if="frontEmbedHtml" class="embed-preview">
-              <div class="embed-media" v-html="frontEmbedHtml"></div>
+              :style="{ fontSize: getFontSize(localCard.front.text) }"></div>
+            <div v-else class="embed-preview">
+              <div class="embed-media">
+                <img :src="localCard.front.imageUrl" :alt="localCard.front.text" class="max-w-full max-h-full object-contain" />
+              </div>
               <button class="remove-embed-btn" @click="removeFrontEmbed" title="Remove media">🗑️</button>
-              <button v-if="frontEmbedHtml && frontEmbedHtml.includes('<img')" class="image-mode-btn"
-                @click="cycleFrontImageMode" :title="'Image mode: ' + frontImageMode">🖼️</button>
+              <button class="image-mode-btn" @click="cycleFrontImageMode" :title="'Image mode: ' + frontImageMode">🖼️</button>
             </div>
           </div>
         </div>
@@ -32,17 +33,18 @@
         <div class="w-full md:flex-1 card-col" style="min-width:0">
           <label class="block text-gray-500 text-xs mb-1">Back</label>
           <div class="card-preview back">
-            <div v-if="!backEmbedHtml" ref="backRef" class="card-content"
-              :class="{ 'input-error': !localCard.back.trim() && touchedBack, 'hidden-input': backEmbedHtml }"
+            <div v-if="!localCard.back.imageUrl" ref="backRef" class="card-content"
+              :class="{ 'input-error': !localCard.back.text && touchedBack }"
               contenteditable="true" @input="onBackInput" @focus="focusedField = 'back'"
               @blur="touchedBack = true; focusedField = null" @keydown.shift.tab.prevent="focusFront"
               @keydown="onBackKeydown" :data-placeholder="'Back text...'"
-              :style="{ fontSize: getFontSize(localCard.back) }"></div>
-            <div v-if="backEmbedHtml" class="embed-preview">
-              <div class="embed-media" v-html="backEmbedHtml"></div>
+              :style="{ fontSize: getFontSize(localCard.back.text) }"></div>
+            <div v-else class="embed-preview">
+              <div class="embed-media">
+                <img :src="localCard.back.imageUrl" :alt="localCard.back.text" class="max-w-full max-h-full object-contain" />
+              </div>
               <button class="remove-embed-btn" @click="removeBackEmbed" title="Remove media">🗑️</button>
-              <button v-if="backEmbedHtml && backEmbedHtml.includes('<img')" class="image-mode-btn"
-                @click="cycleBackImageMode" :title="'Image mode: ' + backImageMode">🖼️</button>
+              <button class="image-mode-btn" @click="cycleBackImageMode" :title="'Image mode: ' + backImageMode">🖼️</button>
             </div>
           </div>
         </div>
@@ -58,19 +60,17 @@
       <input type="text" class="input w-full" v-model="localCard.hint" @input="emitUpdate" placeholder="Hint..." />
     </div>
     <!-- Error message if front or back is blank -->
-    <div v-if="isBlank && (touchedFront || touchedBack)" class="text-red-500 text-xs mt-2">Front and back are required.
-    </div>
+    <div v-if="isBlank && (touchedFront || touchedBack)" class="text-red-500 text-xs mt-2">Front and back are required.</div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed, nextTick, onMounted } from 'vue'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
-import { mediaCheck } from '@/composables/useMediaEmbed'
-import type { FlashCard } from '@/types/flashCard'
+import type { Card } from '@/types/card'
 
 // --- Props and Emits ---
-const props = defineProps<{ card: FlashCard, autoFocus?: boolean }>()
+const props = defineProps<{ card: Card, autoFocus?: boolean }>()
 const emit = defineEmits(['update-card', 'delete-card', 'request-delete'])
 
 // --- Local State ---
@@ -92,59 +92,34 @@ type ImageMode = typeof imageModes[number]
 const frontImageMode = ref<ImageMode>('contain')
 const backImageMode = ref<ImageMode>('contain')
 
-const frontEmbedSource = ref('')
-const backEmbedSource = ref('')
-
 // --- Watchers ---
 onMounted(() => {
   console.log('Component mounted, initial state:', {
     front: props.card.front,
-    back: props.card.back,
-    frontEmbedSource: frontEmbedSource.value,
-    backEmbedSource: backEmbedSource.value
+    back: props.card.back
   })
 
-  // Process initial content
-  const processContent = (content: string | undefined) => {
-    const trimmed = content?.trim() || ''
-    console.log('Processing initial content:', trimmed)
-
-    // Check if content is HTML (iframe or img tag)
-    if (/<iframe|<img/i.test(trimmed)) {
-      console.log('Found initial HTML embed:', trimmed)
-      return { embedSource: trimmed, text: '' }
+  // Ensure proper card structure
+  localCard.value = {
+    ...props.card,
+    front: {
+      text: props.card.front?.text || '',
+      imageUrl: props.card.front?.imageUrl || null
+    },
+    back: {
+      text: props.card.back?.text || '',
+      imageUrl: props.card.back?.imageUrl || null
     }
-
-    // Then check if it's a URL that should be embedded
-    const embedHtml = mediaCheck(trimmed)
-    if (embedHtml) {
-      console.log('Found initial URL to embed:', trimmed)
-      return { embedSource: trimmed, text: '' }
-    }
-
-    return { embedSource: '', text: trimmed }
   }
 
-  // Process and set initial state
-  const frontResult = processContent(props.card.front)
-  const backResult = processContent(props.card.back)
-
-  frontEmbedSource.value = frontResult.embedSource
-  backEmbedSource.value = backResult.embedSource
-  localCard.value.front = frontResult.text
-  localCard.value.back = backResult.text
-
-  // Update DOM after state is set
+  // Initialize text content
   nextTick(() => {
-    if (frontRef.value) frontRef.value.textContent = localCard.value.front
-    if (backRef.value) backRef.value.textContent = localCard.value.back
-
-    console.log('After initial nextTick:', {
-      frontEmbedHtml: frontEmbedHtml.value,
-      backEmbedHtml: backEmbedHtml.value,
-      frontEmbedSource: frontEmbedSource.value,
-      backEmbedSource: backEmbedSource.value
-    })
+    if (frontRef.value) {
+      frontRef.value.textContent = localCard.value.front.text
+    }
+    if (backRef.value) {
+      backRef.value.textContent = localCard.value.back.text
+    }
   })
 })
 
@@ -156,163 +131,68 @@ watch(() => props.card, (newCard) => {
       back: newCard.back
     })
 
-    // Process content
-    const processContent = (content: string | undefined) => {
-      const trimmed = content?.trim() || ''
-      console.log('Processing updated content:', trimmed)
-
-      // Check if content is HTML (iframe or img tag)
-      if (/<iframe|<img/i.test(trimmed)) {
-        console.log('Found updated HTML embed:', trimmed)
-        return { embedSource: trimmed, text: '' }
+    // Ensure proper card structure
+    localCard.value = {
+      ...newCard,
+      front: {
+        text: newCard.front?.text || '',
+        imageUrl: newCard.front?.imageUrl || null
+      },
+      back: {
+        text: newCard.back?.text || '',
+        imageUrl: newCard.back?.imageUrl || null
       }
-
-      // Then check if it's a URL that should be embedded
-      const embedHtml = mediaCheck(trimmed)
-      if (embedHtml) {
-        console.log('Found updated URL to embed:', trimmed)
-        return { embedSource: trimmed, text: '' }
-      }
-
-      return { embedSource: '', text: trimmed }
     }
-
-    // Process and update state
-    const frontResult = processContent(newCard.front)
-    const backResult = processContent(newCard.back)
-
-    // Update state in a single batch
-    localCard.value = { ...newCard }
-    frontEmbedSource.value = frontResult.embedSource
-    backEmbedSource.value = backResult.embedSource
-    localCard.value.front = frontResult.text
-    localCard.value.back = backResult.text
-
-    // Update DOM after state changes
+    
+    // Update text content
     nextTick(() => {
-      if (frontRef.value) frontRef.value.textContent = localCard.value.front
-      if (backRef.value) backRef.value.textContent = localCard.value.back
-
-      console.log('After update nextTick:', {
-        frontEmbedHtml: frontEmbedHtml.value,
-        backEmbedHtml: backEmbedHtml.value,
-        frontEmbedSource: frontEmbedSource.value,
-        backEmbedSource: backEmbedSource.value
-      })
+      if (frontRef.value) {
+        frontRef.value.textContent = localCard.value.front.text
+      }
+      if (backRef.value) {
+        backRef.value.textContent = localCard.value.back.text
+      }
     })
   }
 }, { deep: true })
 
-// --- Computed: Embed Previews ---
-const frontEmbedHtml = computed(() => {
-  const src = frontEmbedSource.value?.trim() || ''
-  console.log('Computing frontEmbedHtml:', { src })
-
-  if (!src) return false
-
-  // If it's already HTML, use it directly
-  if (/<iframe|<img/i.test(src)) {
-    console.log('Using direct HTML for front')
-    return src
-  }
-
-  // Otherwise try to convert URL to embed
-  const result = mediaCheck(src)
-  console.log('Media check result for front:', result)
-  return result || false
-})
-const backEmbedHtml = computed(() => {
-  const src = backEmbedSource.value?.trim() || ''
-  console.log('Computing backEmbedHtml:', { src })
-
-  if (!src) return false
-
-  // If it's already HTML, use it directly
-  if (/<iframe|<img/i.test(src)) {
-    console.log('Using direct HTML for back')
-    return src
-  }
-
-  // Otherwise try to convert URL to embed
-  const result = mediaCheck(src)
-  console.log('Media check result for back:', result)
-  return result || false
-})
-
 // --- Handlers ---
 const emitUpdate = () => {
   console.log('Emitting update:', {
-    frontEmbedHtml: frontEmbedHtml.value,
-    backEmbedHtml: backEmbedHtml.value,
-    frontText: localCard.value.front,
-    backText: localCard.value.back
+    frontText: localCard.value.front.text,
+    backText: localCard.value.back.text
   })
 
-  // If we have an embed HTML, use that, otherwise use the text
-  const front = frontEmbedHtml.value || localCard.value.front.trim()
-  const back = backEmbedHtml.value || localCard.value.back.trim()
-
-  console.log('Final values:', { front, back })
-  emit('update-card', { ...localCard.value, front, back })
+  emit('update-card', { ...localCard.value })
 }
 const onFrontInput = (e: Event) => {
   const target = e.target as HTMLElement
-  const newText = target.textContent || ''
-  const embed = mediaCheck(newText)
-  if (embed && (embed.includes('<iframe') || embed.includes('<img'))) {
-    setTimeout(() => {
-      localCard.value.front = ''
-      target.textContent = ''
-      frontEmbedSource.value = newText
-      adjustCardHeight(target)
-      emitUpdate()
-    }, 0)
-  } else {
-    localCard.value.front = newText
-    frontEmbedSource.value = ''
-    adjustCardHeight(target)
-    emitUpdate()
-  }
+  localCard.value.front.text = target.textContent || ''
+  emitUpdate()
 }
 const onBackInput = (e: Event) => {
   const target = e.target as HTMLElement
-  const newText = target.textContent || ''
-  const embed = mediaCheck(newText)
-  if (embed && (embed.includes('<iframe') || embed.includes('<img'))) {
-    setTimeout(() => {
-      localCard.value.back = ''
-      target.textContent = ''
-      backEmbedSource.value = newText
-      adjustCardHeight(target)
-      emitUpdate()
-    }, 0)
-  } else {
-    localCard.value.back = newText
-    backEmbedSource.value = ''
-    adjustCardHeight(target)
-    emitUpdate()
-  }
+  localCard.value.back.text = target.textContent || ''
+  emitUpdate()
 }
 const onFrontKeydown = (e: KeyboardEvent) => {
-  if (frontEmbedHtml.value && (e.key === 'Backspace' || e.key === 'Delete')) {
-    frontEmbedSource.value = ''
+  if (localCard.value.front.imageUrl && (e.key === 'Backspace' || e.key === 'Delete')) {
+    removeFrontEmbed()
     e.preventDefault()
-    nextTick(() => frontRef.value?.focus())
   }
 }
 const onBackKeydown = (e: KeyboardEvent) => {
-  if (backEmbedHtml.value && (e.key === 'Backspace' || e.key === 'Delete')) {
-    backEmbedSource.value = ''
+  if (localCard.value.back.imageUrl && (e.key === 'Backspace' || e.key === 'Delete')) {
+    removeBackEmbed()
     e.preventDefault()
-    nextTick(() => backRef.value?.focus())
   }
 }
 const removeFrontEmbed = () => {
-  frontEmbedSource.value = ''
+  localCard.value.front.imageUrl = null
   nextTick(() => frontRef.value?.focus())
 }
 const removeBackEmbed = () => {
-  backEmbedSource.value = ''
+  localCard.value.back.imageUrl = null
   nextTick(() => backRef.value?.focus())
 }
 const cycleFrontImageMode = () => {
@@ -326,14 +206,14 @@ const cycleBackImageMode = () => {
 const focusBack = () => nextTick(() => backRef.value?.focus())
 const focusFront = () => nextTick(() => frontRef.value?.focus())
 const onRequestDelete = () => emit('request-delete', localCard.value.id)
-const onInlineEdit = (updated: FlashCard) => {
-  localCard.value = { ...updated }
+const onInlineEdit = (updatedCard: Card) => {
+  localCard.value = { ...updatedCard }
   emitUpdate()
 }
-const isBlank = computed(() =>
-  !(localCard.value.front.trim() || frontEmbedSource.value.trim()) ||
-  !(localCard.value.back.trim() || backEmbedSource.value.trim())
-)
+const isBlank = computed(() => {
+  return (!localCard.value.front.text && !localCard.value.front.imageUrl) || 
+         (!localCard.value.back.text && !localCard.value.back.imageUrl)
+})
 watch(() => props.autoFocus, (val) => {
   if (val) nextTick(() => frontRef.value?.focus())
 }, { immediate: true })
@@ -353,27 +233,12 @@ const handleFlip = (newFlippedState: boolean) => {
 }
 
 // Dynamically adjust font size based on text length
-function getFontSize(text: string): string {
-  const length = text.length
+function getFontSize(text: string | undefined): string {
+  const length = text?.length || 0
   if (length > 500) return '1.4rem'
   if (length > 300) return '1.8rem'
   if (length > 150) return '2rem'
   return '2.2rem'
-}
-
-// Adjust card preview height for overflow (desktop only)
-function adjustCardHeight(element: HTMLElement) {
-  const cardPreview = element.closest('.card-preview') as HTMLElement
-  if (!cardPreview) return
-
-  const isOverflowing = element.scrollHeight > element.clientHeight
-  if (isOverflowing && window.innerWidth >= 768) {
-    cardPreview.style.height = `${element.scrollHeight + 80}px` // 40px top + 40px bottom
-    cardPreview.style.aspectRatio = 'auto'
-  } else {
-    cardPreview.style.height = ''
-    cardPreview.style.aspectRatio = '16/9'
-  }
 }
 
 </script>

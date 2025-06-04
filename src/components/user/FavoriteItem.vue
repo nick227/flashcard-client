@@ -32,6 +32,7 @@ const props = defineProps<{
 const imageError = ref(false)
 
 const handleImageError = () => {
+  console.log('Image error for item:', props.item)
   imageError.value = true
 }
 

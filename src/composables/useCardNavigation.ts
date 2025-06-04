@@ -1,90 +1,56 @@
 import { ref, computed } from 'vue'
 import type { Ref } from 'vue'
-import type { FlashCard } from '@/types'
-import { useToaster } from './useToaster'
+import type { FlashCard } from '@/types/card'
 
 export function useCardNavigation(cards: Ref<FlashCard[]>) {
   const currentIndex = ref(0)
   const flipped = ref(false)
   const currentFlip = ref(0)
-  const { toast } = useToaster()
 
+  const isPrevDisabled = computed(() => currentIndex.value === 0 && !flipped.value)
   const isNextDisabled = computed(() => {
-    if (currentIndex.value === cards.value.length - 1 && flipped.value) {
-      return true
-    }
-    return false
+    // Only disable next if we're at the last card AND it's flipped
+    return currentIndex.value === cards.value.length - 1 && flipped.value
   })
-
-  const isPrevDisabled = computed(() => {
-    if (currentIndex.value === 0 && !flipped.value) {
-      return true
-    }
-    return false
-  })
-
-  const nextCard = () => {
-    if (currentIndex.value === cards.value.length - 1) {
-      if (!flipped.value) {
-        flipped.value = true
-        currentFlip.value++
-        toast('You have reached the end of the set!', 'info')
-      }
-      return
-    }
-
-    if (!flipped.value) {
-      flipped.value = true
-      currentFlip.value++
-      return
-    }
-
-    currentIndex.value++
-    flipped.value = false
-    currentFlip.value++
-  }
 
   const prevCard = () => {
-    if (currentIndex.value === 0) {
-      if (flipped.value) {
-        flipped.value = false
-        currentFlip.value--
-      }
-      return
-    }
-
     if (flipped.value) {
+      // If card is flipped, just unflip it
       flipped.value = false
-      currentFlip.value--
-      return
+      currentFlip.value = currentIndex.value * 2
+    } else if (currentIndex.value > 0) {
+      // If not flipped and not at first card, go to previous card
+      currentIndex.value--
+      currentFlip.value = currentIndex.value * 2
     }
-
-    currentIndex.value--
-    flipped.value = true
-    currentFlip.value--
   }
 
-  const handleCardFlip = (isFlipped: boolean) => {
-    if (isFlipped) {
-      currentFlip.value++
-    } else {
-      currentFlip.value--
+  const nextCard = () => {
+    if (!flipped.value) {
+      // If card is not flipped, flip it
+      flipped.value = true
+      currentFlip.value = (currentIndex.value * 2) + 1
+    } else if (currentIndex.value < cards.value.length - 1) {
+      // If flipped and not at last card, go to next card
+      currentIndex.value++
+      flipped.value = false
+      currentFlip.value = currentIndex.value * 2
     }
-    flipped.value = isFlipped
+  }
 
-    if (isFlipped && currentIndex.value === cards.value.length - 1) {
-      toast('You have reached the end of the set!', 'info')
-    }
+  const handleCardFlip = (newFlipped: boolean) => {
+    flipped.value = newFlipped
+    currentFlip.value = (currentIndex.value * 2) + (newFlipped ? 1 : 0)
   }
 
   return {
     currentIndex,
     flipped,
     currentFlip,
-    isNextDisabled,
     isPrevDisabled,
-    nextCard,
+    isNextDisabled,
     prevCard,
+    nextCard,
     handleCardFlip
   }
 } 

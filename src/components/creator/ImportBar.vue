@@ -7,7 +7,13 @@
       class="hidden"
       @change="onFileChange"
     />
-    <a class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600" @click="openFilePicker">{{ importFileName ? importFileName : 'Import CSV' }}</a>
+    <a 
+      class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600" 
+      @click="openFilePicker"
+      title="Supported columns: Front, Back, Hint, Front Image, Back Image"
+    >
+      {{ importFileName ? importFileName : 'Import CSV' }}
+    </a>
   </div>
 </template>
 <script setup lang="ts">

@@ -4,9 +4,9 @@
       <button class="button button-danger text-xs px-2 py-1" @click="onRequestDelete">Delete</button>
     </div>
     <label class="block text-gray-500 text-xs mb-1">Front</label>
-    <textarea class="input mb-2" v-model="localCard.front" @input="emitUpdate" maxlength="2000" placeholder="Front text..."></textarea>
+    <textarea class="input mb-2" v-model="localCard.front.text" @input="emitUpdate" maxlength="2000" placeholder="Front text..."></textarea>
     <label class="block text-gray-500 text-xs mb-1">Back</label>
-    <textarea class="input" v-model="localCard.back" @input="emitUpdate" maxlength="2000" placeholder="Back text..."></textarea>
+    <textarea class="input" v-model="localCard.back.text" @input="emitUpdate" maxlength="2000" placeholder="Back text..."></textarea>
     <label class="block text-gray-500 text-xs mb-1">Hint</label>
     <textarea class="input" v-model="localCard.hint" @input="emitUpdate" placeholder="Hint..."></textarea>
   </div>
@@ -14,8 +14,9 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import type { Card } from '@/types/card'
 
-const props = defineProps<{ card: any }>()
+const props = defineProps<{ card: Card }>()
 const emit = defineEmits(['update-card', 'delete-card', 'request-delete'])
 const localCard = ref({ ...props.card })
 

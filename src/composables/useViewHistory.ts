@@ -1,7 +1,6 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { api } from '@/api'
 import { useAuthStore } from '@/stores/auth'
-import { useToaster } from '@/composables/useToaster'
 import debounce from 'lodash/debounce'
 
 interface ViewHistory {
@@ -17,7 +16,6 @@ interface ViewHistory {
 export function useViewHistory(setId: number) {
     const auth = useAuthStore()
     const user = ref(auth.user)
-    const { toast } = useToaster()
     const history = ref<ViewHistory | null>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
@@ -35,42 +33,26 @@ export function useViewHistory(setId: number) {
         error.value = null
 
         try {
-            // Try to get existing history
-            const res = await api.get(`/history/${setId}`)
-            const existingHistory = res.data
-            
-            if (existingHistory) {
+            // First try to get existing history
+            try {
+                const { data: existingHistory } = await api.get(`/history/${setId}`)
                 history.value = existingHistory
                 lastUpdatedCards.value = existingHistory.numCardsViewed
-            } else {
-                // Create new history record if none exists
-                const newHistory = await api.post('/history', {
-                    set_id: setId,
-                    user_id: user.value.id
-                })
-                history.value = newHistory.data
-                lastUpdatedCards.value = 0
+                console.log('Found existing history:', existingHistory)
+            } catch (getErr: any) {
+                if (getErr.response?.status === 404) {
+                    // If no history exists, create new one
+                    const { data: newHistory } = await api.post('/history', { set_id: setId })
+                    history.value = newHistory
+                    lastUpdatedCards.value = 0
+                    console.log('Created new history:', newHistory)
+                } else {
+                    throw getErr
+                }
             }
         } catch (err: any) {
-            if (err.response?.status === 404) {
-                // If history not found, create new one
-                try {
-                    const newHistory = await api.post('/history', {
-                        set_id: setId,
-                        user_id: user.value.id
-                    })
-                    history.value = newHistory.data
-                    lastUpdatedCards.value = 0
-                } catch (createErr) {
-                    error.value = 'Failed to create view history'
-                    console.error('Failed to create view history:', createErr)
-                    toast('Failed to create view history', 'error')
-                }
-            } else {
-                error.value = 'Failed to initialize view history'
-                console.error('Failed to initialize view history:', err)
-                toast('Failed to initialize view history', 'error')
-            }
+            console.error('Error initializing history:', err)
+            error.value = err.response?.data?.error || 'Failed to initialize history'
         } finally {
             loading.value = false
         }
@@ -99,16 +81,18 @@ export function useViewHistory(setId: number) {
         })
 
         try {
-            const res = await api.patch(`/history/${history.value.id}`, {
-                num_cards_viewed: numCards,
-                user_id: user.value.id
+            // Update the progress
+            const { data: updatedHistory } = await api.patch(`/history/${history.value.id}`, {
+                num_cards_viewed: numCards
             })
-            history.value = res.data
+            history.value = updatedHistory
             lastUpdatedCards.value = numCards
             console.log('Successfully updated history:', history.value)
-        } catch (err) {
-            console.error('Failed to update cards viewed:', err)
-            toast('Failed to update progress', 'error')
+        } catch (err: any) {
+            console.error('Error updating cards viewed:', err)
+            error.value = err.response?.data?.error || 'Failed to update progress'
+        } finally {
+            loading.value = false
         }
     }, 1000) // Debounce for 1 second
 
@@ -121,16 +105,20 @@ export function useViewHistory(setId: number) {
     const markAsCompleted = async () => {
         if (!history.value || !user.value?.id || isCompleted.value) return
 
+        loading.value = true
+        error.value = null
+
         try {
-            const res = await api.post('/history/complete', {
-                setId
+            // Mark as completed
+            const { data: updatedHistory } = await api.patch(`/history/${history.value.id}`, {
+                completed: true
             })
-            if (res.data) {
-                history.value = res.data
-            }
-        } catch (err) {
-            console.error('Failed to mark set as completed:', err)
-            toast('Failed to mark set as completed', 'error')
+            history.value = updatedHistory
+        } catch (err: any) {
+            console.error('Error marking as completed:', err)
+            error.value = err.response?.data?.error || 'Failed to mark as completed'
+        } finally {
+            loading.value = false
         }
     }
 

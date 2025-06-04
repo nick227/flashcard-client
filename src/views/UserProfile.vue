@@ -142,27 +142,39 @@ const imageError = ref(false)
 const uploading = ref(false)
 
 // Initialize paginated data
-const favorites = usePaginatedData<Favorite>(apiEndpoints.sets, {
+const favorites = usePaginatedData<Favorite>(`${apiEndpoints.sets}/liked`, {
   userId: user.value?.id,
   queryParams: {
-    liked: true,
-    userId: user.value?.id,
-    user_id: user.value?.id
+    page: 1,
+    limit: 6
   },
   pageSize: 6
 })
 
-const purchases = usePaginatedData<Purchase>(apiEndpoints.purchases, {
+const purchases = usePaginatedData<Purchase>(`${apiEndpoints.purchases}/user`, {
   userId: user.value?.id,
+  queryParams: {
+    page: 1,
+    limit: 6
+  },
   pageSize: 6
 })
 
-const subscriptions = usePaginatedData<Subscription>(apiEndpoints.subscriptions, {
+const subscriptions = usePaginatedData<Subscription>(`${apiEndpoints.subscriptions}/user`, {
   userId: user.value?.id,
+  queryParams: {
+    page: 1,
+    limit: 6
+  },
   pageSize: 6
 })
 
-const viewHistory = usePaginatedData<ViewHistory>(apiEndpoints.history, {
+const viewHistory = usePaginatedData<ViewHistory>(`${apiEndpoints.history}/user`, {
+  userId: user.value?.id,
+  queryParams: {
+    page: 1,
+    limit: 6
+  },
   pageSize: 6
 })
 
@@ -213,10 +225,30 @@ const triggerFileInput = () => {
 // Fetch initial data
 onMounted(() => {
   if (isAuthenticated.value) {
-    favorites.fetchData()
-    purchases.fetchData()
-    subscriptions.fetchData()
-    viewHistory.fetchData()
+    console.log('Fetching initial data for user:', user.value?.id)
+    favorites.fetchData().then(data => {
+      console.log('Favorites data received:', data)
+    }).catch(error => {
+      console.error('Error fetching favorites:', error)
+    })
+    
+    purchases.fetchData().then(data => {
+      console.log('Purchases data received:', data)
+    }).catch(error => {
+      console.error('Error fetching purchases:', error)
+    })
+    
+    subscriptions.fetchData().then(data => {
+      console.log('Subscriptions data received:', data)
+    }).catch(error => {
+      console.error('Error fetching subscriptions:', error)
+    })
+    
+    viewHistory.fetchData().then(data => {
+      console.log('View history data received:', data)
+    }).catch(error => {
+      console.error('Error fetching view history:', error)
+    })
   }
 })
 

@@ -2,7 +2,8 @@
   <button 
     class="button button-primary" 
     :disabled="disabled || loading" 
-    @click="startAISetGeneration"
+    @click="generateSet"
+    :title="disabled ? 'Complete Title and Description to Use' : 'Generate cards using AI'"
   >
     <span v-if="loading" class="flex items-center gap-2">
       <span class="loading-spinner"></span>
@@ -13,10 +14,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { api } from '@/api'
+import { ref, watch, onUnmounted } from 'vue'
 import { useToaster } from '@/composables/useToaster'
-import { CardService } from '@/services/CardService'
+import type { Card } from '@/types/card'
+import { aiSocketService } from '@/services/AISocketService'
 
 const props = defineProps<{ 
   disabled: boolean,
@@ -25,105 +26,89 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'add-set': [cards: Array<{ id: number, front: string, back: string, hint: string | null }>]
+  'add-set': [cards: Card[]]
+  'update:generating': [generating: boolean]
 }>()
 
 const loading = ref(false)
 const { toast } = useToaster()
+const toastTimeouts = ref<number[]>([])
+const generating = ref(false)
+const generationId = ref<string | null>(null)
 
-const validateInput = () => {
-  if (!props.title || !props.description) {
-    toast('Please provide a title and description for the AI to generate cards', 'error')
-    return false
+// Watch loading state and emit to parent
+watch(loading, (newValue) => {
+  emit('update:generating', newValue)
+  if (!newValue) {
+    // Clear any pending toast timeouts when generation completes
+    toastTimeouts.value.forEach(timeout => clearTimeout(timeout))
+    toastTimeouts.value = []
   }
+})
 
-  if (props.title.length < 3 || props.title.length > 100) {
-    toast('Title must be between 3 and 100 characters', 'error')
-    return false
-  }
-
-  if (props.description.length < 10 || props.description.length > 500) {
-    toast('Description must be between 10 and 500 characters', 'error')
-    return false
-  }
-
-  return true
-}
-
-const startAISetGeneration = async () => {
-  if (!validateInput()) return
-
-  loading.value = true
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-
+const generateSet = async () => {
+  if (!props.title || !props.description) return
+  
+  generating.value = true
+  emit('update:generating', true)
+  
   try {
-    const response = await api.post('/ai/generate', {
-      title: props.title.trim(),
-      description: props.description.trim()
-    }, {
-      signal: controller.signal,
-      timeout: 30000 // 30 second timeout
-    })
-
-    const { front, back } = response.data
+    const cards: Card[] = []
     
-    if (!Array.isArray(front) || !Array.isArray(back) || front.length !== back.length) {
-      throw new Error('Invalid response format from AI generator')
-    }
-
-    if (front.length === 0) {
-      throw new Error('No cards were generated')
-    }
-
-    // Sanitize and validate each card
-    const sanitizedCards = front.map((frontText, index) => {
-      const sanitizedFront = frontText.trim().replace(/[<>]/g, '') // Basic XSS prevention
-      const sanitizedBack = back[index].trim().replace(/[<>]/g, '')
-      
-      if (!sanitizedFront || !sanitizedBack) {
-        throw new Error('Invalid card content generated')
+    const id = aiSocketService.startGeneration(
+      props.title,
+      props.description,
+      {
+        onCardGenerated: (card) => {
+          console.log('AISetGenerator received card:', {
+            id: card.id,
+            front: { text: card.front.text, imageUrl: card.front.imageUrl },
+            back: { text: card.back.text, imageUrl: card.back.imageUrl },
+            hint: card.hint
+          })
+          
+          // Add the card to our array
+          cards.push(card)
+          
+          // Emit the card directly
+          console.log('AISetGenerator emitting card:', {
+            id: card.id,
+            front: { text: card.front.text, imageUrl: card.front.imageUrl },
+            back: { text: card.back.text, imageUrl: card.back.imageUrl },
+            hint: card.hint
+          })
+          emit('add-set', [card])
+        },
+        onComplete: () => {
+          console.log('Generation complete, total cards:', cards.length)
+          generating.value = false
+          emit('update:generating', false)
+          toast(`Successfully generated ${cards.length} cards!`, 'success')
+        },
+        onError: (error) => {
+          console.error('Generation error:', error)
+          toast(error, 'error')
+          generating.value = false
+          emit('update:generating', false)
+        }
       }
-      
-      if (sanitizedFront.length > 100 || sanitizedBack.length > 200) {
-        throw new Error('Generated card content exceeds length limits')
-      }
-
-      return {
-        id: CardService.generateId(),
-        front: sanitizedFront,
-        back: sanitizedBack,
-        hint: null,
-        setId: 0
-      }
-    })
-
-    if (sanitizedCards.length > 10) {
-      sanitizedCards.length = 10 // Limit to 10 cards
-    }
-
-    emit('add-set', sanitizedCards)
-    toast(`Successfully generated ${sanitizedCards.length} cards!`, 'success')
-  } catch (error: any) {
-    console.error('AI generation error:', error)
-    if (error.name === 'AbortError') {
-      toast('Request timed out. Please try again.', 'error')
-    } else if (error.response?.status === 401) {
-      toast('Please log in to use the AI generator', 'error')
-    } else if (error.response?.status === 429) {
-      toast('Too many requests. Please try again later.', 'error')
-    } else if (error.response?.status === 413) {
-      toast('Input is too long. Please shorten your title or description.', 'error')
-    } else if (error.response?.status === 500) {
-      toast('AI service error. Please try again later.', 'error')
-    } else {
-      toast(error.response?.data?.message || 'Failed to generate cards', 'error')
-    }
-  } finally {
-    clearTimeout(timeoutId)
-    loading.value = false
+    )
+    generationId.value = id
+  } catch (error) {
+    console.error('Generation error:', error)
+    toast('Failed to generate cards', 'error')
+    generating.value = false
+    emit('update:generating', false)
+    generationId.value = null
   }
 }
+
+// Clean up socket connection when component is unmounted
+onUnmounted(() => {
+  if (generationId.value) {
+    aiSocketService.disconnect()
+  }
+})
 </script>
 
 <style scoped>

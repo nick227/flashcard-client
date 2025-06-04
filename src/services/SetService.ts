@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios'
 import { api } from '@/api'
 import type { FlashCard, SetPrice } from '@/types'
+import type { Card } from '@/types/card'
 
 export interface SetFormData {
   title: string
@@ -14,8 +15,14 @@ export interface SetFormData {
 }
 
 export interface CardData {
-  front: string
-  back: string
+  front: {
+    text: string
+    imageUrl: string | null
+  }
+  back: {
+    text: string
+    imageUrl: string | null
+  }
   hint: string | null
 }
 
@@ -77,47 +84,37 @@ export class SetService {
     }
   }
 
-  static prepareFormData(data: SetFormData): FormData {
+  static prepareFormData(data: {
+    title: string
+    description: string
+    categoryId: number
+    price: SetPrice
+    tags: string[]
+    thumbnail: string | null
+    cards: Card[]
+    educatorId: number
+  }) {
     const formData = new FormData()
     formData.append('title', data.title.trim())
     formData.append('description', data.description.trim())
     formData.append('categoryId', data.categoryId.toString())
-    
-    // Handle price based on type
-    if (data.price.type === 'premium') {
-      formData.append('price', (data.price.amount || 0).toString())
-      formData.append('isSubscriberOnly', 'false')
-    } else if (data.price.type === 'subscribers') {
-      formData.append('price', (data.price.amount || 0).toString())
-      formData.append('isSubscriberOnly', 'true')
-    } else {
-      formData.append('price', '0')
-      formData.append('isSubscriberOnly', 'false')
-    }
-
-    formData.append('educatorId', data.educatorId.toString())
-    formData.append('featured', 'false')
-    formData.append('hidden', 'false')
-
-    if (data.tags.length > 0) {
-      formData.append('tags', JSON.stringify(data.tags))
-    }
-
-    // Handle thumbnail URL
+    formData.append('price', JSON.stringify(data.price))
+    formData.append('tags', JSON.stringify(data.tags))
     if (data.thumbnail) {
-      console.log('SetService.prepareFormData - Adding thumbnail URL:', data.thumbnail)
-      formData.append('thumbnailUrl', data.thumbnail)
-    } else {
-      console.log('SetService.prepareFormData - No thumbnail URL provided')
+      formData.append('thumbnail', data.thumbnail)
     }
-
-    const cardsData: CardData[] = data.cards.map(card => ({
-      front: card.front.trim(),
-      back: card.back.trim(),
-      hint: card.hint?.trim() || null
-    }))
-    formData.append('cards', JSON.stringify(cardsData))
-
+    formData.append('cards', JSON.stringify(data.cards.map(card => ({
+      front: {
+        text: card.front.text?.trim() || '',
+        imageUrl: card.front.imageUrl || null
+      },
+      back: {
+        text: card.back.text?.trim() || '',
+        imageUrl: card.back.imageUrl || null
+      },
+      hint: card.hint || null
+    }))))
+    formData.append('educatorId', data.educatorId.toString())
     return formData
   }
 } 
