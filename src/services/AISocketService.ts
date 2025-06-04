@@ -35,30 +35,39 @@ class AISocketService {
             return
         }
 
-        console.log('Initializing socket connection to:', baseUrl)
+        console.log('Initializing socket connection to:', baseUrl, 'with JWT:', auth.jwt.substring(0, 10) + '...')
 
-        this.socket = io(baseUrl, {
-            auth: {
-                token: auth.jwt
-            },
-            reconnection: true,
-            reconnectionAttempts: this.maxReconnectAttempts,
-            reconnectionDelay: this.reconnectDelay,
-            timeout: 10000, // 10 second connection timeout
-            transports: ['websocket', 'polling'] // Prefer WebSocket, fallback to polling
-        })
+        try {
+            this.socket = io(baseUrl, {
+                auth: {
+                    token: auth.jwt
+                },
+                reconnection: true,
+                reconnectionAttempts: this.maxReconnectAttempts,
+                reconnectionDelay: this.reconnectDelay,
+                timeout: 10000, // 10 second connection timeout
+                transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
+                path: '/socket.io/', // Explicitly set socket.io path
+                withCredentials: true // Enable credentials
+            })
 
-        // Add beforeunload handler
-        window.addEventListener('beforeunload', this.handleBeforeUnload)
+            // Add beforeunload handler
+            window.addEventListener('beforeunload', this.handleBeforeUnload)
 
-        this.setupEventListeners()
+            this.setupEventListeners()
+        } catch (error) {
+            console.error('Failed to initialize socket:', error)
+        }
     }
 
     private setupEventListeners() {
-        if (!this.socket) return
+        if (!this.socket) {
+            console.error('Socket is null, cannot setup event listeners')
+            return
+        }
 
         this.socket.on('connect', () => {
-            console.log('Socket connected successfully')
+            console.log('Socket connected successfully, socket id:', this.socket?.id)
             this.isConnected = true
             this.reconnectAttempts = 0
             
@@ -73,7 +82,7 @@ class AISocketService {
         })
 
         this.socket.on('disconnect', (reason) => {
-            console.log('Socket disconnected:', reason)
+            console.log('Socket disconnected:', reason, 'socket id:', this.socket?.id)
             this.isConnected = false
             
             // If the disconnection was not initiated by the client
@@ -84,7 +93,7 @@ class AISocketService {
         })
 
         this.socket.on('connect_error', (error) => {
-            console.error('Socket connection error:', error)
+            console.error('Socket connection error:', error.message, 'socket id:', this.socket?.id)
             this.reconnectAttempts++
             
             if (this.reconnectAttempts >= this.maxReconnectAttempts) {
@@ -94,7 +103,7 @@ class AISocketService {
         })
 
         this.socket.on('error', (error) => {
-            console.error('Socket error:', error)
+            console.error('Socket error:', error, 'socket id:', this.socket?.id)
             if (this.activeGenerationId) {
                 this.cleanupListeners()
             }
@@ -113,13 +122,22 @@ class AISocketService {
     }
 
     public startGeneration(title: string, description: string, callbacks: GenerationCallbacks): string | null {
+        console.log('Starting generation with socket state:', {
+            isConnected: this.isConnected,
+            socketId: this.socket?.id,
+            hasSocket: !!this.socket
+        })
+
         if (!this.socket || !this.isConnected) {
-            callbacks.onError('Socket not connected')
+            console.error('Socket not connected, attempting to reconnect...')
+            this.initialize()
+            callbacks.onError('Socket not connected, attempting to reconnect...')
             return null
         }
 
         const auth = useAuthStore()
         if (!auth.user?.id) {
+            console.error('User not authenticated')
             callbacks.onError('User not authenticated')
             return null
         }
@@ -130,6 +148,8 @@ class AISocketService {
 
         const generationId = `${auth.user.id}-${Date.now()}`
         this.activeGenerationId = generationId
+
+        console.log('Setting up generation with ID:', generationId)
 
         // Set up event listeners
         this.addListener('cardGenerated', (data: { generationId: string, card: any }) => {
@@ -161,6 +181,7 @@ class AISocketService {
 
         this.addListener('generationComplete', (data: { generationId: string }) => {
             if (data.generationId === generationId) {
+                console.log('Generation complete for ID:', generationId)
                 callbacks.onComplete()
                 this.cleanupListeners()
                 // Clear current generation details
@@ -171,6 +192,7 @@ class AISocketService {
 
         this.addListener('generationError', (data: { generationId: string, error: string }) => {
             if (data.generationId === generationId) {
+                console.error('Generation error for ID:', generationId, 'Error:', data.error)
                 callbacks.onError(data.error)
                 this.cleanupListeners()
                 // Clear current generation details
@@ -180,6 +202,7 @@ class AISocketService {
         })
 
         // Start generation
+        console.log('Emitting startGeneration event with:', { title, description })
         this.socket.emit('startGeneration', {
             title,
             description
