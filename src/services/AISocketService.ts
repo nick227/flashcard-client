@@ -125,13 +125,22 @@ class AISocketService {
         console.log('Starting generation with socket state:', {
             isConnected: this.isConnected,
             socketId: this.socket?.id,
-            hasSocket: !!this.socket
+            hasSocket: !!this.socket,
+            transport: this.socket?.io?.engine?.transport?.name
         })
 
         if (!this.socket || !this.isConnected) {
             console.error('Socket not connected, attempting to reconnect...')
             this.initialize()
             callbacks.onError('Socket not connected, attempting to reconnect...')
+            return null
+        }
+
+        // Verify socket is actually connected
+        if (!this.socket.connected) {
+            console.error('Socket reports connected but is not actually connected')
+            this.socket.connect()
+            callbacks.onError('Socket connection lost, attempting to reconnect...')
             return null
         }
 
@@ -201,11 +210,27 @@ class AISocketService {
             }
         })
 
+        // Add timeout for no response
+        const timeoutId = setTimeout(() => {
+            if (this.activeGenerationId === generationId) {
+                console.error('No response from server within timeout period')
+                callbacks.onError('Server did not respond within expected time')
+                this.cleanupListeners()
+            }
+        }, 30000) // 30 second timeout
+
         // Start generation
         console.log('Emitting startGeneration event with:', { title, description })
         this.socket.emit('startGeneration', {
             title,
             description
+        }, (error: any) => {
+            if (error) {
+                console.error('Error from startGeneration callback:', error)
+                callbacks.onError(error.message || 'Failed to start generation')
+                this.cleanupListeners()
+                clearTimeout(timeoutId)
+            }
         })
 
         return generationId
