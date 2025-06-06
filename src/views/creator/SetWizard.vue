@@ -48,6 +48,7 @@
               :disabled="isAIGeneratorDisabled"
               :title="setTitle"
               :description="setDescription"
+              :category="selectedCategoryName"
               @add-set="onAddSet"
               @update:generating="setGenerating = $event" />
             <AddCardButton 
@@ -58,7 +59,8 @@
             <button 
               class="button button-success" 
               :disabled="isSubmitDisabled" 
-              @click="onSubmit">
+              @click="onSubmit"
+              :title="getSubmitButtonTitle">
               {{ submitButtonText }}
             </button>
           </div>
@@ -144,6 +146,11 @@ const {
 
 const historyService = new HistoryService()
 
+const selectedCategoryName = computed(() => {
+  const cat = categories.value.find(c => c.id === setCategoryId.value)
+  return cat ? cat.name : ''
+})
+
 // Save progress whenever form state changes
 watch(
   [
@@ -172,7 +179,7 @@ watch(
 
 // Computed properties for button states
 const isAIGeneratorDisabled = computed(() => {
-  return setGenerating.value || !setTitle.value || !setDescription.value
+  return setGenerating.value || !setTitle.value || !setDescription.value || !setCategoryId.value
 })
 
 const isAddCardDisabled = computed(() => {
@@ -251,43 +258,44 @@ function onReset() {
   confirmVisible.value = true
 }
 
-function onAddSet(newCards: Card[]) {
-  setGenerating.value = true
-  if (!Array.isArray(newCards)) {
-    console.error('Invalid cards data received:', newCards)
-    toast('Failed to generate cards: Invalid response', 'error')
-    setGenerating.value = false
+function onAddSet(newCards: Card | Card[]) {
+  const cardsToAdd = Array.isArray(newCards) ? newCards : [newCards]
+  
+  if (!cardsToAdd.length) {
+    console.error('No cards received')
+    toast('Failed to generate cards: No cards received', 'error')
     return
   }
 
-  // Validate and structure cards
-  const validatedCards = newCards.map(card => ({
-    id: CardService.generateId(),
-    setId: setId.value || 0,
-    front: {
-      text: card.front.text || '',
-      imageUrl: card.front.imageUrl || null
-    },
-    back: {
-      text: card.back.text || '',
-      imageUrl: card.back.imageUrl || null
-    },
-    hint: card.hint || null
-  }))
+  // Handle each card individually
+  cardsToAdd.forEach(card => {
+    // Validate and structure card
+    const validatedCard = {
+      id: CardService.generateId(),
+      setId: setId.value || 0,
+      front: {
+        text: card.front.text || '',
+        imageUrl: card.front.imageUrl || null
+      },
+      back: {
+        text: card.back.text || '',
+        imageUrl: card.back.imageUrl || null
+      },
+      hint: card.hint || null
+    }
 
-  console.log('Adding validated cards:', validatedCards)
-
-  // Add cards to the set
-  cards.value = [...validatedCards, ...cards.value]
-  cardsTouched.value = true
+    // Add card to the set immediately
+    cards.value = [validatedCard, ...cards.value]
+    cardsTouched.value = true
+  })
   
+  // Scroll after a short delay to allow for rendering
   setTimeout(() => {
     window.scrollTo({
       top: 640,
       behavior: 'smooth'
     })
   }, 300)
-  setGenerating.value = false
 }
 
 function onAddCard() {
@@ -469,6 +477,55 @@ async function onSubmit() {
   }
 }
 
+// Add a computed property for the submit button title
+const getSubmitButtonTitle = computed(() => {
+  if (setGenerating.value) return 'Please wait for AI generation to complete'
+  if (!setTitle.value) return 'Title is required'
+  if (!setDescription.value) return 'Description is required'
+  if (!setCategoryId.value) return 'Category is required'
+  if (!hasCards.value) return 'At least one card is required'
+  if (submitting.value) return 'Submitting...'
+  return 'Submit Set'
+})
+
+// Helper function to normalize card data from backend
+function normalizeCard(card: any) {
+  // Normalize front
+  let front;
+  if (typeof card.front === 'object' && card.front !== null) {
+    front = {
+      text: card.front.text || '',
+      imageUrl: card.front.imageUrl || null
+    };
+  } else {
+    front = {
+      text: card.front_text || '',
+      imageUrl: card.front_image_url || null
+    };
+  }
+
+  // Normalize back
+  let back;
+  if (typeof card.back === 'object' && card.back !== null) {
+    back = {
+      text: card.back.text || '',
+      imageUrl: card.back.imageUrl || null
+    };
+  } else {
+    back = {
+      text: card.back_text || '',
+      imageUrl: card.back_image_url || null
+    };
+  }
+
+  return {
+    id: card.id,
+    front,
+    back,
+    hint: card.hint || null
+  };
+}
+
 onMounted(async () => {
   try {
     categories.value = await fetchCategories()
@@ -496,13 +553,12 @@ onMounted(async () => {
           ? { type: 'subscribers' as const, amount: 0 }
           : { type: 'premium' as const, amount: Number(set.price) }
 
-      const cardsData = await SetService.fetchSetCards(Number(setId.value))
-      cards.value = cardsData.map((card: any) => ({
-        id: card.id,
-        front: card.front,
-        back: card.back,
-        hint: card.hint || null
-      }))
+      if (set.cards && set.cards.length > 0) {
+        cards.value = set.cards.map(normalizeCard)
+      } else {
+        const cardsData = await SetService.fetchSetCards(Number(setId.value))
+        cards.value = cardsData.map(normalizeCard)
+      }
     } catch (e) {
       toast('Failed to load set for editing.', 'error')
       router.push('/creator')

@@ -17,7 +17,8 @@ select {
     outline: none;
     padding: 10px !important;
     max-width: 100%;
-    width: calc(100% - 20px);
+    width: 100% !important;
+    box-sizing: border-box;
 }
 
 input:focus,

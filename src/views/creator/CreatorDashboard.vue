@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50">
     
-    <main class="container flex-1 py-12">
+    <main class="container flex-1">
       <CreatorHero />
       <h2 class="text-xl font-semibold mb-4">Your Sets</h2>
       <div v-if="loading" class="text-gray-500">Loading your sets...</div>
@@ -16,7 +16,6 @@
         :loading="actionLoading"
         @page-change="handleSetsPageChange"
         @edit="editSet"
-        @toggle-hidden="toggleHideSet"
         @delete="deleteSet"
         @sort="handleSort"
       />
@@ -107,10 +106,14 @@ const totalSubs = ref(0)
 const fetchSets = async () => {
   loading.value = true
   try {
-    const res = await api.get(`/sets?showHidden=true&educatorId=${LOGGED_IN_USER_ID}&page=${setsPage.value}&limit=${PAGE_SIZE}`)
+    const res = await api.get(`/sets?showHidden=true&educatorId=${LOGGED_IN_USER_ID}&page=${setsPage.value}&limit=${PAGE_SIZE}&sortBy=createdAt&sortOrder=desc`)
     console.log('Client: Fetched sets:', res.data)
-    // Handle new paginated response format
-    sets.value = res.data.items || res.data
+    // Ensure hidden property is properly handled
+    sets.value = (res.data.items || res.data).map((set: any) => ({
+      ...set,
+      hidden: Boolean(set.hidden) // Ensure hidden is a boolean
+    }))
+    console.log('Processed sets with hidden status:', sets.value.map(s => ({ id: s.id, title: s.title, hidden: s.hidden })))
     setsTotalPages.value = Math.ceil(res.data.pagination?.total / PAGE_SIZE) || 1
     totalSets.value = res.data.pagination?.total || sets.value.length
     loading.value = false
@@ -132,7 +135,7 @@ const fetchUsers = async () => {
 const fetchSales = async () => {
   salesLoading.value = true
   try {
-    const res = await api.get(`/sales?page=${salesPage.value}&limit=${PAGE_SIZE}`)
+    const res = await api.get(`/sales?page=${salesPage.value}&limit=${PAGE_SIZE}&sortBy=date&sortOrder=desc`)
     // Handle potential paginated response
     const sales = res.data.items || res.data
     allSales.value = sales.map((sale: any) => ({
@@ -152,7 +155,7 @@ const fetchSales = async () => {
 const fetchSubs = async () => {
   subsLoading.value = true
   try {
-    const res = await api.get(`/subscriptions?educatorId=${LOGGED_IN_USER_ID}&page=${subsPage.value}&limit=${PAGE_SIZE}`)
+    const res = await api.get(`/subscriptions?educatorId=${LOGGED_IN_USER_ID}&page=${subsPage.value}&limit=${PAGE_SIZE}&sortBy=date&sortOrder=desc`)
     // Handle potential paginated response
     const subscriptions = res.data.items || res.data
     allSubs.value = subscriptions.map((sub: any) => {
@@ -179,19 +182,6 @@ const subsTotalPages = ref(1)
 
 const editSet = (set: FlashCardSet) => {
   router.push(`/creator/wizard/${set.id}`)
-}
-
-const toggleHideSet = async (set: FlashCardSet) => {
-  if (actionLoading.value) return
-  actionLoading.value = true
-  try {
-    await api.post(`/sets/${set.id}/toggle-hidden`)
-    set.hidden = !set.hidden
-  } catch (error) {
-    console.error('Failed to toggle set visibility:', error)
-  } finally {
-    actionLoading.value = false
-  }
 }
 
 const deleteSet = (set: FlashCardSet) => {

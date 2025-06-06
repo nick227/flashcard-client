@@ -1,8 +1,8 @@
 <template>
-  <div class="card-full-view bg-gray-50 rounded-xl shadow p-6 mb-4" :class="{ 'card-success': !isBlank }">
+  <div class="card-full-view bg-gray-50 rounded-xl p-6 mb-4" :class="{ 'card-success': !isBlank }">
     <!-- Top action buttons: Delete and Preview toggle -->
     <div class="flex justify-between items-center mb-3">
-      <button class="button button-danger text-xs px-3 py-1" @click="onRequestDelete">Delete</button>
+      <button class="button button-danger button-icon text-xs px-3 py-1" @click="onRequestDelete"><i class="fa-solid fa-trash"></i></button>
       <button class="button button-accent text-xs px-3 py-1" @click="previewMode = !previewMode">
         {{ previewMode ? 'Back to Edit' : 'Preview' }}
       </button>
@@ -14,18 +14,34 @@
         <div class="w-full md:flex-1 card-col" style="min-width:0">
           <label class="block text-gray-500 text-xs mb-1">Front</label>
           <div class="card-preview front">
-            <div v-if="!localCard.front.imageUrl" ref="frontRef" class="card-content"
-              :class="{ 'input-error': !localCard.front.text && touchedFront }"
-              contenteditable="true" @input="onFrontInput" @focus="focusedField = 'front'"
-              @blur="touchedFront = true; focusedField = null" @keydown.tab.prevent="focusBack"
-              @keydown="onFrontKeydown" :data-placeholder="'Front text...'"
-              :style="{ fontSize: getFontSize(localCard.front.text) }"></div>
+            <div v-if="!localCard.front.imageUrl">
+              <div ref="frontRef" class="card-content"
+                :class="{ 'input-error': !localCard.front.text && touchedFront }"
+                contenteditable="true" @input="onFrontInput" @focus="focusedField = 'front'"
+                @blur="touchedFront = true; focusedField = null" @keydown.tab.prevent="focusBack"
+                @keydown="onFrontKeydown" :data-placeholder="'Front text...'"
+                :style="{ fontSize: getFontSize(localCard.front.text) }"></div>
+            </div>
+            <div v-else-if="localCard.front.imageUrl && localCard.front.text" class="media-text-stack">
+              <div class="embed-media">
+                <template v-if="isYouTubeUrl(localCard.front.imageUrl)">
+                  <iframe :src="getYouTubeEmbedUrl(localCard.front.imageUrl)" frameborder="0" allowfullscreen class="media-iframe"></iframe>
+                </template>
+                <template v-else>
+                  <img :src="localCard.front.imageUrl" :alt="localCard.front.text" class="media-img" />
+                </template>
+              </div>
+              <div class="media-text">{{ localCard.front.text }}</div>
+            </div>
             <div v-else class="embed-preview">
               <div class="embed-media">
-                <img :src="localCard.front.imageUrl" :alt="localCard.front.text" class="max-w-full max-h-full object-contain" />
+                <template v-if="isYouTubeUrl(localCard.front.imageUrl)">
+                  <iframe :src="getYouTubeEmbedUrl(localCard.front.imageUrl)" frameborder="0" allowfullscreen class="media-iframe"></iframe>
+                </template>
+                <template v-else>
+                  <img :src="localCard.front.imageUrl" :alt="localCard.front.text" class="media-img" />
+                </template>
               </div>
-              <button class="remove-embed-btn" @click="removeFrontEmbed" title="Remove media">🗑️</button>
-              <button class="image-mode-btn" @click="cycleFrontImageMode" :title="'Image mode: ' + frontImageMode">🖼️</button>
             </div>
           </div>
         </div>
@@ -33,18 +49,34 @@
         <div class="w-full md:flex-1 card-col" style="min-width:0">
           <label class="block text-gray-500 text-xs mb-1">Back</label>
           <div class="card-preview back">
-            <div v-if="!localCard.back.imageUrl" ref="backRef" class="card-content"
-              :class="{ 'input-error': !localCard.back.text && touchedBack }"
-              contenteditable="true" @input="onBackInput" @focus="focusedField = 'back'"
-              @blur="touchedBack = true; focusedField = null" @keydown.shift.tab.prevent="focusFront"
-              @keydown="onBackKeydown" :data-placeholder="'Back text...'"
-              :style="{ fontSize: getFontSize(localCard.back.text) }"></div>
+            <div v-if="!localCard.back.imageUrl">
+              <div ref="backRef" class="card-content"
+                :class="{ 'input-error': !localCard.back.text && touchedBack }"
+                contenteditable="true" @input="onBackInput" @focus="focusedField = 'back'"
+                @blur="touchedBack = true; focusedField = null" @keydown.shift.tab.prevent="focusFront"
+                @keydown="onBackKeydown" :data-placeholder="'Back text...'"
+                :style="{ fontSize: getFontSize(localCard.back.text) }"></div>
+            </div>
+            <div v-else-if="localCard.back.imageUrl && localCard.back.text" class="media-text-stack">
+              <div class="embed-media">
+                <template v-if="isYouTubeUrl(localCard.back.imageUrl)">
+                  <iframe :src="getYouTubeEmbedUrl(localCard.back.imageUrl)" frameborder="0" allowfullscreen class="media-iframe"></iframe>
+                </template>
+                <template v-else>
+                  <img :src="localCard.back.imageUrl" :alt="localCard.back.text" class="media-img" />
+                </template>
+              </div>
+              <div class="media-text">{{ localCard.back.text }}</div>
+            </div>
             <div v-else class="embed-preview">
               <div class="embed-media">
-                <img :src="localCard.back.imageUrl" :alt="localCard.back.text" class="max-w-full max-h-full object-contain" />
+                <template v-if="isYouTubeUrl(localCard.back.imageUrl)">
+                  <iframe :src="getYouTubeEmbedUrl(localCard.back.imageUrl)" frameborder="0" allowfullscreen class="media-iframe"></iframe>
+                </template>
+                <template v-else>
+                  <img :src="localCard.back.imageUrl" :alt="localCard.back.text" class="media-img" />
+                </template>
               </div>
-              <button class="remove-embed-btn" @click="removeBackEmbed" title="Remove media">🗑️</button>
-              <button class="image-mode-btn" @click="cycleBackImageMode" :title="'Image mode: ' + backImageMode">🖼️</button>
             </div>
           </div>
         </div>
@@ -85,12 +117,16 @@ const flipped = ref(false)
 const isFlipping = ref(false)
 const isNavigating = ref(false)
 
-// --- Image Embed Modes ---
-const imageModes = ['contain', 'cover', 'original', 'centered'] as const
-// Type for image mode
-type ImageMode = typeof imageModes[number]
-const frontImageMode = ref<ImageMode>('contain')
-const backImageMode = ref<ImageMode>('contain')
+// --- Helper Functions ---
+function isYouTubeUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//.test(url)
+}
+function getYouTubeEmbedUrl(url: string): string {
+  // Extract video ID and return embed URL
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/)
+  return match ? `https://www.youtube.com/embed/${match[1]}` : url
+}
 
 // --- Watchers ---
 onMounted(() => {
@@ -195,14 +231,6 @@ const removeBackEmbed = () => {
   localCard.value.back.imageUrl = null
   nextTick(() => backRef.value?.focus())
 }
-const cycleFrontImageMode = () => {
-  const idx = imageModes.indexOf(frontImageMode.value)
-  frontImageMode.value = imageModes[(idx + 1) % imageModes.length]
-}
-const cycleBackImageMode = () => {
-  const idx = imageModes.indexOf(backImageMode.value)
-  backImageMode.value = imageModes[(idx + 1) % imageModes.length]
-}
 const focusBack = () => nextTick(() => backRef.value?.focus())
 const focusFront = () => nextTick(() => frontRef.value?.focus())
 const onRequestDelete = () => emit('request-delete', localCard.value.id)
@@ -248,8 +276,6 @@ function getFontSize(text: string | undefined): string {
   background: #f8fafc;
   border: 1.5px solid #e5e7eb;
   border-radius: 1.25rem;
-  box-shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08);
-  transition: box-shadow 0.18s, border-color 0.18s;
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
@@ -269,7 +295,6 @@ function getFontSize(text: string | undefined): string {
 }
 
 .card-full-view:focus-within {
-  box-shadow: 0 0 0 2px #2563eb33;
   border-color: #2563eb;
 }
 
@@ -295,9 +320,9 @@ function getFontSize(text: string | undefined): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   width: 100%;
   box-sizing: border-box;
+  padding: 1rem;
 }
 
 @media (min-width: 768px) {
@@ -308,13 +333,12 @@ function getFontSize(text: string | undefined): string {
   }
 
   .card-content {
-    padding: 2.5rem;
+    padding: 1.5rem;
   }
 }
 
 .card-preview:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .card-preview.front {
@@ -325,6 +349,7 @@ function getFontSize(text: string | undefined): string {
 .card-preview.back {
   background: #2563eb;
   border: 1px solid #2563eb;
+  color: #fff;
 }
 
 .card-content {
@@ -382,12 +407,10 @@ function getFontSize(text: string | undefined): string {
 }
 
 .card-preview.front:focus-within {
-  box-shadow: 0 0 0 2px #2563eb33;
   border-color: #2563eb;
 }
 
 .card-preview.back:focus-within {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
   border-color: #3b82f6;
 }
 
@@ -426,7 +449,6 @@ function getFontSize(text: string | undefined): string {
   font-size: 1.2em;
   cursor: pointer;
   padding: 0.2em 0.4em;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   transition: background 0.2s;
   display: none;
 }
@@ -454,8 +476,8 @@ function getFontSize(text: string | undefined): string {
 }
 
 .card-content {
-  width: 100%;
-  height: 100%;
+  width: calc(100% - 3rem);
+  height: calc(100% - 3rem);
   padding: 1.5rem;
   font-weight: 600;
   line-height: 1.2;
@@ -512,6 +534,55 @@ function getFontSize(text: string | undefined): string {
 @media (min-width: 768px) {
   .embed-media iframe {
     height: 400px;
+  }
+}
+
+.media-text-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+.media-text-stack .embed-media {
+  height: 75%;
+  width: auto;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.media-img, .media-iframe {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 0.5em;
+  display: block;
+  margin: 0 auto;
+}
+.media-text {
+  width: 100%;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: inherit;
+  word-break: break-word;
+  padding: 0.5rem 0.5rem 0 0.5rem;
+  flex: 1 1 0;
+  overflow-y: auto;
+}
+@media (min-width: 768px) {
+  .media-img, .media-iframe {
+    max-height: 350px;
+  }
+  .media-text-stack {
+    gap: 1.5rem;
+    padding: 1.5rem 0;
+  }
+  .media-text-stack .embed-media {
+    height: 75%;
   }
 }
 </style>

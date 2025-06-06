@@ -33,7 +33,7 @@
               </div>
               <div class="space-y-2">
                 <p class="text-gray-700 font-medium text-lg">Generating AI Thumbnail</p>
-                <p class="text-gray-500 text-sm mb-4">This may take a few moments...</p>
+                <p class="text-gray-500 text-sm mb-8">This may take a few moments...</p>
                 <!-- Loading dots animation -->
                 <div class="flex justify-center space-x-1">
                   <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>

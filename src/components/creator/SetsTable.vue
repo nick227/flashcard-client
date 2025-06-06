@@ -30,34 +30,28 @@
       {{ formatDate(item.createdAt) }}
     </template>
     <template #hidden="{ item }">
-      <button
-        @click="handleAction('toggle-hidden', item)"
-        :disabled="props.loading"
-        class="text-sm font-medium hover:underline focus:outline-none"
-        :class="item.hidden ? 'text-red-500 hover:text-red-700' : 'text-green-600 hover:text-green-800'"
-        :title="`Click to ${item.hidden ? 'show' : 'hide'} this set`"
-        :aria-label="`${item.hidden ? 'Show' : 'Hide'} set: ${item.title}`"
-      >
-        {{ item.hidden ? 'Hidden' : 'Visible' }}
-      </button>
+      <VisibilityToggle 
+        :set-id="item.id"
+        :initial-hidden="item.hidden"
+      />
     </template>
     <template #actions="{ item }">
       <div class="flex space-x-4">
         <button
           @click="handleAction('edit', item)"
           :disabled="props.loading"
-          class="text-blue-600 hover:text-blue-800 hover:underline focus:outline-none"
+          class="button button-accent button-icon text-xs px-3 py-1"
           :aria-label="`Edit set: ${item.title}`"
         >
-          Edit
+          <i class="fa-solid fa-pencil"></i>
         </button>
         <button
           @click="handleAction('delete', item)"
           :disabled="props.loading"
-          class="text-red-600 hover:text-red-800 hover:underline focus:outline-none"
+          class="button button-danger button-icon text-xs px-3 py-1"
           :aria-label="`Delete set: ${item.title}`"
         >
-          Delete
+          <i class="fa-solid fa-trash"></i>
         </button>
       </div>
     </template>
@@ -68,6 +62,7 @@
 import { ref } from 'vue'
 import DataTable from '../common/DataTable.vue'
 import type { FlashCardSet } from '@/types'
+import VisibilityToggle from './VisibilityToggle.vue'
 
 const columns = [
   { key: 'title', label: 'Title', sortable: true },
@@ -96,7 +91,6 @@ const sortOrder = ref<'asc' | 'desc'>('desc')
 const emit = defineEmits<{
   (e: 'page-change', page: number): void
   (e: 'edit', set: FlashCardSet): void
-  (e: 'toggle-hidden', set: FlashCardSet): void
   (e: 'delete', set: FlashCardSet): void
   (e: 'sort', key: string, order: 'asc' | 'desc'): void
 }>()
@@ -123,13 +117,9 @@ function handleSort(key: string) {
 
 function handleAction(action: string, item: FlashCardSet) {
   if (props.loading) return;
-  
   switch (action) {
     case 'edit':
       emit('edit', item);
-      break;
-    case 'toggle-hidden':
-      emit('toggle-hidden', item);
       break;
     case 'delete':
       emit('delete', item);
@@ -143,5 +133,51 @@ function handleAction(action: string, item: FlashCardSet) {
 button, a {
   user-select: none;
   -webkit-user-select: none;
+}
+
+.visibility-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-width: 80px; /* Prevent width changes */
+  height: 24px; /* Fixed height */
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.switch input {
+  display: none;
+}
+
+.visibility-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+}
+
+.switch .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #22c55e;
+  transition: color 0.2s;
+}
+.switch input:checked + .icon {
+  color: #22c55e;
+}
+.switch input:not(:checked) + .icon {
+  color: #ef4444;
+}
+.switch input:disabled + .icon {
+  color: #d1d5db;
+  cursor: not-allowed;
 }
 </style> 

@@ -1,24 +1,50 @@
 <template>
-  <div class="card-tile bg-white rounded-xl shadow p-4 flex flex-col items-stretch h-full">
-    <div class="flex justify-between items-center mb-2">
-      <button class="button button-danger text-xs px-2 py-1" @click="onRequestDelete">Delete</button>
+  <div class="card-tile bg-white rounded-xl flex flex-col items-stretch h-full">
+    
+    <div class="flex justify-between mb-4 button-row">
+      <button class="button button-danger button-icon text-xs px-3 py-1 mr-2" @click="onRequestDelete"><i class="fa-solid fa-trash"></i></button>
+      <button class="button button-accent text-xs px-3 py-1" @click="onRequestPreview">
+        {{ previewMode ? 'Back to Edit' : 'Preview' }}
+      </button>
     </div>
-    <label class="block text-gray-500 text-xs mb-1">Front</label>
-    <textarea class="input mb-2" v-model="localCard.front.text" @input="emitUpdate" maxlength="2000" placeholder="Front text..."></textarea>
-    <label class="block text-gray-500 text-xs mb-1">Back</label>
-    <textarea class="input" v-model="localCard.back.text" @input="emitUpdate" maxlength="2000" placeholder="Back text..."></textarea>
-    <label class="block text-gray-500 text-xs mb-1">Hint</label>
-    <textarea class="input" v-model="localCard.hint" @input="emitUpdate" placeholder="Hint..."></textarea>
+
+    <div class="tile-content flex-1 flex flex-col min-h-0" v-if="!previewMode">
+      <label class="block text-gray-500 text-xs mb-1">Front</label>
+      <textarea class="input mb-2 flex-shrink-0" v-model="localCard.front.text" @input="emitUpdate" maxlength="2000" placeholder="Front text..."></textarea>
+      <input type="text" class="input mb-2 flex-shrink-0" v-model="localCard.front.imageUrl" @input="emitUpdate" placeholder="Front image URL...">
+      <label class="block text-gray-500 text-xs mb-1">Back</label>
+      <textarea class="input mb-2 flex-shrink-0" v-model="localCard.back.text" @input="emitUpdate" maxlength="2000" placeholder="Back text..."></textarea>
+      <input type="text" class="input mb-2 flex-shrink-0" v-model="localCard.back.imageUrl" @input="emitUpdate" placeholder="Back image URL...">
+      <label class="block text-gray-500 text-xs mb-1">Hint</label>
+      <textarea class="input flex-shrink-0" v-model="localCard.hint" @input="emitUpdate" placeholder="Hint..."></textarea>
+    </div>
+    <template v-else>
+      <div class="tile-preview flex-1 flex items-stretch justify-stretch min-h-0">
+        <FlashCardScaffold 
+          :card="localCard" 
+          :flipped="flipped" 
+          :editable="false" 
+          :inlineEditable="true"
+          @update:card="onInlineEdit" 
+          @flip="handleFlip"
+          class="w-full h-full preview-scaffold"
+        />
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import type { Card } from '@/types/card'
+import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
 
 const props = defineProps<{ card: Card }>()
 const emit = defineEmits(['update-card', 'delete-card', 'request-delete'])
 const localCard = ref({ ...props.card })
+const previewMode = ref(false)
+const flipped = ref(false)
+const isFlipping = ref(false)
 
 // Update watch to handle deep changes
 watch(() => props.card, (val) => { 
@@ -37,6 +63,25 @@ onMounted(() => {
 function onRequestDelete() {
   emit('request-delete', localCard.value.id)
 }
+
+function onRequestPreview() {
+  previewMode.value = !previewMode.value
+  if (!previewMode.value) {
+    flipped.value = false
+  }
+}
+
+function onInlineEdit(updatedCard: Card) {
+  localCard.value = { ...updatedCard }
+  emitUpdate()
+}
+
+function handleFlip(newFlippedState: boolean) {
+  if (isFlipping.value) return
+  isFlipping.value = true
+  flipped.value = newFlippedState
+  setTimeout(() => { isFlipping.value = false }, 300)
+}
 </script>
 
 <style scoped>
@@ -45,22 +90,44 @@ function onRequestDelete() {
   border: 1.5px solid #e5e7eb;
   border-radius: 1.25rem;
   box-shadow: 0 4px 24px 0 rgba(30,41,59,0.08);
-  min-height: 220px;
+  min-height: 460px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   width: 100%;
+  height: 100%;
+  transition: all 0.3s ease;
+  padding: 1rem;
+  box-sizing: border-box;
 }
-.button.button-danger {
-  background: #ef4444;
-  border-color: #ef4444;
-  color: #fff;
-  font-size: 0.95em;
-  padding: 0.2em 0.8em;
-  border-radius: 0.5em;
+
+.tile-content, .tile-preview {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
-.button.button-danger:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+
+.button-row {
+  margin-top: auto;
+}
+
+.tile-preview {
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+}
+
+.preview-scaffold {
+  border-radius: 1.25rem;
+  box-shadow: none;
+  height: 100%;
+  min-height: 200px;
+  box-sizing: border-box;
+}
+
+.card-tile .card-content {
+  padding: 0 !important;
 }
 </style> 

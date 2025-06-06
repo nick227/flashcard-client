@@ -1,5 +1,5 @@
 <template>
-    <footer class="footer mt-4">
+    <footer class="footer mt-24">
         <div class="footer-content">
             <!-- Logo and Description -->
             <div class="footer-brand">

@@ -68,32 +68,6 @@
     @apply max-w-7xl mx-auto px-4 py-12;
 }
 
-/* Hero Section */
-.hero-section {
-    @apply flex flex-col lg:flex-row items-center justify-between gap-12 mb-24;
-}
-
-.hero-content {
-    @apply flex-1 space-y-6;
-}
-
-.hero-title {
-    @apply text-5xl lg:text-6xl font-bold leading-tight;
-    line-height: 1.5;
-}
-
-.text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600;
-}
-
-.hero-subtitle {
-    @apply text-xl text-gray-600;
-}
-
-.hero-image {
-    @apply flex-1 relative h-[300px] lg:h-[400px];
-}
-
 .floating-card {
     @apply absolute w-24 h-24 rounded-2xl bg-white shadow-xl flex items-center justify-center text-4xl;
     animation: float 6s ease-in-out infinite;

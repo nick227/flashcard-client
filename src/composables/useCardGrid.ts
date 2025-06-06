@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { Ref } from 'vue'
 import type { Card } from '@/types/card'
 
@@ -9,19 +9,34 @@ interface CardViewState {
 }
 
 export function useCardGrid(cards: Ref<Card[]>) {
-  const showGridView = ref(false)
+  // Single source of truth for view state
+  const activeView = ref<'grid' | 'mobile' | null>(null)
   const gridCardStates = ref<Record<number, boolean>>({})
   const viewedCards = ref<CardViewState[]>([])
 
+  // Computed for compatibility
+  const showGridView = computed(() => activeView.value === 'grid')
+  const showMobileView = computed(() => activeView.value === 'mobile')
+
   const toggleGridView = () => {
-    showGridView.value = !showGridView.value
-    if (showGridView.value) {
+    if (activeView.value !== 'grid') {
+      activeView.value = 'grid'
       setTimeout(() => {
         window.scrollTo({
           top: 640,
           behavior: 'smooth'
         })
       }, 20)
+    } else {
+      activeView.value = null
+    }
+  }
+
+  const toggleMobileView = () => {
+    if (activeView.value !== 'mobile') {
+      activeView.value = 'mobile'
+    } else {
+      activeView.value = null
     }
   }
 
@@ -73,9 +88,11 @@ export function useCardGrid(cards: Ref<Card[]>) {
 
   return {
     showGridView,
+    showMobileView,
     gridCardStates,
     viewedCards,
     toggleGridView,
+    toggleMobileView,
     handleGridCardFlip,
     shuffleCardOrder
   }

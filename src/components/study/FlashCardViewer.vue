@@ -6,7 +6,7 @@
     <div v-else-if="error" class="text-red-500 text-lg">{{ error }}</div>
     <div v-else-if="!set" class="text-gray-500 text-lg">Set not found</div>
     <div v-else-if="unauthorized && set" class="w-full max-w-4xl mx-auto">
-      <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div class="bg-white rounded-lg overflow-hidden">
         <!-- Set Header with Image -->
         <div class="relative bg-gray-200 h-96">
           <img v-if="set?.thumbnail" :src="set.thumbnail" :alt="set?.title" class="w-full h-full object-contain" />
@@ -64,7 +64,7 @@
 
     <!-- No Cards -->
     <div v-else-if="!cards || cards.length === 0" class="w-full max-w-4xl mx-auto">
-      <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div class="bg-white rounded-lg overflow-hidden">
         <!-- Set Header with Image -->
         <div class="relative bg-gray-200 h-96">
           <img v-if="set?.thumbnail" :src="set.thumbnail" :alt="set?.title" class="w-full h-full object-contain" />
@@ -137,8 +137,8 @@
         <div class="flex gap-2">
           <a @click="handleShuffle" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-shuffle"></i>
             Shuffle Cards</a>
-          <a @click="toggleGridView" class="button-round" href="javascript:void(0)"><i
-              class="fa-solid fa-table-cells"></i> Grid View</a>
+          <a @click="toggleGridView" :class="['button-round', { active: showGridView }]" href="javascript:void(0)"><i class="fa-solid fa-table-cells"></i> Grid View</a>
+          <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)"><i class="fa-solid fa-mobile"></i> Mobile View</a>
           <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-expand"></i>
             Full-Screen</a>
         </div>
@@ -150,6 +150,11 @@
     <div v-if="showGridView" class="mt-4 w-full">
       <CardGrid :cards="cards" :grid-card-states="gridCardStates" :flipped="gridFlipped" :current-flip="gridCurrentFlip"
         @card-flip="handleGridCardFlip" />
+    </div>
+
+    <!-- Mobile View -->
+    <div v-if="showMobileView" class="mt-4 w-full">
+      <CardRiverMobile :cards="cards" />
     </div>
 
     <Toaster :toasts="toasts" @remove="remove" />
@@ -174,6 +179,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/common/Toaster.vue'
 import { useViewHistory } from '@/composables/useViewHistory'
+import CardRiverMobile from './CardRiverMobile.vue'
 
 const props = defineProps<{
   setId: number | string
@@ -346,7 +352,22 @@ const fetchSet = async () => {
     }
   } catch (err) {
     console.error('Error fetching set:', err)
-    error.value = 'Failed to load flashcard set'
+    // Try to extract a specific error message/code
+    let message = 'Failed to load flashcard set'
+    const e = err as any
+    if (e.response && e.response.data) {
+      const data = e.response.data
+      if (data.error && typeof data.error === 'string') {
+        if (data.error.includes('hidden') || data.error.includes('not available') || data.error.includes('SET_HIDDEN')) {
+          message = 'This set is hidden or unavailable. If you are the owner, check your visibility settings.'
+        } else {
+          message = data.error
+        }
+      } else if (data.message && typeof data.message === 'string') {
+        message = data.message
+      }
+    }
+    error.value = message
   } finally {
     loading.value = false
   }
@@ -634,4 +655,15 @@ watch([currentIndex, flipped], ([newIndex, newFlipped]) => {
     isPrevDisabled: isPrevDisabled.value
   })
 })
+
+const showMobileView = ref(false)
+const toggleMobileView = () => {
+  showMobileView.value = !showMobileView.value
+  emit('update:showGridView', !showGridView.value)
+}
+
+const emit = defineEmits(['update:showGridView'])
 </script>
+
+<style scoped>
+</style>

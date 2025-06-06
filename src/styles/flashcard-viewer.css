@@ -9,9 +9,9 @@
     justify-content: center;
     width: 100%;
     max-width: 100%;
-    height: 50vh;
+    height: 150vh;
     min-width: 340px;
-    min-height: 340px;
+    min-height: 360px;
 }
 
 .title-container {
@@ -45,7 +45,7 @@
 .progress-bar-bg {
     width: 100%;
     height: 0.5rem;
-    background: #e5e7eb;
+    background: var(--color-border);
     border-radius: 9999px;
     overflow: hidden;
 }
@@ -57,46 +57,27 @@
 }
 
 .controls-group {
-    background: #f8fafc;
-    border-radius: 1.2rem;
-    border: 1.5px solid #e5e7eb;
-    box-shadow: 0 2px 8px 0 rgba(30, 41, 59, 0.06);
-    padding: 2.5rem 2rem;
-    margin-bottom: 2rem;
+    background: var(--color-bg);
+    border-radius: var(--radius);
+    border: 1.5px solid var(--color-border);
+    box-shadow: var(--shadow);
+    padding: var(--space-lg) var(--space-md);
+    margin-bottom: var(--space-md);
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    gap: 2rem;
+    gap: var(--space-md);
 }
 
 .button-disabled,
 .button:disabled {
-    background: #e5e7eb !important;
-    color: #a1a1aa !important;
-    border-color: #e5e7eb !important;
+    background: var(--color-border) !important;
+    color: var(--color-muted) !important;
+    border-color: var(--color-border) !important;
     cursor: not-allowed !important;
     opacity: 1 !important;
     box-shadow: none !important;
-}
-
-.flashcard-area .flashcard-scaffold.card {
-    width: 100% !important;
-    height: 100% !important;
-}
-
-.flashcard-scaffold.card {
-    perspective: 1200px;
-    transition: box-shadow 0.2s, transform 0.3s;
-    position: relative;
-    overflow: hidden;
-    outline: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08);
-    background: #fff;
-    margin: 0 auto;
 }
 
 .main-card-area {
@@ -137,8 +118,8 @@
     }
     .controls-group {
         flex-direction: column;
-        gap: 0.5rem;
-        padding: 0.5rem 0.2rem;
+        gap: var(--space-xs);
+        padding: var(--space-xs);
         justify-content: center;
     }
 }

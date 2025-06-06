@@ -32,7 +32,7 @@
       <div class="card-stats w-full text-left">
         <div class="stat-group">
           <span class="stat">
-            <i class="fas fa-cards"></i>
+            <i class="fas fa-layer-group"></i>
             {{ cardCount }} cards
           </span>
           <span class="stat">
@@ -55,7 +55,7 @@
     <div class="card-actions">
       <button class="button button-primary w-full" @click="goToSet">
         <span class="button-text">Start Learning</span>
-        <span class="button-icon">→</span>
+        <span>→</span>
       </button>
     </div>
   </div>
@@ -125,7 +125,7 @@ const fetchSetStats = async () => {
     ])
     viewCount.value = viewsRes.data.count || 0
     likeCount.value = likesRes.data.count || 0
-    cardCount.value = cardsRes.data.length || 0
+    cardCount.value = cardsRes.data.count || 0
   } catch (err) {
     console.error('Error fetching set stats:', err)
     viewCount.value = 0
@@ -166,17 +166,12 @@ watch(() => props.set?.id, (newId) => {
 .set-preview-card {
   background: white;
   border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   transition: all 0.2s ease;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   width: 100%;
-}
-
-.set-preview-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  border: 1px solid var(--color-subtle);
 }
 
 .card-image-container {
@@ -211,21 +206,10 @@ watch(() => props.set?.id, (newId) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  background: gray;
+  color: white;
   position: relative;
   overflow: hidden;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(0.95);
-  }
-  100% {
-    transform: scale(1);
-  }
 }
 
 .card-content {

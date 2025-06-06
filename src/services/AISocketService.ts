@@ -10,6 +10,14 @@ interface GenerationCallbacks {
 
 type SocketEventListener = (...args: any[]) => void
 
+interface GenerationProgress {
+    status: 'preparing' | 'generating' | 'completed' | 'failed'
+    cardsGenerated: number
+    totalCards: number
+    currentOperation?: string
+    error?: string
+}
+
 class AISocketService {
     private socket: Socket | null = null
     private isConnected = false
@@ -20,12 +28,52 @@ class AISocketService {
     private eventListeners: Map<string, Set<SocketEventListener>> = new Map()
     private currentTitle: string | null = null
     private currentDescription: string | null = null
+    private currentCategory: string | null = null
+    private onStatusChange: ((status: string) => void) | null = null
+    private onProgressUpdate: ((progress: GenerationProgress) => void) | null = null
 
     constructor() {
         this.initialize()
     }
 
+    public get connected(): boolean {
+        return this.isConnected && this.socket?.connected === true
+    }
+
+    public setStatusCallback(callback: (status: string) => void) {
+        this.onStatusChange = callback
+    }
+
+    public setProgressCallback(callback: (progress: GenerationProgress) => void) {
+        this.onProgressUpdate = callback
+    }
+
+    private updateStatus(status: 'disconnected' | 'connecting' | 'connected' | 'reconnecting', message?: string) {
+        if (this.onStatusChange) {
+            this.onStatusChange(message || status)
+        }
+    }
+
+    private updateProgress(progress: Partial<GenerationProgress>) {
+        if (this.onProgressUpdate) {
+            const currentProgress = {
+                status: progress.status || 'generating',
+                cardsGenerated: progress.cardsGenerated || 0,
+                totalCards: progress.totalCards || 10,
+                currentOperation: progress.currentOperation,
+                error: progress.error
+            }
+            this.onProgressUpdate(currentProgress)
+        }
+    }
+
     private initialize() {
+        // If socket already exists and is connected, don't reinitialize
+        if (this.socket?.connected) {
+            console.log('Socket already connected, skipping initialization')
+            return
+        }
+
         const auth = useAuthStore()
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
         const isDev = import.meta.env.DEV
@@ -33,16 +81,28 @@ class AISocketService {
         // Ensure we have a JWT before connecting
         if (!auth.jwt) {
             console.error('No JWT available')
+            this.updateStatus('disconnected', 'Authentication required')
             return
         }
 
         console.log('Initializing socket connection:', {
             baseUrl,
             isDev,
-            hasJwt: !!auth.jwt
+            hasJwt: !!auth.jwt,
+            existingSocket: !!this.socket
         })
 
+        this.updateStatus('connecting', 'Connecting to AI service...')
+
         try {
+            // If socket exists but is disconnected, reconnect it
+            if (this.socket) {
+                console.log('Reconnecting existing socket')
+                this.socket.connect()
+                return
+            }
+
+            // Create new socket connection
             this.socket = io(baseUrl, {
                 auth: {
                     token: auth.jwt
@@ -50,12 +110,13 @@ class AISocketService {
                 reconnection: true,
                 reconnectionAttempts: this.maxReconnectAttempts,
                 reconnectionDelay: this.reconnectDelay,
-                timeout: 20000, // Increased timeout to 20 seconds
+                timeout: 30000,
                 transports: ['websocket', 'polling'],
                 path: '/socket.io/',
                 withCredentials: true,
-                forceNew: true,
-                autoConnect: true
+                forceNew: false,
+                autoConnect: true,
+                multiplex: true
             })
 
             // Add beforeunload handler
@@ -64,6 +125,7 @@ class AISocketService {
             this.setupEventListeners()
         } catch (error) {
             console.error('Failed to initialize socket:', error)
+            this.updateStatus('disconnected', 'Failed to connect to AI service')
         }
     }
 
@@ -73,17 +135,24 @@ class AISocketService {
             return
         }
 
+        // Remove any existing listeners to prevent duplicates
+        this.socket.removeAllListeners()
+
         this.socket.on('connect', () => {
             console.log('Socket connected successfully, socket id:', this.socket?.id)
             this.isConnected = true
             this.reconnectAttempts = 0
+            this.updateStatus('connected', 'Connected to AI service')
             
             // If we have an active generation, restart it
             if (this.activeGenerationId) {
                 console.log('Restarting active generation after reconnection')
+                this.updateStatus('connected', 'Reconnecting to previous generation...')
                 this.socket?.emit('startGeneration', {
                     title: this.currentTitle,
-                    description: this.currentDescription
+                    description: this.currentDescription,
+                    generationId: this.activeGenerationId,
+                    category: this.currentCategory
                 })
             }
         })
@@ -92,25 +161,35 @@ class AISocketService {
             console.log('Socket disconnected:', reason, 'socket id:', this.socket?.id)
             this.isConnected = false
             
-            // If the disconnection was not initiated by the client
-            if (reason !== 'io client disconnect') {
+            // If the disconnection was not initiated by the client and not due to server disconnect
+            if (reason !== 'io client disconnect' && reason !== 'io server disconnect') {
                 console.log('Attempting to reconnect...')
+                this.updateStatus('reconnecting', 'Connection lost, attempting to reconnect...')
                 this.handleReconnection()
+            } else {
+                this.updateStatus('disconnected', 'Disconnected from AI service')
+                // Don't try to reconnect if server disconnected us
+                if (reason === 'io server disconnect') {
+                    this.cleanup()
+                }
             }
         })
 
         this.socket.on('connect_error', (error) => {
             console.error('Socket connection error:', error.message, 'socket id:', this.socket?.id)
             this.reconnectAttempts++
+            this.updateStatus('reconnecting', `Connection error: ${error.message}. Attempt ${this.reconnectAttempts} of ${this.maxReconnectAttempts}`)
             
             if (this.reconnectAttempts >= this.maxReconnectAttempts) {
                 console.error('Max reconnection attempts reached')
+                this.updateStatus('disconnected', 'Failed to connect after multiple attempts')
                 this.cleanup()
             }
         })
 
         this.socket.on('error', (error) => {
             console.error('Socket error:', error, 'socket id:', this.socket?.id)
+            this.updateStatus('disconnected', `Connection error: ${error}`)
             if (this.activeGenerationId) {
                 this.cleanupListeners()
             }
@@ -120,64 +199,125 @@ class AISocketService {
     private handleReconnection() {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000)
+            this.updateStatus('reconnecting', `Reconnecting in ${delay/1000} seconds...`)
             setTimeout(() => {
-                if (this.socket) {
+                if (this.socket && !this.socket.connected) {
                     this.socket.connect()
                 }
             }, delay)
         }
     }
 
-    public startGeneration(title: string, description: string, callbacks: GenerationCallbacks): string | null {
-        console.log('Starting generation with socket state:', {
-            isConnected: this.isConnected,
-            socketId: this.socket?.id,
-            hasSocket: !!this.socket,
-            transport: this.socket?.io?.engine?.transport?.name
-        })
+    private handleError(error: any, context: string): string {
+        const errorMessage = this.formatErrorMessage(error, context)
+        console.error(`Socket ${context} error:`, errorMessage)
+        this.updateStatus('disconnected', errorMessage)
+        return errorMessage
+    }
 
-        if (!this.socket || !this.isConnected) {
-            console.error('Socket not connected, attempting to reconnect...')
-            this.initialize()
-            callbacks.onError('Socket not connected, attempting to reconnect...')
-            return null
-        }
+    private formatErrorMessage(error: any, context: string): string {
+        if (typeof error === 'string') return error
+        if (error.message) return `${context}: ${error.message}`
+        return `An unexpected error occurred during ${context}`
+    }
 
-        // Verify socket is actually connected
-        if (!this.socket.connected) {
-            console.error('Socket reports connected but is not actually connected')
-            this.socket.connect()
-            callbacks.onError('Socket connection lost, attempting to reconnect...')
+    public startGeneration(title: string, description: string, category: string, callbacks: GenerationCallbacks): string | null {
+        if (!this.validateConnection()) {
+            const error = this.handleError('Connection not available', 'connection')
+            callbacks.onError(error)
             return null
         }
 
         const auth = useAuthStore()
         if (!auth.user?.id) {
-            console.error('User not authenticated')
-            callbacks.onError('User not authenticated')
+            const error = this.handleError('User not authenticated', 'auth')
+            callbacks.onError(error)
             return null
         }
 
         // Store current generation details for reconnection
         this.currentTitle = title
         this.currentDescription = description
+        this.currentCategory = category
 
         const generationId = `${auth.user.id}-${Date.now()}`
         this.activeGenerationId = generationId
 
-        console.log('Setting up generation with ID:', generationId)
+        // Update progress to preparing
+        this.updateProgress({
+            status: 'preparing',
+            currentOperation: 'Initializing generation...'
+        })
 
         // Set up event listeners
-        this.addListener('cardGenerated', (data: { generationId: string, card: any }, callback: (ack: any) => void) => {
-            console.log('Received cardGenerated event:', {
-                eventGenerationId: data.generationId,
-                currentGenerationId: generationId,
-                card: data.card
-            })
-            
+        this.setupGenerationListeners(generationId, callbacks)
+
+        // Start generation
+        this.socket?.emit('startGeneration', {
+            title,
+            description,
+            generationId
+        }, (error: any) => {
+            if (error) {
+                console.error('Error from startGeneration callback:', error)
+                const errorMessage = typeof error === 'string' ? error : error.message || 'Failed to start generation'
+                callbacks.onError(errorMessage)
+                this.cleanupListeners()
+            }
+        })
+
+        return generationId
+    }
+
+    private validateConnection(): boolean {
+        if (!this.socket) {
+            console.log('Socket not initialized, attempting to initialize...')
+            this.initialize()
+            return false
+        }
+
+        if (!this.isConnected || !this.socket.connected) {
+            console.log('Socket not connected, attempting to connect...')
+            this.socket.connect()
+            return false
+        }
+
+        const auth = useAuthStore()
+        if (!auth.jwt) {
+            console.error('No JWT available')
+            this.updateStatus('disconnected', 'Authentication required')
+            return false
+        }
+
+        return true
+    }
+
+    private setupGenerationListeners(generationId: string, callbacks: GenerationCallbacks) {
+        this.addListener('openaiResponse', (data: { generationId: string, status: 'success' | 'error', message: string, requestId?: string }, callback: (ack: any) => void) => {
             if (data.generationId === generationId) {
-                console.log('Processing card for current generation')
-                // Ensure proper card structure
+                this.updateProgress({
+                    status: data.status === 'success' ? 'generating' : 'failed',
+                    currentOperation: data.message,
+                    error: data.status === 'error' ? data.message : undefined
+                })
+                if (typeof callback === 'function') callback({ received: true })
+            }
+        })
+
+        this.addListener('generationProgress', (data: { generationId: string, message: string, progress: number, totalCards: number }, callback: (ack: any) => void) => {
+            if (data.generationId === generationId) {
+                this.updateProgress({
+                    status: 'generating',
+                    currentOperation: data.message,
+                    cardsGenerated: Math.round((data.progress / 100) * data.totalCards),
+                    totalCards: data.totalCards
+                })
+                if (typeof callback === 'function') callback({ received: true })
+            }
+        })
+
+        this.addListener('cardGenerated', (data: { generationId: string, card: any, progress: number, totalCards: number }) => {
+            if (data.generationId === generationId) {
                 const card: Card = {
                     id: Date.now(),
                     setId: 0,
@@ -191,86 +331,30 @@ class AISocketService {
                     },
                     hint: data.card.hint || null
                 }
-                console.log('Emitting transformed card to callbacks')
+                
+                this.updateProgress({
+                    status: 'generating',
+                    cardsGenerated: Math.round((data.progress / 100) * data.totalCards),
+                    totalCards: data.totalCards
+                })
+                
                 callbacks.onCardGenerated(card)
-                // Acknowledge receipt of card
-                if (callback) {
-                    console.log('Acknowledging card receipt')
-                    callback({ received: true })
-                }
-            } else {
-                console.log('Ignoring card for different generation')
             }
         })
 
-        this.addListener('generationComplete', (data: { generationId: string }, callback: (ack: any) => void) => {
-            console.log('Received generationComplete event:', {
-                eventGenerationId: data.generationId,
-                currentGenerationId: generationId
-            })
-            
+        this.addListener('generationComplete', (data: { generationId: string, totalCards: number }, callback: (ack: any) => void) => {
             if (data.generationId === generationId) {
-                console.log('Processing completion for current generation')
+                this.updateProgress({
+                    status: 'completed',
+                    currentOperation: 'Generation complete!',
+                    cardsGenerated: data.totalCards,
+                    totalCards: data.totalCards
+                })
                 callbacks.onComplete()
                 this.cleanupListeners()
-                // Clear current generation details
-                this.currentTitle = null
-                this.currentDescription = null
-                // Acknowledge completion
-                if (callback) {
-                    console.log('Acknowledging completion')
-                    callback({ received: true })
-                }
-            } else {
-                console.log('Ignoring completion for different generation')
+                if (typeof callback === 'function') callback({ received: true })
             }
         })
-
-        this.addListener('generationError', (data: { generationId: string, error: string }, callback: (ack: any) => void) => {
-            console.log('Received generationError event:', {
-                eventGenerationId: data.generationId,
-                currentGenerationId: generationId,
-                error: data.error
-            })
-            
-            if (data.generationId === generationId) {
-                console.log('Processing error for current generation')
-                callbacks.onError(data.error)
-                this.cleanupListeners()
-                // Clear current generation details
-                this.currentTitle = null
-                this.currentDescription = null
-                // Acknowledge error
-                if (callback) {
-                    console.log('Acknowledging error')
-                    callback({ received: true })
-                }
-            } else {
-                console.log('Ignoring error for different generation')
-            }
-        })
-
-        // Start generation
-        console.log('Emitting startGeneration event with:', { 
-            title, 
-            description,
-            generationId 
-        })
-        this.socket.emit('startGeneration', {
-            title,
-            description,
-            generationId
-        }, (error: any) => {
-            if (error) {
-                console.error('Error from startGeneration callback:', error)
-                callbacks.onError(error.message || 'Failed to start generation')
-                this.cleanupListeners()
-            } else {
-                console.log('StartGeneration acknowledged by server')
-            }
-        })
-
-        return generationId
     }
 
     private addListener(event: string, callback: SocketEventListener) {

@@ -28,7 +28,7 @@
       </div>
     </div>
     <slot name="controls"></slot>
-    <button v-if="editable && showControls" class="button button-danger absolute top-4 right-4 z-10" @click.stop="$emit('delete')">Delete</button>
+    <button v-if="editable && showControls" class="button button-danger button-icon absolute top-4 right-4 z-10" @click.stop="$emit('delete')"><i class="fa-solid fa-trash"></i></button>
     <div v-if="showHint && card?.hint" class="hint-text text-base text-gray-700 mt-4 w-full text-left px-2">{{ card.hint }}</div>
   </div>
 </template>
@@ -103,6 +103,22 @@ function onCardClick() {
   const now = Date.now()
   const timeSinceLastClick = now - lastClickTime.value
   
+  // Check if user is selecting text
+  const selection = window.getSelection()
+  if (selection?.toString()) {
+    clearClickTimeout()
+    return
+  }
+  
+  // Remove selection if clicking without text selected
+  if (!selection?.toString()) {
+    selection?.removeAllRanges()
+    const textElements = document.querySelectorAll('.card-text')
+    textElements.forEach(element => {
+      element.classList.remove('highlight')
+    })
+  }
+  
   if (timeSinceLastClick < CLICK_DELAY) {
     clearClickTimeout()
     return
@@ -115,13 +131,43 @@ function onCardClick() {
   }
 }
 
-function onDoubleClick() {
-  clearClickTimeout()
+function onDoubleClick(e: MouseEvent) {
+  // Check if user is selecting text
+  const selection = window.getSelection()
+  if (selection?.toString()) {
+    // If text is already selected, don't do anything
+    return
+  }
+
+  // Get the text element that was double-clicked
+  const textElement = (e.target as HTMLElement).closest('.card-text')
+  if (!textElement) return
+
+  // Create a range to select the text
+  const range = document.createRange()
+  range.selectNodeContents(textElement)
+  
+  // Clear any existing selection and add our new one
+  selection?.removeAllRanges()
+  selection?.addRange(range)
+
+  // Add highlight class for visual feedback
+  textElement.classList.add('highlight')
 }
 
 // Flip handling
 function handleFlip() {
   if (isFlipping.value || isNavigating.value) return
+  
+  // Clear selection when flipping
+  const selection = window.getSelection()
+  selection?.removeAllRanges()
+  
+  // Remove highlight
+  const textElements = document.querySelectorAll('.card-text')
+  textElements.forEach(element => {
+    element.classList.remove('highlight')
+  })
   
   isFlipping.value = true
   const newFlippedState = !isFlipped.value
@@ -194,6 +240,22 @@ function clearTimeouts() {
   clearClickTimeout()
 }
 
+// Deselect highlight if clicking outside the card
+function handleDocumentClick(e: MouseEvent) {
+  const cardEl = document.querySelector('.flashcard-scaffold')
+  if (!cardEl) return
+  if (!cardEl.contains(e.target as Node)) {
+    // Remove highlight
+    const textElements = document.querySelectorAll('.card-text')
+    textElements.forEach(element => {
+      element.classList.remove('highlight')
+    })
+    // Remove selection
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+  }
+}
+
 // Touch handling
 onMounted(() => {
   const element = document.querySelector('.flashcard-scaffold')
@@ -208,6 +270,7 @@ onMounted(() => {
       }
     }, { passive: false })
   }
+  document.addEventListener('mousedown', handleDocumentClick)
 })
 
 onUnmounted(() => {
@@ -216,6 +279,7 @@ onUnmounted(() => {
   if (element) {
     element.removeEventListener('touchmove', () => {})
   }
+  document.removeEventListener('mousedown', handleDocumentClick)
 })
 </script>
 
@@ -227,10 +291,9 @@ onUnmounted(() => {
   -webkit-touch-callout: default;
   border-radius: 1rem;
   width: 100%;
-  height: 400px;
+  min-height: 400px;
   transition: transform 0.3s ease;
   background: white;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   position: relative;
   perspective: 1000px;
   will-change: transform; /* Performance optimization */
@@ -258,14 +321,9 @@ onUnmounted(() => {
 
 .formatted-content img {
   max-width: 100%;
-  max-height: 300px;
+  max-height: 100%;
   object-fit: contain;
   border-radius: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.card-face.back .formatted-content img {
-  box-shadow: 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 
 .card-content {
@@ -295,7 +353,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 1rem;
-  overflow: hidden;
 }
 
 .card-face.front {
@@ -318,6 +375,20 @@ onUnmounted(() => {
   padding: 2rem;
 }
 
+.card-text {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: inherit;
+  line-height: 1.5;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.fullscreen .card-text {
+  font-size: 2rem;
+}
+
 .card-face .formatted-content img,
 .card-face .formatted-content iframe {
   max-width: 100%;
@@ -331,8 +402,32 @@ onUnmounted(() => {
   outline-offset: 2px;
 }
 
-/* Add hover effect for better interactivity */
-.flashcard-scaffold:not(.editable):hover {
-  box-shadow: 0 6px 8px -1px rgb(0 0 0 / 0.15), 0 3px 6px -3px rgb(0 0 0 / 0.15);
+/* Update highlight animation to use primary blue */
+@keyframes highlight {
+  0% { background-color: rgba(37, 99, 235, 0.2); }
+  100% { background-color: rgba(37, 99, 235, 0.1); }
+}
+
+.highlight {
+  animation: highlight 0.2s ease-out forwards;
+  color: white;
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+/* Ensure text remains selectable during flip */
+.card-content.is-flipping .card-text {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Add natural selection color */
+.card-text::selection {
+  background-color: rgb(37, 99, 235);
+  color: white;
+}
+
+.card-text::-moz-selection {
+  background-color: rgb(37, 99, 235);
+  color: white;
 }
 </style>

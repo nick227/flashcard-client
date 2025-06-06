@@ -148,11 +148,13 @@ onMounted(() => {
 .set-title {
   font-size: clamp(0.8em, calc(4em - (var(--char-count) * 0.1em)), 4em);
   margin-top: 0;
-  line-height: 1;
+  line-height: 1.23;
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
   max-width: 100%;
+  min-height: 60px;
+  font-size: 3.4rem;
 }
 
 .title-buttons {

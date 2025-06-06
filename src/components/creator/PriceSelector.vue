@@ -2,14 +2,14 @@
   <div class="price-selector">
     <label class="block mb-1 font-medium text-gray-700">Access & Pricing</label>
     <select class="input w-full mb-2" :value="modelValue.type" @change="onTypeChange(($event.target as HTMLSelectElement).value)">
-      <option value="free">Free</option>
+      <option default value="free">Free</option>
       <option value="subscribers">Subscribers Only</option>
       <option value="premium">Premium (One-time purchase)</option>
     </select>
     <div v-if="modelValue.type === 'premium'" class="flex items-center gap-2 mt-1">
       <span class="text-gray-500">$</span>
       <input
-        class="input price-input"
+        :class="['input', 'price-input', { 'input-error': showError }]"
         type="text"
         inputmode="decimal"
         :value="formattedAmount"
@@ -17,7 +17,6 @@
         placeholder="0.00"
         style="width: 100px;"
       />
-      <span v-if="showError" class="text-red-500 text-xs ml-2">Enter a valid price</span>
     </div>
   </div>
 </template>
@@ -75,5 +74,8 @@ const showError = computed(() => {
   font-size: 1em;
   padding: 0.4rem 0.7rem;
   text-align: right;
+}
+.input-error {
+  border-color: var(--color-danger);
 }
 </style> 
