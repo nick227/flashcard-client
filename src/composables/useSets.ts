@@ -85,13 +85,11 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
       }
 
       if (searchQuery.value.trim()) {
-        console.log('Adding search query to params:', searchQuery.value.trim())
         params.append('search', searchQuery.value.trim())
       }
 
-      console.log('Fetching sets with params:', params.toString())
       const setsRes = await api.get(`/sets?${params.toString()}`)
-      const { items, pagination } = setsRes.data
+      const { items } = setsRes.data
 
       if (reset) {
         sets.value = items
