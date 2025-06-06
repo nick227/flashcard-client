@@ -77,9 +77,8 @@
         />
       </div>
       <!-- Loading indicator for pagination -->
-      <div v-if="loading && sets.length" class="flex justify-center items-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
+      <FunnyLoadingIndicator v-if="(loading && sets.length) || isBatchWaiting" />
+      <LoadMoreButton v-if="showLoadMoreButton && hasMore" @click="handleLoadMore" />
       <!-- End of content message -->
       <div v-if="!hasMore && sets.length" class="text-center text-gray-500 py-8 mb-8">
         <span class="text-2xl">😢</span> That's all the sets we have.
@@ -100,14 +99,22 @@
 <script setup lang="ts">
 import BrowseHero from '../components/sections/BrowseHero.vue'
 import SetPreviewCard from '../components/cards/SetPreviewCard.vue'
-import { ref, onMounted, watch, onUnmounted } from 'vue'
+import { ref, onMounted, watch, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSets } from '@/composables/useSets'
+import FunnyLoadingIndicator from '../components/common/FunnyLoadingIndicator.vue'
+import LoadMoreButton from '../components/common/LoadMoreButton.vue'
 
 const route = useRoute()
 const router = useRouter()
 const sentinel = ref<HTMLElement | null>(null)
 const selectedSetType = ref('')
+
+const batchDelay = ref(0)
+let batchTimeout: ReturnType<typeof setTimeout> | null = null
+let isBatchWaiting = ref(false)
+const batchCount = ref(0)
+const showLoadMoreButton = computed(() => batchCount.value >= 3)
 
 const {
   sets,
@@ -158,12 +165,28 @@ const viewSet = (setId: number) => {
 // Intersection Observer for infinite scroll
 let observer: IntersectionObserver | null = null
 
+const triggerNextBatch = () => {
+  if (isBatchWaiting.value || loading.value || showLoadMoreButton.value) return
+  isBatchWaiting.value = true
+  batchDelay.value = Math.floor(Math.random() * 3000) + 500 // random delay
+  batchTimeout = setTimeout(() => {
+    loadSets()
+    isBatchWaiting.value = false
+    batchCount.value++
+  }, batchDelay.value)
+}
+
+const handleLoadMore = () => {
+  batchCount.value = 0
+  triggerNextBatch()
+}
+
 onMounted(() => {
   // Small delay to ensure DOM is ready
   setTimeout(() => {
     observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore.value && !loading.value) {
-        loadSets()
+      if (entries[0].isIntersecting && hasMore.value && !loading.value && !isBatchWaiting.value) {
+        triggerNextBatch()
       }
     }, { 
       threshold: 0.1,
@@ -180,6 +203,10 @@ onUnmounted(() => {
   if (observer) {
     observer.disconnect()
     observer = null
+  }
+  if (batchTimeout) {
+    clearTimeout(batchTimeout)
+    batchTimeout = null
   }
 })
 

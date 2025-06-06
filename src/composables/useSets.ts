@@ -33,7 +33,7 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
     initialCategory = '',
     initialSortOrder = 'newest',
     initialSetType = '',
-    pageSize = 12,
+    pageSize = 9,
     autoLoad = true
   } = options
 
@@ -91,7 +91,6 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
 
       console.log('Fetching sets with params:', params.toString())
       const setsRes = await api.get(`/sets?${params.toString()}`)
-      console.log('Search response:', setsRes.data)
       const { items, pagination } = setsRes.data
 
       if (reset) {
@@ -100,8 +99,11 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
         sets.value = [...sets.value, ...items]
       }
 
-      hasMore.value = currentPage.value < pagination.totalPages
-      if (hasMore.value) {
+      // Update hasMore based on whether we received a full page of items
+      hasMore.value = items.length === pageSize
+      
+      // Always increment the page if we got any items
+      if (items.length > 0) {
         currentPage.value++
       }
 
