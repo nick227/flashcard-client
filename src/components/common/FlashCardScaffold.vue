@@ -359,15 +359,15 @@ onUnmounted(() => {
 
 .card-face {
   position: absolute;
-  width: 100%;
-  height: 100%;
+  width: calc(100% - 20px); 
+  height: calc(100% - 20px);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 1rem;
-  padding: 0;
+  padding: 10px;
 }
 
 .card-face.front {
