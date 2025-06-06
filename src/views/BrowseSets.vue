@@ -77,7 +77,7 @@
                 : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
             ]"
           >
-            Subscriber Only
+            Subscriber
           </button>
         </div>
       </div>
