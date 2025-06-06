@@ -46,7 +46,7 @@
                 <div class="footer-links">
                     <h3>Site</h3>
                     <div class="links-list">
-                        <a href="/sets/10" class="link-item">
+                        <a href="/sets/226" class="link-item">
                             <i class="fas fa-compass"></i>
                             <span>Set of the Day</span>
                         </a>
