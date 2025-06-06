@@ -77,7 +77,7 @@ const subscribeNewsletter = async () => {
   newsletterLoading.value = true
   showNotification.value = false
   try {
-    const res = await api.post('/newsletter/subscribe', { email: email.value.trim() })
+    await api.post('/newsletter/subscribe', { email: email.value.trim() })
     newsletterStatus.value = 'success'
     newsletterMessage.value = 'Subscribed! Rock and Roll!'
     email.value = ''

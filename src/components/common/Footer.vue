@@ -122,12 +122,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useCategories } from '@/composables/useCategories'
 import { useSets } from '@/composables/useSets'
-import type { FlashCardSet } from '@/types'
 import StatsSection from './StatsSection.vue'
-import { api } from '@/api'
 import NewsletterSubscribe from './NewsletterSubscribe.vue'
 
 const { categories } = useCategories()
