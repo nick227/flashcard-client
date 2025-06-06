@@ -21,12 +21,6 @@ export function useCardGrid(cards: Ref<Card[]>) {
   const toggleGridView = () => {
     if (activeView.value !== 'grid') {
       activeView.value = 'grid'
-      setTimeout(() => {
-        window.scrollTo({
-          top: 640,
-          behavior: 'smooth'
-        })
-      }, 20)
     } else {
       activeView.value = null
     }

@@ -337,4 +337,17 @@ onUnmounted(() => {
         transform: rotate(360deg);
     }
 }
+@media (max-width: 600px) {
+  button, 
+  .button, 
+  .generation-status, 
+  .generation-status span  {
+    font-size: 0.85rem;
+    width: 100% !important;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    display: flex;
+  }
+}
 </style> 

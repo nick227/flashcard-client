@@ -1,5 +1,5 @@
 <template>
-  <div class="tags-list">
+  <div v-if="tags.length > 0" class="tags-list">
     <span v-for="tag in tags" :key="tag" class="tag-chip">
       {{ tag }}
       <button v-if="removable" type="button" class="remove-btn" @click="$emit('remove', tag)" aria-label="Remove tag">&times;</button>

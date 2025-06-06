@@ -26,9 +26,9 @@
 /* Card content styles */
 
 .card-content {
-    width: 100%;
+    width: calc(100% - 2rem);
     height: 100%;
-    padding: var(--space-lg);
+    padding: 1rem;
     font-weight: 600;
     line-height: 1.2;
     text-align: center;
@@ -43,10 +43,6 @@
     position: relative;
     font-family: var(--font-main);
     cursor: text;
-}
-
-.grid-view .card-content {
-    padding: 0 !important;
 }
 
 
@@ -106,8 +102,6 @@
 
 .flashcard-scaffold .card-content {
     position: relative;
-    width: 100%;
-    height: 100%;
 }
 
 
@@ -309,8 +303,7 @@
 
 @media (max-width: 900px) {
     .flashcard-area {
-        width: 98vw;
-        max-width: 98vw;
+        width: 100%;
         min-width: 0;
         height: 220px;
         min-height: 180px;

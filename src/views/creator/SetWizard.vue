@@ -34,6 +34,7 @@
         <div class="flex flex-wrap items-center gap-6 mb-8">
           <!-- View Toggle -->
           <ViewToggle v-model="viewMode" />
+          <div class="flex flex-wrap items-center gap-2 mt-4 mb-4">
           <!-- Reverse Cards Button -->
           <button title="Reverse Card Order" class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600" @click="reverseCards" :disabled="!hasCards">
             <i class="fa-solid fa-arrows-up-down"></i>
@@ -42,8 +43,9 @@
           <CardCountIndicator :count="cards.length" />
           <!-- Import Bar -->
           <ImportBar :importFileName="importFileName" @import-csv="onImportCsv" />
-          <button class="button button-danger" @click="onReset" :disabled="!hasCards">Reset</button>
-          <div class="flex items-center gap-2 flex-nowrap">
+          <button class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600 button-danger" @click="onReset" :disabled="!hasCards">Reset</button>
+          </div>
+          <div class="flex items-center justify-end gap-2 flex-nowrap button-row">
             <AISetGenerator 
               :disabled="isAIGeneratorDisabled"
               :title="setTitle"
@@ -588,3 +590,45 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
+
+<style scoped>
+/* Existing styles ... */
+
+.button-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .button-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .flex.flex-wrap.items-center.gap-6.mb-8 {
+    flex-direction: column !important;
+  }
+  
+  .button-row .button, 
+  .generation-status  {
+    font-size: 0.85rem;
+    width: 100% !important;
+  }
+
+  .p-8 {
+    padding: 0.5rem !important;
+  }
+}
+
+/* Further mobile enhancements */
+@media (max-width: 400px) {
+  .button-row .button {
+    font-size: 0.75rem;
+    padding: 0.2em 0.5em;
+  }
+}
+</style>

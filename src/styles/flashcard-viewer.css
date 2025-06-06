@@ -106,20 +106,3 @@
 .fade-leave-to {
     opacity: 0;
 }
-
-@media (max-width: 900px) {
-    .flashcard-area {
-        width: 98vw;
-        max-width: 98vw;
-        min-width: 0;
-        height: 220px;
-        min-height: 180px;
-        padding: 0.5rem;
-    }
-    .controls-group {
-        flex-direction: column;
-        gap: var(--space-xs);
-        padding: var(--space-xs);
-        justify-content: center;
-    }
-}

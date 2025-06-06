@@ -328,8 +328,6 @@ onUnmounted(() => {
 
 .card-content {
   position: relative;
-  width: 100%;
-  height: 100%;
   transform-style: preserve-3d;
   transition: transform 0.3s ease;
   will-change: transform; /* Performance optimization */

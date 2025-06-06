@@ -228,7 +228,9 @@ const {
   viewedCards,
   toggleGridView,
   shuffleCardOrder,
-  handleGridCardFlip
+  handleGridCardFlip,
+  showMobileView,
+  toggleMobileView
 } = useCardGrid(cards)
 
 // Separate state for grid view
@@ -655,14 +657,6 @@ watch([currentIndex, flipped], ([newIndex, newFlipped]) => {
     isPrevDisabled: isPrevDisabled.value
   })
 })
-
-const showMobileView = ref(false)
-const toggleMobileView = () => {
-  showMobileView.value = !showMobileView.value
-  emit('update:showGridView', !showGridView.value)
-}
-
-const emit = defineEmits(['update:showGridView'])
 </script>
 
 <style scoped>

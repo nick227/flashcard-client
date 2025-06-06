@@ -16,10 +16,9 @@
           <div class="card-preview front">
             <div v-if="!localCard.front.imageUrl">
               <div ref="frontRef" class="card-content"
-                :class="{ 'input-error': !localCard.front.text && touchedFront }"
                 contenteditable="true" @input="onFrontInput" @focus="focusedField = 'front'"
                 @blur="touchedFront = true; focusedField = null" @keydown.tab.prevent="focusBack"
-                @keydown="onFrontKeydown" :data-placeholder="'Front text...'"
+                @keydown="onFrontKeydown" :data-placeholder="'Front-text...'"
                 :style="{ fontSize: getFontSize(localCard.front.text) }"></div>
             </div>
             <div v-else-if="localCard.front.imageUrl && localCard.front.text" class="media-text-stack">
@@ -51,10 +50,9 @@
           <div class="card-preview back">
             <div v-if="!localCard.back.imageUrl">
               <div ref="backRef" class="card-content"
-                :class="{ 'input-error': !localCard.back.text && touchedBack }"
                 contenteditable="true" @input="onBackInput" @focus="focusedField = 'back'"
                 @blur="touchedBack = true; focusedField = null" @keydown.shift.tab.prevent="focusFront"
-                @keydown="onBackKeydown" :data-placeholder="'Back text...'"
+                @keydown="onBackKeydown" :data-placeholder="'Back-text...'"
                 :style="{ fontSize: getFontSize(localCard.back.text) }"></div>
             </div>
             <div v-else-if="localCard.back.imageUrl && localCard.back.text" class="media-text-stack">
@@ -331,10 +329,6 @@ function getFontSize(text: string | undefined): string {
     height: 400px;
     aspect-ratio: auto;
   }
-
-  .card-content {
-    padding: 1.5rem;
-  }
 }
 
 .card-preview:hover {
@@ -353,7 +347,8 @@ function getFontSize(text: string | undefined): string {
 }
 
 .card-content {
-  width: 100%;
+  min-width: 300px;
+  max-width: calc(100% - 3rem);
   height: 100%;
   padding: 1.5rem;
   font-weight: 600;

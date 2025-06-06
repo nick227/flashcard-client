@@ -33,4 +33,8 @@ defineEmits<{
   width: 100%;
   margin-top: 1rem;
 }
+.card-content {
+  width: calc(100% - 2rem);
+  padding: 1rem;
+}
 </style> 

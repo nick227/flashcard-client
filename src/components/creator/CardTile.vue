@@ -128,6 +128,7 @@ function handleFlip(newFlippedState: boolean) {
 }
 
 .card-tile .card-content {
-  padding: 0 !important;
+  padding: 1rem;
+  width: calc(100% - 2rem);
 }
 </style> 
