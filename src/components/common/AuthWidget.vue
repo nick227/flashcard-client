@@ -14,7 +14,7 @@
           {{ getInitials(auth.user.name || auth.user.email) }}
         </div>
       </a>
-      <a href="/profile" class="flex items-center gap-2">
+      <a v-if="isDesktop" href="/profile" class="flex items-center gap-2">
         <span class="user-email">{{ auth.user.email }}</span>
       </a>
     </template>
@@ -31,6 +31,7 @@ import { ref, watch } from 'vue'
 const auth = useAuthStore()
 const defaultAvatar = 'https://ui-avatars.com/api/?name=U&background=2563eb&color=fff&size=32'
 const imageLoadError = ref(false)
+const isDesktop = ref(window.innerWidth > 768)
 
 function handleImageError() {
   imageLoadError.value = true

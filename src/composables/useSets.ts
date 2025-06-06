@@ -2,6 +2,12 @@ import { ref, type Ref } from 'vue'
 import type { FlashCardSet } from '@/types'
 import { api, fetchCategories } from '@/api/index'
 
+interface Category {
+  id: number
+  name: string
+  setCount: number
+}
+
 interface UseSetsOptions {
   initialCategory?: string
   initialSortOrder?: string
@@ -15,7 +21,7 @@ interface UseSetsReturn {
   loading: Ref<boolean>
   selectedCategory: Ref<string>
   sortOrder: Ref<string>
-  categories: Ref<string[]>
+  categories: Ref<Category[]>
   hasMore: Ref<boolean>
   error: Ref<string | null>
   selectedSetType: Ref<string>
@@ -41,7 +47,7 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
   const loading = ref(false)
   const selectedCategory = ref(initialCategory)
   const sortOrder = ref(initialSortOrder)
-  const categories = ref<string[]>([])
+  const categories = ref<Category[]>([])
   const currentPage = ref(1)
   const hasMore = ref(true)
   const error = ref<string | null>(null)
@@ -97,22 +103,23 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
         sets.value = [...sets.value, ...items]
       }
 
-      // Update hasMore based on whether we received a full page of items
       hasMore.value = items.length === pageSize
       
-      // Always increment the page if we got any items
       if (items.length > 0) {
         currentPage.value++
       }
 
       if (categories.value.length === 0) {
         const categoriesRes = await fetchCategories(true)
-        categories.value = categoriesRes.map(c => typeof c === 'string' ? c : c.name)
+        categories.value = categoriesRes.map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          setCount: cat.setCount || 0
+        }))
       }
     } catch (err: any) {
       error.value = err.message || 'Error loading sets'
       console.error('Error loading sets:', err)
-      // Clear results on error
       if (reset) {
         sets.value = []
       }
@@ -142,7 +149,6 @@ export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
       clearTimeout(debounceTimeout.value)
     }
     
-    // If search is empty, reset the results
     if (!query.trim()) {
       loadSets(true)
       return

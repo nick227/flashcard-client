@@ -5,19 +5,84 @@
 
     <!-- Filter & Sort Controls -->
     <section class="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full mb-8 gap-4">
-      <div class="flex flex-wrap flex-row-reverse sm:flex-row items-center gap-4 w-full sm:w-auto">
-        <select id="category" v-model="selectedCategory" class="w-full sm:w-auto" @change="onCategoryChange">
-          <option value="">All Categories</option>
-          <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-        </select>
-
-        <select id="setType" v-model="selectedSetType" class="w-full sm:w-auto" @change="onSetTypeChange">
-          <option value="">All Types</option>
-          <option value="free">Free</option>
-          <option value="premium">Premium</option>
-          <option value="subscriber">Subscriber Only</option>
-        </select>
-        <div class="relative w-full sm:w-auto">
+      <div class="flex flex-wrap gap-4 w-full">
+        <!-- Category Chips -->
+        <div class="flex flex-wrap gap-2 mb-2">
+          <button
+            @click="onCategoryChipClick('')"
+            :class="[
+              'px-4 py-1 rounded-full border transition-colors',
+              !selectedCategory
+                ? 'bg-blue-600 text-white border-blue-600 shadow'
+                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
+            ]"
+          >
+            All Categories
+          </button>
+          <button
+            v-for="cat in categories"
+            :key="cat.id"
+            @click="onCategoryChipClick(cat.name)"
+            :class="[
+              'px-4 py-1 rounded-full border transition-colors',
+              selectedCategory === cat.name
+                ? 'bg-blue-600 text-white border-blue-600 shadow'
+                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
+            ]"
+          >
+            {{ cat.name }} <span class="ml-1 text-xs">({{ cat.setCount }})</span>
+          </button>
+        </div>
+        <!-- Set Type Chips -->
+        <div class="flex flex-wrap gap-2 mb-2">
+          <button
+            @click="onSetTypeChipClick('')"
+            :class="[
+              'px-4 py-1 rounded-full border transition-colors',
+              !selectedSetType
+                ? 'bg-blue-600 text-white border-blue-600 shadow'
+                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
+            ]"
+          >
+            All Types
+          </button>
+          <button
+            @click="onSetTypeChipClick('free')"
+            :class="[
+              'px-4 py-1 rounded-full border transition-colors',
+              selectedSetType === 'free'
+                ? 'bg-blue-600 text-white border-blue-600 shadow'
+                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
+            ]"
+          >
+            Free
+          </button>
+          <button
+            @click="onSetTypeChipClick('premium')"
+            :class="[
+              'px-4 py-1 rounded-full border transition-colors',
+              selectedSetType === 'premium'
+                ? 'bg-blue-600 text-white border-blue-600 shadow'
+                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
+            ]"
+          >
+            Premium
+          </button>
+          <button
+            @click="onSetTypeChipClick('subscriber')"
+            :class="[
+              'px-4 py-1 rounded-full border transition-colors',
+              selectedSetType === 'subscriber'
+                ? 'bg-blue-600 text-white border-blue-600 shadow'
+                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
+            ]"
+          >
+            Subscriber Only
+          </button>
+        </div>
+      </div>
+        <!-- Search -->
+        <div class="relative w-full justify-end">
           <input 
             type="text" 
             v-model="searchQuery" 
@@ -35,11 +100,7 @@
             <span class="sr-only">Clear search</span>
             ✕
           </button>
-        </div>
-        <div v-if="loading" class="ml-2">
-          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-        </div>
-      </div>
+      <!-- Sort -->
       <div class="flex items-center gap-4 w-full sm:w-auto justify-end">
         <select id="sort" v-model="sortOrder" class="w-full sm:w-auto">
           <option value="featured">Featured</option>
@@ -47,6 +108,11 @@
           <option value="oldest">Oldest</option>
         </select>
       </div>
+        </div>
+        <!-- Loading indicator -->
+        <div v-if="loading" class="ml-2">
+          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        </div>
     </section>
 
     <!-- Error Message -->
@@ -146,16 +212,17 @@ watch(sortOrder, (newOrder) => {
   updateSortOrder(newOrder)
 })
 
-const onCategoryChange = () => {
-  if (selectedCategory.value) {
-    router.push(`/browse/${encodeURIComponent(selectedCategory.value)}`)
+const onCategoryChipClick = (catName: string) => {
+  if (catName) {
+    router.push(`/browse/${encodeURIComponent(catName)}`)
   } else {
     router.push('/browse')
   }
 }
 
-const onSetTypeChange = () => {
-  updateSetType(selectedSetType.value)
+const onSetTypeChipClick = (type: string) => {
+  selectedSetType.value = type
+  updateSetType(type)
 }
 
 const viewSet = (setId: number) => {
