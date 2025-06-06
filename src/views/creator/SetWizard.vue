@@ -461,13 +461,20 @@ async function onSubmit() {
       cards: cards.value,
       educatorId: auth.user!.id
     })
-    const newSet = await SetService.createSet(formData)
 
-    // Clear saved progress after successful submission
-    SetWizardStorageService.clearProgress()
+    let updatedSet
+    if (setId.value) {
+      // Update existing set
+      updatedSet = await SetService.updateSet(setId.value, formData)
+    } else {
+      // Create new set
+      updatedSet = await SetService.createSet(formData)
+      // Clear saved progress after successful creation
+      SetWizardStorageService.clearProgress()
+    }
 
     toast(setId.value ? 'Set updated successfully!' : 'Set created successfully!', 'success')
-    setTimeout(() => router.push('/sets/'+newSet.id), 1200)
+    setTimeout(() => router.push('/sets/'+updatedSet.id), 1200)
 
     historyService.clearHistory() // Clear history after successful submission
   } catch (e: any) {
