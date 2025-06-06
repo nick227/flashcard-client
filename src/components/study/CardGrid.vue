@@ -5,6 +5,7 @@
         :card="card" 
         :editable="false"
         :flipped="gridCardStates[card.id]"
+        size="small"
         @flip="(isFlipped) => $emit('card-flip', card.id, isFlipped)"
       />
     </div>

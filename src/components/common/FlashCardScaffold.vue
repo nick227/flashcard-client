@@ -1,6 +1,7 @@
 <template>
   <div
     class="flashcard-scaffold card flex flex-col items-center justify-center w-full mx-auto relative"
+    :class="{ small: size === 'small' }"
     :tabindex="editable ? -1 : 0"
     :aria-label="editable ? 'Edit flash card' : 'Flash card'"
     @click="onCardClick"
@@ -16,13 +17,27 @@
     <div class="card-content" :class="{ 'is-flipped': isFlipped, 'is-flipping': isFlipping }">
       <div v-show="!isFlipped" class="card-face front">
         <div class="text-2xl font-semibold formatted-content">
-          <img v-if="card?.front?.imageUrl" :src="card.front.imageUrl" :alt="card.front.text" class="max-w-full max-h-full object-contain" @error="(e) => console.error('Front image failed to load:', card.front.imageUrl, e)" />
+          <img
+            v-if="card?.front?.imageUrl"
+            :src="card.front.imageUrl"
+            :alt="card.front.text"
+            :class="{ 'media-with-text': card?.front?.text }"
+            class="max-w-full object-contain"
+            @error="(e) => console.error('Front image failed to load:', card.front.imageUrl, e)"
+          />
           <div v-if="card?.front?.text" class="card-text" v-html="card.front.text"></div>
         </div>
       </div>
       <div v-show="isFlipped" class="card-face back">
         <div class="text-2xl font-semibold formatted-content">
-          <img v-if="card?.back?.imageUrl" :src="card.back.imageUrl" :alt="card.back.text" class="max-w-full max-h-full object-contain" @error="(e) => console.error('Back image failed to load:', card.back.imageUrl, e)" />
+          <img
+            v-if="card?.back?.imageUrl"
+            :src="card.back.imageUrl"
+            :alt="card.back.text"
+            :class="{ 'media-with-text': card?.back?.text }"
+            class="max-w-full object-contain"
+            @error="(e) => console.error('Back image failed to load:', card.back.imageUrl, e)"
+          />
           <div v-if="card?.back?.text" class="card-text" v-html="card.back.text"></div>
         </div>
       </div>
@@ -45,6 +60,7 @@ const props = defineProps<{
   showHint?: boolean
   mode?: 'view' | 'edit' | 'preview'
   inlineEditable?: boolean
+  size?: 'normal' | 'small'
 }>()
 
 const emit = defineEmits<{
@@ -351,6 +367,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   border-radius: 1rem;
+  padding: 0;
 }
 
 .card-face.front {
@@ -370,7 +387,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 0;
 }
 
 .card-text {
@@ -392,6 +409,10 @@ onUnmounted(() => {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+
+.media-with-text {
+  max-height: 33% !important;
 }
 
 /* Add focus styles for better accessibility */
@@ -427,5 +448,22 @@ onUnmounted(() => {
 .card-text::-moz-selection {
   background-color: rgb(37, 99, 235);
   color: white;
+}
+
+.flashcard-scaffold.small {
+  min-height: 180px;
+  max-width: 100%;
+  font-size: 0.95rem;
+}
+.flashcard-scaffold.small .formatted-content {
+  padding: 0.5rem;
+}
+.flashcard-scaffold.small .card-text {
+  font-size: 1rem;
+  padding: 0.25rem;
+}
+/* Only limit media height in small cards when there is also text */
+.flashcard-scaffold.small .media-with-text {
+  max-height: 60px !important;
 }
 </style>
