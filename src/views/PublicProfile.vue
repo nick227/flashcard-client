@@ -20,10 +20,10 @@
       <!-- Sets Grid -->
       <div class="mb-8">
         <h2 class="text-2xl font-semibold mb-6">Flash Card Sets</h2>
-        <div v-if="sets.length === 0" class="text-gray-500">
+        <div v-if="sets && sets.length === 0" class="text-gray-500">
           This educator hasn't created any sets yet.
         </div>
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-else-if="sets && sets.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <SetPreviewCard
             v-for="set in sets"
             :key="set.id"
@@ -60,9 +60,16 @@ const totalPages = ref(1)
 const fetchEducator = async () => {
   try {
     const res = await api.get(`/users?name=${targetEducatorName}`)
-    educator.value = res.data
+    educator.value = Array.isArray(res.data) ? res.data[0] : res.data
+    if (educator.value && educator.value.id) {
+      await fetchSets()
+    } else {
+      sets.value = []
+    }
   } catch (err) {
     console.error('Error fetching educator:', err)
+    educator.value = null
+    sets.value = []
   }
 }
 
@@ -70,15 +77,17 @@ const fetchSets = async () => {
   try {
     const res = await api.get(`/sets`, {
       params: {
-        educatorId: educator.value?.id,
+        educator_id: educator.value?.id,
         page: currentPage.value.toString(),
         limit: pageSize.value.toString()
       }
     })
-    sets.value = res.data.sets
-    totalPages.value = res.data.pagination.totalPages
+    console.log('API /sets response:', res.data);
+    sets.value = Array.isArray(res.data.items) ? res.data.items : []
+    totalPages.value = res.data.pagination?.totalPages || 1
   } catch (err) {
     console.error('Error fetching sets:', err)
+    sets.value = []
   }
 }
 
@@ -89,7 +98,6 @@ const viewSet = (setId: number) => {
 onMounted(async () => {
   loading.value = true
   await fetchEducator()
-  await fetchSets()
   loading.value = false
 })
 </script>

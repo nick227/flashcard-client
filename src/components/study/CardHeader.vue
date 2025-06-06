@@ -14,8 +14,8 @@
         <div v-else class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
           {{ getEducatorInitials }}
         </div>
-        <a @click="router.push(`/u/${set.educatorName}`)" class="link">
-          <h3 class="my-0">{{ set.educatorName }}</h3>
+        <a @click="router.push(`/u/${set.educator?.name}`)" class="link">
+          <h3 class="my-0">{{ set.educator?.name }}</h3>
         </a>
       </div>
     </div>
@@ -79,10 +79,10 @@ const handleAvatarLoad = () => {
 }
 
 const getEducatorInitials = computed(() => {
-  if (!props.set.educatorName) return 'U'
+  if (!props.set.educator?.name) return 'U'
   
   // Clean and normalize the input
-  const cleanName = props.set.educatorName
+  const cleanName = props.set.educator?.name
     .replace(/[^a-zA-Z\s]/g, '') // Remove special characters
     .trim()
     .split(/\s+/) // Split on any whitespace

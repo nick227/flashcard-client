@@ -19,7 +19,7 @@
       </div>
       <div class="featured-info">
         <div class="flex items-center gap-4 mb-4">
-          <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })" class="category-badge link">
+          <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })" class="category-badge">
             {{ set.category }}
           </div>
           <div v-else class="category-badge link">Uncategorized</div>

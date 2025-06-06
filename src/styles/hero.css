@@ -3,7 +3,7 @@
     --hero-padding-y: var(--space-xl, 4rem);
     --hero-radius: var(--radius-lg, 1.5rem);
     --hero-shadow: 0 8px 40px 0 rgba(30, 41, 59, 0.10);
-    --hero-bg-gradient: linear-gradient(120deg, var(--color-primary, #7c3aed) 0%, var(--color-accent2, #a21caf) 100%);
+    --hero-bg-gradient: linear-gradient(120deg, var(--color-primary, #7c3aed) 0%, var(--color-accent, #a21caf) 100%);
     --hero-bg: var(--color-subtle);
     --hero-color: var(--color-black);
     --hero-title-size: 3.2rem;

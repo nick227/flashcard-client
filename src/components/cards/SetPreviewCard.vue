@@ -1,7 +1,7 @@
 <template>
   <div class="set-preview-card">
     <div class="card-image-container">
-      <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })" class="category-badge link">{{ set.category }}</div>
+      <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })" class="category-badge">{{ set.category }}</div>
       <div class="image-wrapper">
         <img 
           v-if="set.thumbnail && !imageLoadError"
