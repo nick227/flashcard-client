@@ -4,13 +4,13 @@
       <div class="panel-face front">
         <div class="panel-content formatted-content">
           <img v-if="card.front.imageUrl" :src="card.front.imageUrl" class="max-w-full max-h-full object-contain" />
-          <div v-if="card.front.text" class="panel-text">{{ card.front.text }}</div>
+          <div v-if="card.front.text" class="panel-text" v-html="card.front.text"></div>
         </div>
       </div>
       <div class="panel-face back">
         <div class="panel-content formatted-content">
           <img v-if="card.back.imageUrl" :src="card.back.imageUrl" class="max-w-full max-h-full object-contain" />
-          <div v-if="card.back.text" class="panel-text">{{ card.back.text }}</div>
+          <div v-if="card.back.text" class="panel-text" v-html="card.back.text"></div>
         </div>
         <div v-if="card.hint" class="panel-hint">{{ card.hint }}</div>
       </div>

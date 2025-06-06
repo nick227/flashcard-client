@@ -17,13 +17,13 @@
       <div v-show="!isFlipped" class="card-face front">
         <div class="text-2xl font-semibold formatted-content">
           <img v-if="card?.front?.imageUrl" :src="card.front.imageUrl" :alt="card.front.text" class="max-w-full max-h-full object-contain" @error="(e) => console.error('Front image failed to load:', card.front.imageUrl, e)" />
-          <div v-if="card?.front?.text" class="card-text">{{ card.front.text }}</div>
+          <div v-if="card?.front?.text" class="card-text" v-html="card.front.text"></div>
         </div>
       </div>
       <div v-show="isFlipped" class="card-face back">
         <div class="text-2xl font-semibold formatted-content">
           <img v-if="card?.back?.imageUrl" :src="card.back.imageUrl" :alt="card.back.text" class="max-w-full max-h-full object-contain" @error="(e) => console.error('Back image failed to load:', card.back.imageUrl, e)" />
-          <div v-if="card?.back?.text" class="card-text">{{ card.back.text }}</div>
+          <div v-if="card?.back?.text" class="card-text" v-html="card.back.text"></div>
         </div>
       </div>
     </div>

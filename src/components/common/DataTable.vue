@@ -1,12 +1,16 @@
 <template>
   <div class="overflow-x-show -mx-4 sm:mx-0">
+    <!-- Search input -->
+    <div class="flex justify-end">
+      <input type="text" v-model="searchQuery" placeholder="Search..." class="w-full sm:w-auto px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 search-input" />
+    </div>
     <!-- Loading State -->
     <div v-if="loading" class="flex justify-center items-center py-8">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="items.length === 0" class="text-center py-8 text-gray-500">
+    <div v-else-if="filteredItems.length === 0" class="text-center py-8 text-gray-500">
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
       </svg>
@@ -42,7 +46,7 @@
         </thead>
         <tbody class="divide-y divide-gray-200">
           <tr 
-            v-for="(item, index) in items" 
+            v-for="(item, index) in paginatedItems" 
             :key="item.id || index" 
             class="hover:bg-gray-50 transition-colors duration-150"
           >
@@ -66,9 +70,9 @@
             Showing
             <span class="font-medium">{{ (currentPage - 1) * pageSize + 1 }}</span>
             to
-            <span class="font-medium">{{ Math.min(currentPage * pageSize, totalItems) }}</span>
+            <span class="font-medium">{{ Math.min(currentPage * pageSize, totalFilteredItems) }}</span>
             of
-            <span class="font-medium">{{ totalItems }}</span>
+            <span class="font-medium">{{ totalFilteredItems }}</span>
             results
           </span>
         </div>
@@ -121,7 +125,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 
 interface Column {
   key: string
@@ -157,6 +161,29 @@ const emit = defineEmits<{
   (e: 'page-change', page: number): void
   (e: 'sort', key: string): void
 }>()
+
+const searchQuery = ref('')
+
+// Filter items based on searchQuery (case-insensitive, all columns)
+const filteredItems = computed(() => {
+  if (!searchQuery.value) return props.items
+  const q = searchQuery.value.toLowerCase()
+  return props.items.filter(item =>
+    Object.values(item).some(val =>
+      String(val).toLowerCase().includes(q)
+    )
+  )
+})
+
+// Paginate filtered items
+const paginatedItems = computed(() => {
+  const start = (props.currentPage - 1) * props.pageSize
+  const end = start + props.pageSize
+  return filteredItems.value.slice(start, end)
+})
+
+// Update totalItems to reflect filtered count
+const totalFilteredItems = computed(() => filteredItems.value.length)
 
 // Calculate which page numbers to show in pagination
 const displayedPages = computed(() => {
