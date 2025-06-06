@@ -1,12 +1,12 @@
 <template>
   <div class="price-selector">
     <label class="block mb-1 font-medium text-gray-700">Access & Pricing</label>
-    <select class="input w-full mb-2" :value="modelValue.type" @change="onTypeChange(($event.target as HTMLSelectElement).value)">
-      <option default value="free">Free</option>
+    <select class="input w-full mb-2" :value="actualType" @change="onTypeChange(($event.target as HTMLSelectElement).value)">
+      <option value="free">Free</option>
       <option value="subscribers">Subscribers Only</option>
       <option value="premium">Premium (One-time purchase)</option>
     </select>
-    <div v-if="modelValue.type === 'premium'" class="flex items-center gap-2 mt-1">
+    <div v-if="actualType === 'premium'" class="flex items-center gap-2 mt-1">
       <span class="text-gray-500">$</span>
       <input
         :class="['input', 'price-input', { 'input-error': showError }]"
@@ -26,6 +26,14 @@ import { computed } from 'vue'
 const props = defineProps<{ modelValue: { type: string, amount?: number } }>()
 const emit = defineEmits(['update:modelValue'])
 
+// Determine the actual type based on price
+const actualType = computed(() => {
+  if (props.modelValue.amount === 0 || props.modelValue.amount === null || props.modelValue.amount === undefined) {
+    return 'free'
+  }
+  return props.modelValue.type
+})
+
 const formattedAmount = computed(() => {
   if (props.modelValue.amount === undefined || props.modelValue.amount === null) return '0.00'
   const amount = typeof props.modelValue.amount === 'string' ? parseFloat(props.modelValue.amount) : props.modelValue.amount
@@ -34,9 +42,13 @@ const formattedAmount = computed(() => {
 
 function onTypeChange(type: string) {
   if (type === 'premium') {
-    emit('update:modelValue', { type: 'premium', amount: props.modelValue.amount || 0 })
+    // Preserve existing amount if it exists and is valid, otherwise use 0
+    const currentAmount = props.modelValue.amount && props.modelValue.amount > 0 
+      ? props.modelValue.amount 
+      : 0
+    emit('update:modelValue', { type: 'premium', amount: currentAmount })
   } else {
-    emit('update:modelValue', { type })
+    emit('update:modelValue', { type, amount: 0 })
   }
 }
 
@@ -58,7 +70,7 @@ function onAmountInput(val: string) {
 }
 
 const showError = computed(() => {
-  return props.modelValue.type === 'premium' && (!props.modelValue.amount || props.modelValue.amount <= 0)
+  return actualType.value === 'premium' && (!props.modelValue.amount || props.modelValue.amount <= 0)
 })
 </script>
 
