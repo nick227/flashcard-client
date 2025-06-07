@@ -35,7 +35,7 @@
                 <p class="text-gray-700 font-medium text-lg">Generating AI Thumbnail</p>
                 <p class="text-gray-500 text-sm mb-8">This may take a few moments...</p>
                 <!-- Loading dots animation -->
-                <div class="flex justify-center space-x-1">
+                <div class="flex justify-center space-x-1 mt-4">
                   <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
                   <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
                   <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>

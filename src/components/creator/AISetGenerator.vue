@@ -7,16 +7,20 @@
     </div>
   <div class="generation-status">
     <button 
-      class="button button-primary" 
+      class="button button-primary"
+      :class="{ 'ai-generating': generating }"
       :disabled="disabled || generating" 
       @click="generateSet"
       :title="disabled ? 'Complete Title Description and Category to Use' : 'Generate cards using AI'"
     >
       <span class="flex items-center gap-2">
-        <span v-if="generating" class="loading-spinner"></span>
         <span>🪄 AI Generator</span>
       </span>
     </button>
+  </div>
+  <!-- Fixed bottom progress bar -->
+  <div v-if="generating" class="ai-progress-bar-fixed">
+    <div class="ai-progress-bar-indeterminate"></div>
   </div>
 </template>
 
@@ -283,71 +287,79 @@ onUnmounted(() => {
     min-width: 120px;
 }
 
-.loading-spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid #ffffff;
-    border-bottom-color: transparent;
-    border-radius: 50%;
-    display: inline-block;
-    animation: rotation 1s linear infinite;
+.ai-generating {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  background-size: 400% 400%;
+  animation: ai-gradient-move 2s linear infinite;
+  color: #fff;
+  border: 3px solid transparent;
+  border-radius: 8px;
+  box-shadow: 0 0 0 3px rgba(80, 143, 255, 0.2);
+  overflow: hidden;
+}
+.ai-generating:before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -3px; left: -3px; right: -3px; bottom: -3px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #16181c, #340c69, #ff6bcb, #127834, #079b80, #4f8cff);
+  background-size: 800% 400%;
+  animation: ai-border-move 5s linear infinite;
+  filter: blur(1px);
+}
+@keyframes ai-gradient-move {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes ai-border-move {
+  0% { background-position: 100% 0%; }
+  50% { background-position: 0% 100%; }
+  100% { background-position: 100% 0%; }
+}
+.ai-generating span {
+  position: relative;
+  z-index: 2;
+  background: none;
+  color: #fff;
+  font-weight: bold;
+  letter-spacing: 0.03em;
 }
 
-.progress-bar {
-    width: 100%;
-    height: 4px;
-    background: #eee;
-    border-radius: 2px;
-    margin-top: 8px;
+.ai-progress-bar-fixed {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 14px;
+  background: #cc9b30;
+  z-index: 9999;
+  width: 100vw;
+  pointer-events: none;margin: 0 auto;
+  margin: 0 auto;
 }
-
-.progress-fill {
-    height: 100%;
-    background: #4CAF50;
-    border-radius: 2px;
-    transition: width 0.3s ease;
+.ai-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4b4b4b, #4b4b4b, #4b4b4b, #4b4b4b, #4b4b4b, #4b4b4b);
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 8px 0 #4f8cff33;
 }
-
-.error-message {
-    color: #f44336;
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.ai-progress-bar-indeterminate {
+  height: 100%;
+  width: 30vw;
+  min-width: 80px;
+  max-width: 90%;
+  background: linear-gradient(90deg, #4b4b4b, #4b4b4b, #4b4b4b, #4b4b4b, #4b4b4b, #4b4b4b);
+  border-radius: 2px;
+  animation: ai-progress-indeterminate 20s linear infinite;
+  box-shadow: 0 0 8px 0 #4f8cff33;
 }
-
-.retry-button {
-    padding: 4px 8px;
-    background: #f44336;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.retry-button:hover {
-    background: #d32f2f;
-}
-
-@keyframes rotation {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-@media (max-width: 600px) {
-  button, 
-  .button, 
-  .generation-status, 
-  .generation-status span  {
-    font-size: 0.85rem;
-    width: 100% !important;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    display: flex;
-  }
+@keyframes ai-progress-indeterminate {
+  0% { margin-left: -30vw; }
+  100% { margin-left: 100vw; }
 }
 </style> 

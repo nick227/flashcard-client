@@ -5,13 +5,13 @@
       :class="{ active: mode === 'login' }"
       @click="$emit('update:mode', 'login')"
       type="button"
-    >Sign In</button>
+    >Existing Users</button>
     <button
       class="toggle-btn"
       :class="{ active: mode === 'register' }"
       @click="$emit('update:mode', 'register')"
       type="button"
-    >Register</button>
+    >New Members</button>
   </div>
 </template>
 

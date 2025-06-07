@@ -29,8 +29,8 @@
         <a :href="`/u/${set.educatorName}`"><h6 class="text-sm text-gray-500 mt-2">{{ set.educatorName || 'Unknown' }}</h6></a>
         <p class="card-description w-full text-left">{{ set.description }}</p>
       </div>
-      <div class="card-stats w-full text-left">
-        <div class="stat-group">
+      <div class="card-stats w-full justify-between">
+        <div class="stat-group justify-between w-full flex">
           <span class="stat">
             <i class="fas fa-layer-group"></i>
             {{ cardCount }} cards

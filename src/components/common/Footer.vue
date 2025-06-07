@@ -74,13 +74,13 @@
                     <h3>Categories</h3>
                     <div class="footer-section justify-between">
                     <div class="category-tags">
-                        <a v-for="category in categories" 
-                           :key="category.id" 
-                           :href="'/browse/' + encodeURIComponent(category.name)" 
+                        <router-link v-for="category in categories"
+                           :key="category.id"
+                           :to="`/browse/${encodeURIComponent(category.name)}`"
                            class="category-tag"
                            :style="{ backgroundColor: getCategoryColor(category.name) }">
                             {{ category.name }}
-                        </a>
+                        </router-link>
                     </div>
                     
                 <div class="newsletter">

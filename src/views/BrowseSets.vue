@@ -147,7 +147,7 @@
       <LoadMoreButton v-if="showLoadMoreButton && hasMore" @click="handleLoadMore" />
       <!-- End of content message -->
       <div v-if="!hasMore && sets.length" class="text-center text-gray-500 py-8 mb-8">
-        <span class="text-2xl">😢</span> That's all the sets we have.
+        <div class="text-2xl my-16"><span class="text-2xl">😢</span> That's all the sets.</div>
         <div class="w-full h-4 mt-4">
           <button @click="router.push('/create')" class="button button-accent text-white-500">Hey, what if you created one?</button>
         </div>
