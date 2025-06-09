@@ -127,34 +127,34 @@ export default defineConfig(({ mode }): UserConfig => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Core framework
+          // Core framework - bundle all Vue ecosystem together
           if (id.includes('node_modules/vue') || 
               id.includes('node_modules/vue-router') || 
-              id.includes('node_modules/pinia')) {
-            return 'vue-core';
-          }
-          // UI components
-          if (id.includes('node_modules/@headlessui/vue') || 
+              id.includes('node_modules/pinia') ||
+              id.includes('node_modules/@vue/') ||
+              id.includes('node_modules/@headlessui/vue') || 
               id.includes('node_modules/@heroicons/vue')) {
-            return 'ui-components';
+            return 'vendor';
           }
           // Data handling
           if (id.includes('node_modules/axios') || 
               id.includes('node_modules/lodash')) {
             return 'data-layer';
           }
-          // Feature-based chunks
-          if (id.includes('/src/components/')) {
-            return 'components';
-          }
-          if (id.includes('/src/views/')) {
-            return 'views';
-          }
-          if (id.includes('/src/stores/')) {
-            return 'stores';
-          }
-          if (id.includes('/src/composables/')) {
-            return 'composables';
+          // Feature-based chunks - only split if not in vendor
+          if (!id.includes('node_modules')) {
+            if (id.includes('/src/components/')) {
+              return 'components';
+            }
+            if (id.includes('/src/views/')) {
+              return 'views';
+            }
+            if (id.includes('/src/stores/')) {
+              return 'stores';
+            }
+            if (id.includes('/src/composables/')) {
+              return 'composables';
+            }
           }
         },
         // CSS code splitting
@@ -219,14 +219,18 @@ export default defineConfig(({ mode }): UserConfig => ({
     modulePreload: {
       polyfill: true,
       resolveDependencies: (filename, deps, { hostId, hostType }) => {
-        if (filename.includes('main.ts') || filename.includes('style.css')) {
+        // Always preload vendor and data-layer chunks
+        if (deps.some(dep => dep.includes('vendor') || dep.includes('data-layer'))) {
+          return deps;
+        }
+        // For main entry point, preload critical chunks
+        if (filename.includes('main.ts')) {
           return deps.filter(dep => {
             if (dep.endsWith('.css')) return false;
-            return dep.includes('main') || 
-                   dep.includes('vendor') || 
-                   dep.includes('router') ||
-                   dep.includes('store') ||
-                   dep.includes('api');
+            return dep.includes('vendor') || 
+                   dep.includes('data-layer') ||
+                   dep.includes('components') ||
+                   dep.includes('stores');
           });
         }
         return deps;
