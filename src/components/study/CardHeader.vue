@@ -20,10 +20,9 @@
       </div>
     </div>
     <!-- Title Row -->
-    <div class="title-container mb-2 flex flex-col sm:flex-row items-end gap-4">
-      <div class="flex items-start gap-4 w-full sm:w-[80%]">
+    <div class="title-container mb-2 flex gap-4 items-start">
         <!-- Set thumbnail -->
-        <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gray-100">
+        <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gray-100 mt-4">
           <img 
             v-if="set.thumbnail && !thumbnailError" 
             :src="set.thumbnail" 
@@ -37,9 +36,9 @@
         </div>
         <!-- Set title -->
         <h1 ref="titleElement" class="text-2xl font-bold flex-1 set-title">{{ set.title }}</h1>
-      </div>
+    </div>
       <!-- Action Buttons -->
-      <div class="flex items-center justify-between sm:justify-end gap-4 title-buttons w-full sm:w-[20%] mt-4 sm:mt-0">
+      <div class="flex items-center justify-end sm:justify-end gap-4 title-buttons w-full mb-2">
         <!-- Download Button -->
         <a class="link" @click="$emit('download')">
           <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
@@ -47,7 +46,6 @@
         <!-- Like Button -->
         <LikeButton :set-id="set.id" />
       </div>
-    </div>
   </div>
 </template>
 
@@ -201,5 +199,17 @@ onMounted(() => {
 
 .like-button:hover i {
   transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .title-buttons {
+    text-align: center;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
 }
 </style> 

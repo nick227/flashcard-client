@@ -1,5 +1,11 @@
 import type { FlashCard } from '@/types/flashCard'
 
+interface Educator {
+  id: number
+  name: string
+  image: string | null
+}
+
 export interface FlashCardSet {
   id: number
   title: string
@@ -8,7 +14,8 @@ export interface FlashCardSet {
   hidden: boolean
   educatorId: number
   educatorName: string
-  educatorImage?: string
+  educatorImage: string | null
+  educator: Educator | null
   category: string
   tags: string[]
   price: {

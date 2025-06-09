@@ -56,7 +56,7 @@
           :current-page="favorites.currentPage.value" :page-size="6"
           :empty-message="favorites.error.value || 'No favorites yet'" @page-change="handleFavoritesPageChange">
           <template #default="{ items }">
-            <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <FavoriteItem v-for="item in items as Favorite[]" :key="item.id" :item="item" />
             </div>
           </template>
@@ -68,7 +68,7 @@
           :current-page="purchases.currentPage.value" :page-size="6"
           :empty-message="purchases.error.value || 'No purchases yet'" @page-change="handlePurchasesPageChange">
           <template #default="{ items }">
-            <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <PurchaseItem v-for="item in items as Purchase[]" :key="item.id" :item="item" />
             </div>
           </template>
@@ -81,7 +81,7 @@
           :empty-message="subscriptions.error.value || 'No subscriptions yet'"
           @page-change="handleSubscriptionsPageChange">
           <template #default="{ items }">
-            <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <SubscriptionItem v-for="item in items as Subscription[]" :key="item.id" :subscription="item" />
             </div>
           </template>
@@ -93,7 +93,7 @@
           :current-page="viewHistory.currentPage.value" :page-size="6"
           :empty-message="viewHistory.error.value || 'No view history yet'" @page-change="handleViewHistoryPageChange">
           <template #default="{ items }">
-            <div class="grid grid-cols-1 md:grid-cols-2 .lg:grid-cols-1 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <ViewHistoryItem v-for="item in items as ViewHistory[]" :key="item.id" :item="item" />
             </div>
           </template>
@@ -145,7 +145,6 @@ const uploading = ref(false)
 const favorites = usePaginatedData<Favorite>(`${apiEndpoints.sets}/liked`, {
   userId: user.value?.id,
   queryParams: {
-    page: 1,
     limit: 6
   },
   pageSize: 6
@@ -154,7 +153,6 @@ const favorites = usePaginatedData<Favorite>(`${apiEndpoints.sets}/liked`, {
 const purchases = usePaginatedData<Purchase>(`${apiEndpoints.purchases}/user`, {
   userId: user.value?.id,
   queryParams: {
-    page: 1,
     limit: 6
   },
   pageSize: 6
@@ -163,7 +161,6 @@ const purchases = usePaginatedData<Purchase>(`${apiEndpoints.purchases}/user`, {
 const subscriptions = usePaginatedData<Subscription>(`${apiEndpoints.subscriptions}/user`, {
   userId: user.value?.id,
   queryParams: {
-    page: 1,
     limit: 6
   },
   pageSize: 6
@@ -172,7 +169,6 @@ const subscriptions = usePaginatedData<Subscription>(`${apiEndpoints.subscriptio
 const viewHistory = usePaginatedData<ViewHistory>(`${apiEndpoints.history}/user`, {
   userId: user.value?.id,
   queryParams: {
-    page: 1,
     limit: 6
   },
   pageSize: 6
@@ -253,20 +249,68 @@ onMounted(() => {
 })
 
 // Page change handlers
-const handleFavoritesPageChange = (page: number) => {
-  favorites.fetchData(page)
+const handleFavoritesPageChange = async (page: number) => {
+  console.log('UserProfile - Favorites Page Change:', {
+    page,
+    currentItems: favorites.items.value.length,
+    currentTotal: favorites.totalItems.value,
+    currentPage: favorites.currentPage.value
+  })
+  await favorites.fetchData(page)
+  console.log('UserProfile - Favorites Data Updated:', {
+    newItems: favorites.items.value.length,
+    newTotal: favorites.totalItems.value,
+    newPage: favorites.currentPage.value,
+    firstItem: favorites.items.value[0]
+  })
 }
 
-const handlePurchasesPageChange = (page: number) => {
-  purchases.fetchData(page)
+const handlePurchasesPageChange = async (page: number) => {
+  console.log('UserProfile - Purchases Page Change:', {
+    page,
+    currentItems: purchases.items.value.length,
+    currentTotal: purchases.totalItems.value,
+    currentPage: purchases.currentPage.value
+  })
+  await purchases.fetchData(page)
+  console.log('UserProfile - Purchases Data Updated:', {
+    newItems: purchases.items.value.length,
+    newTotal: purchases.totalItems.value,
+    newPage: purchases.currentPage.value,
+    firstItem: purchases.items.value[0]
+  })
 }
 
-const handleSubscriptionsPageChange = (page: number) => {
-  subscriptions.fetchData(page)
+const handleSubscriptionsPageChange = async (page: number) => {
+  console.log('UserProfile - Subscriptions Page Change:', {
+    page,
+    currentItems: subscriptions.items.value.length,
+    currentTotal: subscriptions.totalItems.value,
+    currentPage: subscriptions.currentPage.value
+  })
+  await subscriptions.fetchData(page)
+  console.log('UserProfile - Subscriptions Data Updated:', {
+    newItems: subscriptions.items.value.length,
+    newTotal: subscriptions.totalItems.value,
+    newPage: subscriptions.currentPage.value,
+    firstItem: subscriptions.items.value[0]
+  })
 }
 
-const handleViewHistoryPageChange = (page: number) => {
-  viewHistory.fetchData(page)
+const handleViewHistoryPageChange = async (page: number) => {
+  console.log('UserProfile - View History Page Change:', {
+    page,
+    currentItems: viewHistory.items.value.length,
+    currentTotal: viewHistory.totalItems.value,
+    currentPage: viewHistory.currentPage.value
+  })
+  await viewHistory.fetchData(page)
+  console.log('UserProfile - View History Data Updated:', {
+    newItems: viewHistory.items.value.length,
+    newTotal: viewHistory.totalItems.value,
+    newPage: viewHistory.currentPage.value,
+    firstItem: viewHistory.items.value[0]
+  })
 }
 
 // Bio update handler

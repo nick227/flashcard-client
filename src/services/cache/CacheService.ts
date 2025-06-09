@@ -415,7 +415,7 @@ export class CacheService {
     }
   }
 
-  private async startCleanupInterval(): Promise<void> {
+  private startCleanupInterval(): void {
     if (this.cleanupIntervalId) return
     const interval = this.options.cleanupInterval || DEFAULT_OPTIONS.cleanupInterval
     this.cleanupIntervalId = window.setInterval(() => {
@@ -446,40 +446,6 @@ export class CacheService {
         this.cleanupInProgress = false
       }
     }, interval)
-  }
-
-  private cleanup(): void {
-    if (this.cleanupInProgress) return
-    this.cleanupInProgress = true
-
-    try {
-      const now = Date.now()
-      
-      // Clear expired entries and empty queues
-      for (const [key, entry] of this.cache.entries()) {
-        if (now > entry.expiresAt) {
-          this.delete(key)
-        }
-      }
-
-      // Clear empty batch queues and their timeouts
-      for (const [key, queue] of this.batchQueue.entries()) {
-        if (queue.length === 0) {
-          this.batchQueue.delete(key)
-          if (this.batchTimeouts.has(key)) {
-            clearTimeout(this.batchTimeouts.get(key)!)
-            this.batchTimeouts.delete(key)
-          }
-        }
-      }
-
-      // Clear completed request queues
-      for (const [key, promise] of this.requestQueue.entries()) {
-        promise.catch(() => this.requestQueue.delete(key))
-      }
-    } finally {
-      this.cleanupInProgress = false
-    }
   }
 
   stopCleanupInterval(): void {

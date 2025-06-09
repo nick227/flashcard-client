@@ -16,30 +16,24 @@
   >
     <div class="card-content" :class="{ 'is-flipped': isFlipped, 'is-flipping': isFlipping }">
       <div v-show="!isFlipped" class="card-face front">
-        <div class="text-2xl font-semibold formatted-content">
-          <img
-            v-if="card?.front?.imageUrl"
-            :src="card.front.imageUrl"
-            :alt="card.front.text"
-            :class="{ 'media-with-text': card?.front?.text }"
-            class="max-w-full object-contain"
-            @error="(e) => console.error('Front image failed to load:', card.front.imageUrl, e)"
-          />
-          <div v-if="card?.front?.text" class="card-text" v-html="card.front.text"></div>
-        </div>
+        <CardContent 
+          :text="card?.front?.text || ''"
+          :imageUrl="card?.front?.imageUrl"
+          :mode="editable ? 'edit' : 'view'"
+          :has-text="!!card?.front?.text"
+          viewMode="full"
+          @update="onFrontUpdate"
+        />
       </div>
       <div v-show="isFlipped" class="card-face back">
-        <div class="text-2xl font-semibold formatted-content">
-          <img
-            v-if="card?.back?.imageUrl"
-            :src="card.back.imageUrl"
-            :alt="card.back.text"
-            :class="{ 'media-with-text': card?.back?.text }"
-            class="max-w-full object-contain"
-            @error="(e) => console.error('Back image failed to load:', card.back.imageUrl, e)"
-          />
-          <div v-if="card?.back?.text" class="card-text" v-html="card.back.text"></div>
-        </div>
+        <CardContent 
+          :text="card?.back?.text || ''"
+          :imageUrl="card?.back?.imageUrl"
+          :mode="editable ? 'edit' : 'view'"
+          :has-text="!!card?.back?.text"
+          viewMode="full"
+          @update="onBackUpdate"
+        />
       </div>
     </div>
     <slot name="controls"></slot>
@@ -51,6 +45,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { FlashCard } from '@/types/card'
+import CardContent from './CardContent.vue'
 
 const props = defineProps<{
   card: FlashCard
@@ -297,6 +292,28 @@ onUnmounted(() => {
   }
   document.removeEventListener('mousedown', handleDocumentClick)
 })
+
+const onFrontUpdate = (text: string) => {
+  const updatedCard = {
+    ...props.card,
+    front: {
+      ...props.card.front,
+      text
+    }
+  }
+  emit('update:card', updatedCard)
+}
+
+const onBackUpdate = (text: string) => {
+  const updatedCard = {
+    ...props.card,
+    back: {
+      ...props.card.back,
+      text
+    }
+  }
+  emit('update:card', updatedCard)
+}
 </script>
 
 <style scoped>
@@ -359,15 +376,16 @@ onUnmounted(() => {
 
 .card-face {
   position: absolute;
-  width: calc(100% - 20px); 
-  height: calc(100% - 20px);
+  width: 100%;
+  height: 100%;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 1rem;
-  padding: 10px;
+  padding: 0;
+  overflow: hidden; /* Add this to contain the iframe */
 }
 
 .card-face.front {
@@ -388,6 +406,15 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 0;
+}
+
+/* Update YouTube iframe styles */
+.card-face .youtube-iframe {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 16/9;
 }
 
 .card-text {
@@ -465,5 +492,14 @@ onUnmounted(() => {
 /* Only limit media height in small cards when there is also text */
 .flashcard-scaffold.small .media-with-text {
   max-height: 60px !important;
+}
+
+/* Ensure proper sizing for small cards */
+.flashcard-scaffold.small .card-face {
+  padding: 0.5rem;
+}
+
+.flashcard-scaffold.small .youtube-iframe {
+  max-height: 150px;
 }
 </style>

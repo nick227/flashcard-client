@@ -24,10 +24,10 @@ declare module 'axios' {
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 NProgress.configure({ 
-  showSpinner: false,
+  showSpinner: true,
   minimum: 0.1,
   easing: 'ease',
-  speed: 500
+  speed: 800
 })
 
 // Router guards with error handling

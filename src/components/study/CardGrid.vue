@@ -33,9 +33,27 @@ defineEmits<{
   gap: 1rem;
   width: 100%;
   margin-top: 1rem;
+  justify-items: center;
+  align-items: stretch;
 }
+
 .card-content {
   width: calc(100% - 2rem);
   padding: 1rem;
+}
+
+@media (max-width: 768px) {
+  .grid-view {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+  .card-face, .formatted-content {
+    font-size: 12px !important;
+  }
+  .card-content {
+    max-height: 160px;
+  }
+  .grid-view .card {
+    max-height: 180px;
+  }
 }
 </style> 

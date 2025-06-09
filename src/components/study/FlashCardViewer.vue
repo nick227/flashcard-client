@@ -133,15 +133,14 @@
       </div>
 
       <!-- Bottom Controls -->
-      <div class="flex justify-center w-full mb-4">
-        <div class="flex gap-2">
+      <div class="flex justify-center w-full mb-4 flex-wrap main-controls">
+          <a @click="handleRestart" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-rotate-right"></i> Restart</a>
           <a @click="handleShuffle" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-shuffle"></i>
             Shuffle Cards</a>
           <a @click="toggleGridView" :class="['button-round', { active: showGridView }]" href="javascript:void(0)"><i class="fa-solid fa-table-cells"></i> Grid View</a>
           <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)"><i class="fa-solid fa-mobile"></i> Mobile View</a>
           <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-expand"></i>
             Full-Screen</a>
-        </div>
         <CardHint v-if="cards[currentIndex]?.hint" :hint="cards[currentIndex].hint || ''" @show-hint="showHintToast" />
       </div>
     </div>
@@ -337,7 +336,13 @@ const fetchSet = async () => {
       console.log('Final cards array:', cards.value)
 
       // Initialize history tracking
-      await initializeHistory()
+      try {
+        await initializeHistory()
+      } catch (historyErr) {
+        console.error('Error initializing history:', historyErr)
+        // Continue with card display even if history fails
+        error.value = 'Note: Progress tracking is unavailable'
+      }
 
       // Reset state
       currentIndex.value = 0
@@ -534,6 +539,12 @@ onUnmounted(() => {
   document.removeEventListener('fullscreenchange', handleFullScreenChange)
 })
 
+const handleRestart = () => {
+  currentIndex.value = 0
+  flipped.value = false
+  currentFlip.value = 0
+}
+
 const handleShuffle = () => {
   // Store the current progress position
   const currentProgress = currentIndex.value
@@ -660,4 +671,11 @@ watch([currentIndex, flipped], ([newIndex, newFlipped]) => {
 </script>
 
 <style scoped>
+@media (max-width: 768px) {
+  .main-controls a {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+}
 </style>

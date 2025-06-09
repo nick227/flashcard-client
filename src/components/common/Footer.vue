@@ -1,5 +1,5 @@
 <template>
-    <footer class="footer mt-24">
+    <footer class="footer mt-8">
         <div class="footer-content">
             <!-- Main Footer Grid -->
             <div class="footer-grid">
@@ -326,5 +326,11 @@ const formatTimeAgo = (date: string) => {
 
 .logo-svg {
     animation: float 3s ease-in-out forwards;
+}
+
+@media (max-width: 768px) {
+    .latest-sets, .stats-section, .footer-nav-grid, .footer-connect {
+        width: 90%;
+    }
 }
 </style>

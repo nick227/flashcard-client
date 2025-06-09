@@ -4,7 +4,7 @@
     <div v-if="showNotification && newsletterStatus === 'success'" class="newsletter-success">{{ newsletterMessage }}</div>
     <div v-if="showNotification && newsletterStatus === 'error'" class="newsletter-error">{{ newsletterMessage }}</div>
     <div v-if="showNotification && newsletterStatus === 'exists'" class="newsletter-exists">{{ newsletterMessage }}</div>
-    <form @submit.prevent="subscribeNewsletter" class="newsletter-form" novalidate>
+    <form @submit.prevent="subscribeNewsletter" class="newsletter-form my-2" novalidate>
       <label for="newsletter-email" class="sr-only">Email</label>
       <input
         id="newsletter-email"
@@ -139,5 +139,11 @@ const subscribeNewsletter = async () => {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+@media (max-width: 768px) {
+  .newsletter-form {
+    margin-top: 60px;
+    width: 90%;
+  }
 }
 </style> 

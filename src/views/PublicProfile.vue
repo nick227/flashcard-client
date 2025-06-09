@@ -138,7 +138,7 @@ const fetchSets = async () => {
       views: set.views || 0,
       likes: set.likes || 0,
       educatorId: educator.value?.id,
-      educatorImage: educator.value?.image,
+      educatorImage: educator.value?.image || undefined,
       cards: undefined
     }))
 

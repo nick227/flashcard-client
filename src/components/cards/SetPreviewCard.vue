@@ -1,7 +1,7 @@
 <template>
-  <div class="card group">
+  <div v-if="set" class="card group">
     <!-- Image Container -->
-    <div class="relative h-48 overflow-hidden">
+    <div class="relative img-container">
       <img 
         @click="handleView"
         :src="imageLoadError ? '/images/default-set.png' : (set.image || set.thumbnail || '/images/default-set.png')" 
@@ -38,15 +38,17 @@
       <p class="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">{{ set.description }}</p>
       
       <!-- Tags -->
-      <div class="flex flex-wrap gap-1.5 mb-4 min-h-[1.5rem]">
-        <span 
-          v-for="tag in set.tags" 
-          :key="tag"
-          class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full"
-        >
-          {{ tag }}
-        </span>
-      </div>
+        <template v-if="set.tags">
+          <div class="flex flex-wrap gap-1.5 mb-4 min-h-[1.5rem]">
+          <span 
+            v-for="tag in set.tags" 
+            :key="tag"
+            class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full"
+          >
+            {{ tag }}
+          </span>
+        </div>
+        </template>
 
       <!-- Footer -->
       <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
@@ -86,15 +88,15 @@ import { cachedApiEndpoints } from '@/services/CachedApiService'
 const router = useRouter()
 
 const props = defineProps<{
-  set: {
+  set?: {
     id: number
     title: string
     description: string
-    image?: string
-    thumbnail?: string
+    image?: string | null
+    thumbnail?: string | null
     educatorName: string
     price: number | { type: 'free' | 'premium' | 'subscribers'; amount?: number }
-    tags: string[]
+    tags?: string[]
     views?: number
     likes?: number
     cards?: { id: number; setId: number; front: string; back: string; hint?: string }[]
@@ -108,7 +110,7 @@ const props = defineProps<{
     isLiked?: boolean
     hidden?: boolean
     educatorId?: number
-    educatorImage?: string
+    educatorImage?: string | null
   }
 }>()
 
@@ -123,6 +125,7 @@ const localLikes = ref(0)
 const localCards = ref(0)
 
 const handleView = () => {
+  if (!props.set) return
   emit('view', props.set.id)
 }
 
@@ -131,6 +134,7 @@ const handleImageError = () => {
 }
 
 const handleUserView = () => {
+  if (!props.set) return
   router.push(`/u/${props.set.educatorName}`)
 }
 
@@ -199,7 +203,7 @@ const fetchStats = async () => {
       }
     })
   } catch (error) {
-    console.error('[Stats] Error fetching stats for set', props.set.id, ':', error)
+    console.error('[Stats] Error fetching stats for set', props.set?.id, ':', error)
   } finally {
     isLoadingStats.value = false
   }
@@ -207,11 +211,20 @@ const fetchStats = async () => {
 
 // Fetch stats when component is mounted
 onMounted(() => {
+  if (!props.set) return
+  console.log('[SetPreviewCard] Mounted with set:', {
+    id: props.set.id,
+    hasTags: !!props.set.tags,
+    tagsType: props.set.tags ? typeof props.set.tags : 'undefined',
+    isArray: Array.isArray(props.set.tags),
+    tagsLength: props.set.tags ? props.set.tags.length : 0
+  });
   fetchStats()
 })
 
 // Computed properties for stats with proper fallbacks
 const views = computed(() => {
+  if (!props.set) return 0
   const value = localViews.value || (typeof props.set.views === 'number' ? props.set.views : 0)
   console.log('[Stats] Computed views for set', props.set.id, ':', {
     propValue: props.set.views,
@@ -222,6 +235,7 @@ const views = computed(() => {
 })
 
 const likes = computed(() => {
+  if (!props.set) return 0
   const value = localLikes.value || (typeof props.set.likes === 'number' ? props.set.likes : 0)
   console.log('[Stats] Computed likes for set', props.set.id, ':', {
     propValue: props.set.likes,
@@ -232,6 +246,7 @@ const likes = computed(() => {
 })
 
 const cards = computed(() => {
+  if (!props.set) return 0
   let value = localCards.value
   if (!value) {
     if (Array.isArray(props.set.cards)) {
@@ -253,10 +268,13 @@ const cards = computed(() => {
 
 <style scoped>
 .card {
-  @apply bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300;
-  min-height: 360px;
+  @apply bg-white rounded-xl transition-all duration-300;
+  min-height: 455px;
   display: flex;
   flex-direction: column;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+  overflow: hidden;
 }
 
 .line-clamp-1 {
@@ -276,5 +294,16 @@ const cards = computed(() => {
 /* Remove default margin from h3 */
 h3 {
   margin: 0;
+}
+.img-container {
+  height: 385px;
+  width: 100%;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+  overflow: hidden;
+}
+.img-container img {
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
 }
 </style>

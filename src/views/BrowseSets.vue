@@ -201,7 +201,8 @@ const {
   updateSortOrder,
   updateSetType,
   updateSearch,
-  initialize
+  initialize,
+  currentPage
 } = useSets()
 
 // Animation hooks for transition-group
@@ -235,11 +236,25 @@ watch(() => route.params.category, (newCategory) => {
   } else {
     updateCategory('')
   }
+  // Reset batch state on category change
+  batchCount.value = 0
+  isBatchWaiting.value = false
+  if (batchTimeout) {
+    clearTimeout(batchTimeout)
+    batchTimeout = null
+  }
 }, { immediate: true })
 
 // Watch for sort order changes
 watch(sortOrder, (newOrder) => {
   updateSortOrder(newOrder)
+  // Reset batch state on sort change
+  batchCount.value = 0
+  isBatchWaiting.value = false
+  if (batchTimeout) {
+    clearTimeout(batchTimeout)
+    batchTimeout = null
+  }
 })
 
 const onCategoryChipClick = (catName: string) => {
@@ -280,18 +295,28 @@ let observer: IntersectionObserver | null = null
 
 const triggerNextBatch = () => {
   if (isBatchWaiting.value || loading.value || showLoadMoreButton.value) return
+  
+  // Only increment batch count if we're not at the first page
+  if (currentPage.value > 1) {
+    batchCount.value++
+  }
+  
   isBatchWaiting.value = true
   batchDelay.value = Math.floor(Math.random() * 3000) + 500 // random delay
   batchTimeout = setTimeout(() => {
     loadSets()
     isBatchWaiting.value = false
-    batchCount.value++
   }, batchDelay.value)
 }
 
 const handleLoadMore = () => {
   batchCount.value = 0
-  triggerNextBatch()
+  isBatchWaiting.value = false
+  if (batchTimeout) {
+    clearTimeout(batchTimeout)
+    batchTimeout = null
+  }
+  loadSets()
 }
 
 onMounted(() => {

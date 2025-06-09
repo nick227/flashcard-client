@@ -184,11 +184,9 @@ export function useSets() {
         state.data = [...(state.data || []), ...newSets]
       }
 
-      const total = response.pagination?.total || 0
-      const totalPages = Math.ceil(total / params.limit)
-      hasMore.value = currentPage.value < totalPages
-      
-      if (hasMore.value && setsData.length > 0) {
+      // Update pagination state
+      hasMore.value = response.pagination?.hasMore ?? false
+      if (hasMore.value) {
         currentPage.value++
       }
 

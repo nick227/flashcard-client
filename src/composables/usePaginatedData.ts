@@ -2,6 +2,9 @@ import { ref, computed, watch } from 'vue'
 import { api, apiEndpoints } from '@/api'
 import { cacheService } from '@/services/cache'
 
+// Cache duration - 5 minutes for paginated data
+const CACHE_DURATION = 5 * 60 * 1000
+
 export function usePaginatedData<T>(endpoint: string, options: {
   userId?: number
   pageSize?: number
@@ -13,6 +16,8 @@ export function usePaginatedData<T>(endpoint: string, options: {
   const currentPage = ref(1)
   const totalItems = ref(0)
   const pageSize = options.pageSize || 10
+  const cacheHits = ref(0)
+  const cacheMisses = ref(0)
 
   const totalPages = computed(() => {
     return Math.max(1, Math.ceil(totalItems.value / pageSize))
@@ -20,25 +25,39 @@ export function usePaginatedData<T>(endpoint: string, options: {
 
   // Generate cache key for the current request
   const getCacheKey = (page: number) => {
+    // Create a new params object with the current page
     const params = {
-      page,
-      limit: pageSize,
-      ...options.queryParams,
-      ...(options.userId ? { userId: options.userId } : {})
+      page: page.toString(),
+      limit: pageSize.toString(),
+      ...(options.userId ? { userId: options.userId.toString() } : {}),
+      ...Object.fromEntries(
+        Object.entries(options.queryParams || {}).map(([key, value]) => {
+          // Don't override the page parameter if it exists in queryParams
+          if (key === 'page') return [key, page.toString()]
+          return [key, String(value)]
+        })
+      )
     }
-    return `${endpoint}-${JSON.stringify(params)}`
+    
+    const cacheKey = `${endpoint}?${new URLSearchParams(params).toString()}`
+    return cacheKey
   }
 
   const fetchData = async (page: number = 1) => {
+
     loading.value = true
     error.value = null
     currentPage.value = page
 
     try {
+      // Create query params without page first
+      const baseParams = { ...options.queryParams }
+      delete baseParams.page // Remove page if it exists in queryParams
+
       const queryParams: Record<string, any> = {
         page,
         limit: pageSize,
-        ...options.queryParams
+        ...baseParams
       }
 
       if (options.userId) {
@@ -47,10 +66,14 @@ export function usePaginatedData<T>(endpoint: string, options: {
 
       // Use CacheService for request deduplication and caching
       const cacheKey = getCacheKey(page)
+      
       const data = await cacheService.getOrSet(
         cacheKey,
         async () => {
+          cacheMisses.value++
+          
           const res = await api.get(endpoint, { params: queryParams })
+          
           let processedData: T[] = []
           let processedTotal = 0
 
@@ -62,8 +85,7 @@ export function usePaginatedData<T>(endpoint: string, options: {
             }
           } else if (res.data && res.data.pagination) {
             processedData = res.data.items || []
-            const reportedTotal = res.data.pagination.total || 0
-            processedTotal = processedData.length < reportedTotal ? processedData.length : reportedTotal
+            processedTotal = res.data.pagination.total || 0
           } else if (Array.isArray(res.data)) {
             processedData = res.data
             processedTotal = res.data.length
@@ -74,15 +96,18 @@ export function usePaginatedData<T>(endpoint: string, options: {
 
           return { data: processedData, total: processedTotal }
         },
-        60000 // 1 minute cache
+        CACHE_DURATION
       )
 
+      cacheHits.value++
+
+      // Update items and total only after successful fetch
       items.value = data.data
       totalItems.value = data.total
 
     } catch (err) {
       error.value = 'Failed to fetch data'
-      console.error('Error fetching data:', err)
+      console.error('usePaginatedData - Error:', err)
       items.value = []
       totalItems.value = 0
     } finally {
@@ -95,6 +120,11 @@ export function usePaginatedData<T>(endpoint: string, options: {
     cacheService.deleteByPrefix(endpoint)
   }, { deep: true })
 
+  // Clear cache when userId changes
+  watch(() => options.userId, () => {
+    cacheService.deleteByPrefix(endpoint)
+  })
+
   return {
     items,
     loading,
@@ -102,6 +132,13 @@ export function usePaginatedData<T>(endpoint: string, options: {
     currentPage,
     totalItems,
     totalPages,
-    fetchData
+    fetchData,
+    cacheStats: computed(() => ({
+      hits: cacheHits.value,
+      misses: cacheMisses.value,
+      hitRate: cacheHits.value + cacheMisses.value > 0 
+        ? cacheHits.value / (cacheHits.value + cacheMisses.value) 
+        : 0
+    }))
   }
 } 

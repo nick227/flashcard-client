@@ -5,9 +5,9 @@
       {{ title }}
     </h2>
     
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    <!-- Loading State (only show on initial load) -->
+    <div v-if="loading && !itemsArray.length" class="flex justify-center py-8 loading-state min-height-300">
+      {{ loadingMessage }} <i class="fas fa-spinner fa-spin"></i>
     </div>
 
     <!-- Empty State -->
@@ -16,14 +16,19 @@
     </div>
 
     <!-- Content -->
-    <div v-else>
+    <div v-else class="min-height-300 relative">
+      <!-- Loading Overlay -->
+      <div v-if="loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+      </div>
+      
       <slot :items="itemsArray"></slot>
       
       <!-- Pagination -->
       <div v-if="showPagination" class="mt-6 flex justify-center gap-2">
         <button 
           @click="changePage(currentPage - 1)"
-          :disabled="!canGoPrevious"
+          :disabled="!canGoPrevious || (typeof loading === 'boolean' ? loading : loading.value)"
           class="px-3 py-1 rounded border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Previous
@@ -33,7 +38,7 @@
         </span>
         <button 
           @click="changePage(currentPage + 1)"
-          :disabled="!canGoNext"
+          :disabled="!canGoNext || (typeof loading === 'boolean' ? loading : loading.value)"
           class="px-3 py-1 rounded border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Next
@@ -56,6 +61,7 @@ interface Props<T = unknown> {
   currentPage: number | Ref<number>
   pageSize: number
   emptyMessage?: string
+  loadingMessage?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -63,29 +69,61 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  (e: 'pageChange', page: number): void
+  (e: 'page-change', page: number): void
 }>()
+
+const randomLoadingMessages = [
+'Keep it together...', 
+'Loading the best I can...', 
+'Patience is a virtue...', 
+'I am doing something...', 
+'Rock City!',
+'We are almost there...',
+'Just a moment...',
+'Yellow Submarine',
+'Seriously Loading...',
+'Bleep, bloop, whiz',
+'Loading, loading, loading!',
+'This is the best I can do...']
+
+const loadingMessage = computed(() => {
+  return randomLoadingMessages[Math.floor(Math.random() * randomLoadingMessages.length)]
+})
 
 // Use the current page from props
 const currentPage = computed(() => {
-  return typeof props.currentPage === 'number' ? props.currentPage : props.currentPage.value
+  const page = typeof props.currentPage === 'number' ? props.currentPage : props.currentPage.value
+  console.log('DataGrid - Current Page:', {
+    page,
+    rawValue: props.currentPage,
+    isRef: typeof props.currentPage !== 'number'
+  })
+  return page
 })
 
 // Update total pages when total items changes
 const totalPages = computed(() => {
   const total = typeof props.totalItems === 'number' ? props.totalItems : props.totalItems.value
   const pages = Math.max(1, Math.ceil(total / props.pageSize))
-  console.log('Total Pages Calculation:', {
+  console.log('DataGrid - Total Pages:', {
     total,
     pageSize: props.pageSize,
-    calculatedPages: pages
+    calculatedPages: pages,
+    rawTotal: props.totalItems,
+    isRef: typeof props.totalItems !== 'number'
   })
   return pages
 })
 
 const itemsArray = computed(() => {
-  if (!props.items) return []
-  return Array.isArray(props.items) ? props.items : props.items.value || []
+  const items = Array.isArray(props.items) ? props.items : props.items.value || []
+  console.log('DataGrid - Items Array:', {
+    length: items.length,
+    rawItems: props.items,
+    isRef: !Array.isArray(props.items),
+    firstItem: items[0]
+  })
+  return items
 })
 
 // Only show pagination if we have more items than the page size
@@ -104,17 +142,27 @@ const showPagination = computed(() => {
 })
 
 // Handle page changes
-const changePage = (newPage: number) => {
-  console.log('Page Change Attempt:', {
-    newPage,
+const changePage = async (page: number) => {
+  const isLoading = typeof props.loading === 'boolean' ? props.loading : props.loading.value
+  console.log('DataGrid - Page Change Attempt:', {
+    requestedPage: page,
     currentPage: currentPage.value,
     totalPages: totalPages.value,
-    totalItems: typeof props.totalItems === 'number' ? props.totalItems : props.totalItems.value,
-    pageSize: props.pageSize
+    isLoading,
+    itemsLength: itemsArray.value.length
   })
-  if (newPage >= 1 && newPage <= totalPages.value) {
-    emit('pageChange', newPage)
+  
+  if (page < 1 || page > totalPages.value || isLoading) {
+    console.log('DataGrid - Page Change Rejected:', {
+      reason: page < 1 ? 'below minimum' : 
+              page > totalPages.value ? 'above maximum' : 
+              'loading in progress'
+    })
+    return
   }
+  
+  console.log('DataGrid - Emitting Page Change:', page)
+  emit('page-change', page)
 }
 
 // Pagination button states
@@ -144,4 +192,27 @@ const canGoNext = computed(() => {
   })
   return canGo
 })
-</script> 
+</script>
+
+<style scoped>
+.min-height-300 {
+  min-height: 300px;
+}
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.fa-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style> 

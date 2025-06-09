@@ -20,15 +20,6 @@
     padding: var(--space-lg);
 }
 
-.grid-view {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 2.5rem;
-    justify-items: center;
-    align-items: stretch;
-}
-
 .section {
     margin-bottom: var(--space-xl);
 }

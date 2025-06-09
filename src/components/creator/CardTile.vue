@@ -10,11 +10,21 @@
 
     <div class="tile-content flex-1 flex flex-col min-h-0" v-if="!previewMode">
       <label class="block text-gray-500 text-xs mb-1">Front</label>
-      <textarea class="input mb-2 flex-shrink-0" v-model="localCard.front.text" @input="emitUpdate" maxlength="2000" placeholder="Front text..."></textarea>
-      <input type="text" class="input mb-2 flex-shrink-0" v-model="localCard.front.imageUrl" @input="emitUpdate" placeholder="Front image URL...">
+      <CardContent
+        :text="localCard.front.text"
+        :imageUrl="localCard.front.imageUrl"
+        mode="edit"
+        viewMode="tile"
+        @update="onFrontUpdate"
+      />
       <label class="block text-gray-500 text-xs mb-1">Back</label>
-      <textarea class="input mb-2 flex-shrink-0" v-model="localCard.back.text" @input="emitUpdate" maxlength="2000" placeholder="Back text..."></textarea>
-      <input type="text" class="input mb-2 flex-shrink-0" v-model="localCard.back.imageUrl" @input="emitUpdate" placeholder="Back image URL...">
+      <CardContent
+        :text="localCard.back.text"
+        :imageUrl="localCard.back.imageUrl"
+        mode="edit"
+        viewMode="tile"
+        @update="onBackUpdate"
+      />
       <label class="block text-gray-500 text-xs mb-1">Hint</label>
       <textarea class="input flex-shrink-0" v-model="localCard.hint" @input="emitUpdate" placeholder="Hint..."></textarea>
     </div>
@@ -38,6 +48,7 @@
 import { ref, watch, onMounted } from 'vue'
 import type { Card } from '@/types/card'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
+import CardContent from '@/components/common/CardContent.vue'
 
 const props = defineProps<{ card: Card }>()
 const emit = defineEmits(['update-card', 'delete-card', 'request-delete'])
@@ -81,6 +92,16 @@ function handleFlip(newFlippedState: boolean) {
   isFlipping.value = true
   flipped.value = newFlippedState
   setTimeout(() => { isFlipping.value = false }, 300)
+}
+
+const onFrontUpdate = (text: string) => {
+  localCard.value.front.text = text
+  emitUpdate()
+}
+
+const onBackUpdate = (text: string) => {
+  localCard.value.back.text = text
+  emitUpdate()
 }
 </script>
 

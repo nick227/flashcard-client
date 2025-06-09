@@ -27,32 +27,49 @@ export function useViewHistory(setId: number) {
 
     // Initialize history when component mounts
     const initializeHistory = async () => {
-        if (!user.value?.id) return
+        if (!user.value?.id) {
+            console.log('No user ID available, skipping history initialization')
+            return
+        }
 
         loading.value = true
         error.value = null
 
         try {
             // First try to get existing history
-            try {
-                const { data: existingHistory } = await api.get(`/history/${setId}`)
-                history.value = existingHistory
-                lastUpdatedCards.value = existingHistory.numCardsViewed
-                console.log('Found existing history:', existingHistory)
-            } catch (getErr: any) {
-                if (getErr.response?.status === 404) {
-                    // If no history exists, create new one
-                    const { data: newHistory } = await api.post('/history', { set_id: setId })
-                    history.value = newHistory
-                    lastUpdatedCards.value = 0
-                    console.log('Created new history:', newHistory)
-                } else {
-                    throw getErr
-                }
+            const response = await api.get(`/history/${setId}`)
+            if (response.data) {
+                history.value = response.data
+                lastUpdatedCards.value = response.data.numCardsViewed || 0
+                console.log('Found existing history:', response.data)
+                return
             }
-        } catch (err: any) {
-            console.error('Error initializing history:', err)
-            error.value = err.response?.data?.error || 'Failed to initialize history'
+        } catch (getErr: any) {
+            // Handle 404 specifically
+            if (getErr.response?.status === 404) {
+                console.log('No existing history found, creating new one')
+                try {
+                    const createResponse = await api.post('/history', { 
+                        set_id: setId,
+                        user_id: user.value.id 
+                    })
+                    
+                    if (createResponse.data) {
+                        history.value = createResponse.data
+                        lastUpdatedCards.value = 0
+                        console.log('Created new history:', createResponse.data)
+                        return
+                    }
+                } catch (createErr: any) {
+                    console.error('Error creating new history:', createErr)
+                    error.value = createErr.response?.data?.error || 'Failed to create history'
+                    // Don't throw, just log the error and continue
+                }
+            } else {
+                console.error('Error fetching history:', getErr)
+                error.value = getErr.response?.data?.error || 'Failed to fetch history'
+                // Don't throw, just log the error and continue
+            }
         } finally {
             loading.value = false
         }
@@ -82,12 +99,14 @@ export function useViewHistory(setId: number) {
 
         try {
             // Update the progress
-            const { data: updatedHistory } = await api.patch(`/history/${history.value.id}`, {
+            const response = await api.patch(`/history/${history.value.id}`, {
                 num_cards_viewed: numCards
             })
-            history.value = updatedHistory
-            lastUpdatedCards.value = numCards
-            console.log('Successfully updated history:', history.value)
+            if (response.data) {
+                history.value = response.data
+                lastUpdatedCards.value = numCards
+                console.log('Successfully updated history:', history.value)
+            }
         } catch (err: any) {
             console.error('Error updating cards viewed:', err)
             error.value = err.response?.data?.error || 'Failed to update progress'
@@ -110,10 +129,12 @@ export function useViewHistory(setId: number) {
 
         try {
             // Mark as completed
-            const { data: updatedHistory } = await api.patch(`/history/${history.value.id}`, {
+            const response = await api.patch(`/history/${history.value.id}`, {
                 completed: true
             })
-            history.value = updatedHistory
+            if (response.data) {
+                history.value = response.data
+            }
         } catch (err: any) {
             console.error('Error marking as completed:', err)
             error.value = err.response?.data?.error || 'Failed to mark as completed'

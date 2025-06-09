@@ -59,16 +59,35 @@ export default defineConfig(({ mode }): UserConfig => ({
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.flashcardacademy\.com\/.*/i,
-            handler: 'NetworkFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'api-cache',
-              networkTimeoutSeconds: 10,
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 // 24 hours
               },
               cacheableResponse: {
                 statuses: [0, 200]
+              },
+              backgroundSync: {
+                name: 'api-queue',
+                options: {
+                  maxRetentionTime: 24 * 60 * 60
+                }
+              },
+              matchOptions: {
+                ignoreSearch: true
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
               }
             }
           },
@@ -80,20 +99,6 @@ export default defineConfig(({ mode }): UserConfig => ({
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/cdnjs\.cloudflare\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'cdn-cache',
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 1 week
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -121,9 +126,36 @@ export default defineConfig(({ mode }): UserConfig => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor': ['vue', 'vue-router', 'pinia'],
-          'styles': ['@/style.css']
+        manualChunks: (id) => {
+          // Core framework
+          if (id.includes('node_modules/vue') || 
+              id.includes('node_modules/vue-router') || 
+              id.includes('node_modules/pinia')) {
+            return 'vue-core';
+          }
+          // UI components
+          if (id.includes('node_modules/@headlessui/vue') || 
+              id.includes('node_modules/@heroicons/vue')) {
+            return 'ui-components';
+          }
+          // Data handling
+          if (id.includes('node_modules/axios') || 
+              id.includes('node_modules/lodash')) {
+            return 'data-layer';
+          }
+          // Feature-based chunks
+          if (id.includes('/src/components/')) {
+            return 'components';
+          }
+          if (id.includes('/src/views/')) {
+            return 'views';
+          }
+          if (id.includes('/src/stores/')) {
+            return 'stores';
+          }
+          if (id.includes('/src/composables/')) {
+            return 'composables';
+          }
         },
         // CSS code splitting
         assetFileNames: (assetInfo: PreRenderedAsset) => {
@@ -153,10 +185,25 @@ export default defineConfig(({ mode }): UserConfig => ({
         drop_console: mode === 'production',
         drop_debugger: mode === 'production',
         pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
-        passes: 2
+        passes: 3,
+        dead_code: true,
+        unsafe: false,
+        unsafe_math: false,
+        unsafe_proto: false,
+        unsafe_regexp: false,
+        unsafe_undefined: false,
+        unused: true,
+        toplevel: true,
+        keep_fnames: true,
+        keep_classnames: true
       },
       mangle: {
-        safari10: true
+        toplevel: true,
+        safari10: true,
+        properties: {
+          regex: /^_/,
+          reserved: ['__proto__', 'constructor', 'prototype']
+        }
       },
       format: {
         comments: false
@@ -170,15 +217,16 @@ export default defineConfig(({ mode }): UserConfig => ({
     // Build optimization
     assetsInlineLimit: 4096,
     modulePreload: {
-      polyfill: true, // Enable Vite's built-in polyfill
+      polyfill: true,
       resolveDependencies: (filename, deps, { hostId, hostType }) => {
-        // Only preload critical dependencies
         if (filename.includes('main.ts') || filename.includes('style.css')) {
           return deps.filter(dep => {
-            // Don't preload CSS files
             if (dep.endsWith('.css')) return false;
-            // Only preload critical JS files
-            return dep.includes('main') || dep.includes('vendor');
+            return dep.includes('main') || 
+                   dep.includes('vendor') || 
+                   dep.includes('router') ||
+                   dep.includes('store') ||
+                   dep.includes('api');
           });
         }
         return deps;
@@ -213,7 +261,7 @@ export default defineConfig(({ mode }): UserConfig => ({
     }
   },
   optimizeDeps: {
-    include: ['vue', 'vue-router', 'pinia']
+    include: ['vue', 'vue-router', 'pinia', 'axios', 'lodash']
   },
   esbuild: {
     target: 'esnext',

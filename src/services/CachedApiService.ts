@@ -1,18 +1,11 @@
 import { api } from '@/api'
 import { cacheService } from './cache/CacheService'
-import axios from 'axios'
 
 interface CacheConfig {
   ttl?: number
   key?: string
   forceRefresh?: boolean
   invalidatePrefix?: string // If set, invalidate all cache keys with this prefix after mutation
-}
-
-function stableStringify(obj: any): string {
-  if (obj === null || typeof obj !== 'object') return JSON.stringify(obj)
-  if (Array.isArray(obj)) return '[' + obj.map(stableStringify).join(',') + ']'
-  return '{' + Object.keys(obj).sort().map(k => JSON.stringify(k) + ':' + stableStringify(obj[k])).join(',') + '}'
 }
 
 export class CachedApiService {
@@ -143,46 +136,7 @@ export class CachedApiService {
     cacheService.clear()
   }
 
-  private getBatchKey(key: string): string {
-    try {
-      // Extract the base resource and action from the key
-      const match = key.match(/^([^|]+)\|get\|\/([^\/]+)(?:\/batch\/([^\/]+))?/)
-      if (match) {
-        const [, , resource, action] = match
-        
-        // Don't batch above-the-fold content
-        if (resource === 'sets' && !action) {
-          const paramsStr = key.split('|')[2] || '{}'
-          try {
-            const params = JSON.parse(paramsStr)
-            // If it's the first page, don't batch
-            if (params.page === 1) {
-              return key
-            }
-            // For subsequent pages, use a unique key to prevent caching issues
-            return `${key}:page${params.page}`
-          } catch (e) {
-            console.warn('Failed to parse params for key:', key, e)
-            return key
-          }
-        }
-        
-        // For batch operations, use the full key to maintain uniqueness
-        if (key.includes('/batch/')) {
-          return key
-        }
-        
-        // For main resources, batch by resource
-        return resource
-      }
-      return key
-    } catch (error) {
-      console.warn('Error in getBatchKey for key:', key, error)
-      return key
-    }
-  }
-
-  private async getFromCache<T>(cacheKey: string): Promise<T | undefined> {
+  private async getFromCache<T>(cacheKey: string): Promise<T | null> {
     return await cacheService.get(cacheKey)
   }
 
