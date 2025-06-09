@@ -10,6 +10,15 @@ const STORAGE_RETRY_DELAY = 1000 // 1 second
 const BATCH_TIMEOUT = 30000 // 30 seconds
 const CLEANUP_BATCH_SIZE = 100
 
+let isVueReady = false
+
+// Initialize Vue readiness check
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    isVueReady = true
+  })
+}
+
 export class CacheService {
   private cache: Map<string, CacheEntry<any>>
   private options: CacheOptions
@@ -24,6 +33,7 @@ export class CacheService {
   private batchManager: BatchManager
   private locks: Map<string, Promise<void>> = new Map()
   private cleanupInProgress = false
+  private initialized = false
 
   // Vue reactive properties
   public readonly size = ref(0)
@@ -43,17 +53,36 @@ export class CacheService {
       timeout: BATCH_TIMEOUT
     })
 
-    if (this.options.persist) {
-      this.loadFromStorage()
+    // Initialize after Vue is ready
+    if (typeof window !== 'undefined') {
+      if (isVueReady) {
+        this.initialize()
+      } else {
+        window.addEventListener('load', () => this.initialize())
+      }
     }
+  }
 
-    if (this.options.autoCleanup) {
-      this.startCleanupInterval()
-    }
+  private async initialize() {
+    if (this.initialized) return
+    this.initialized = true
 
-    // Monitor memory pressure
-    if (typeof performance !== 'undefined' && performance.memory) {
-      setInterval(() => this.checkMemoryPressure(), 60000) // Check every minute
+    try {
+      if (this.options.persist) {
+        await this.loadFromStorage()
+      }
+
+      if (this.options.autoCleanup) {
+        this.startCleanupInterval()
+      }
+
+      // Monitor memory pressure
+      if (typeof performance !== 'undefined' && performance.memory) {
+        setInterval(() => this.checkMemoryPressure(), 60000) // Check every minute
+      }
+    } catch (error) {
+      console.error('[Cache] Initialization error:', error)
+      this.events.onError?.(error as Error)
     }
   }
 

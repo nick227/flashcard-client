@@ -11,6 +11,14 @@ import axios from 'axios'
 import { watch } from 'vue'
 import './polyfills/modulepreload'
 
+// Production configuration
+const isProd = import.meta.env.PROD
+const API_URL = isProd ? 'https://api.flashcardacademy.com' : 'http://localhost:5000'
+
+// Configure axios defaults
+axios.defaults.baseURL = API_URL
+axios.defaults.timeout = 30000 // 30 seconds
+
 // Extend Axios request config type
 declare module 'axios' {
   interface InternalAxiosRequestConfig {
@@ -30,36 +38,24 @@ NProgress.configure({
   speed: 800
 })
 
-// Router guards with error handling
-router.beforeEach(async (_to, _from, next) => {
-  NProgress.start()
-  try {
-    // Add any route-specific logic here
-    next()
-  } catch (error) {
-    console.error('Navigation error:', error)
-    next(false)
-  }
-})
-
-router.afterEach(() => {
-  NProgress.done()
-})
-
 // Create app with error handling
 const app = createApp(App)
 
-// Error handler
+// Error handler with production logging
 app.config.errorHandler = (err, instance, info) => {
   console.error('Vue Error:', err)
-  console.error('Component:', instance)
-  console.error('Info:', info)
+  if (isProd) {
+    // Add production error reporting here (e.g., Sentry)
+    console.error('Component:', instance?.$options?.name || 'Unknown')
+    console.error('Info:', info)
+  } else {
+    console.error('Component:', instance)
+    console.error('Info:', info)
+  }
 }
 
 // Performance monitoring
-if (import.meta.env.PROD) {
-  app.config.performance = true
-}
+app.config.performance = isProd
 
 // Initialize Pinia with persistence
 const pinia = createPinia()
@@ -67,7 +63,10 @@ pinia.use(piniaPersist)
 app.use(pinia)
 
 // Google Sign In Configuration
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1073484039132-kcld0v58e4k7el7hbp16m23j1b5e4joe.apps.googleusercontent.com'
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+if (!GOOGLE_CLIENT_ID) {
+  console.error('VITE_GOOGLE_CLIENT_ID is not defined')
+}
 app.use(GoogleSignInPlugin, {
   clientId: GOOGLE_CLIENT_ID
 })
@@ -78,17 +77,15 @@ app.use(router)
 // Auth setup
 const auth = useAuthStore()
 
-// Axios configuration
-axios.defaults.timeout = 30000 // 30 seconds
+// Set initial auth header
 axios.defaults.headers.common['Authorization'] = auth.jwt ? `Bearer ${auth.jwt}` : ''
 
 // Request deduplication cache
 const pendingRequests = new Map<string, Promise<any>>()
 
 // Development logging with request deduplication
-if (import.meta.env.DEV) {
+if (!isProd) {
   axios.interceptors.request.use(request => {
-    // Create a unique key for the request that includes all relevant parts
     const requestKey = [
       request.method?.toLowerCase(),
       request.url,
@@ -97,61 +94,48 @@ if (import.meta.env.DEV) {
       request.headers?.['Authorization'] || ''
     ].join('|')
     
-    // Check if there's a pending request with the same key
     if (pendingRequests.has(requestKey)) {
       console.log('Deduplicating request:', requestKey)
-      const existingPromise = pendingRequests.get(requestKey)!
-      
-      // Return a new promise that will resolve/reject with the existing request
       return Promise.reject({
         __CANCEL__: true,
         message: 'Request deduplicated',
-        promise: existingPromise
+        promise: pendingRequests.get(requestKey)
       })
     }
     
-    // Create a new promise for this request
     const requestPromise = new Promise((resolve, reject) => {
       request.__requestKey = requestKey
       request.__resolve = resolve
       request.__reject = reject
     })
     
-    // Store the pending request
     pendingRequests.set(requestKey, requestPromise)
-    
-    // Set up cleanup for the request
     requestPromise.finally(() => {
       if (pendingRequests.get(requestKey) === requestPromise) {
         pendingRequests.delete(requestKey)
       }
     })
     
-    console.log('Starting Request:', requestKey)
     return request
   })
 
   axios.interceptors.response.use(
     response => {
-      // Resolve the request promise
       if (response.config.__requestKey) {
         const requestPromise = pendingRequests.get(response.config.__requestKey)
         if (requestPromise) {
           response.config.__resolve?.(response)
         }
       }
-      console.log('Response:', response.config.__requestKey)
       return response
     },
     error => {
-      // Reject the request promise
       if (error.config?.__requestKey) {
         const requestPromise = pendingRequests.get(error.config.__requestKey)
         if (requestPromise) {
           error.config.__reject?.(error)
         }
       }
-      console.error('Response Error:', error.config?.__requestKey)
       return Promise.reject(error)
     }
   )
@@ -163,7 +147,6 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 axios.interceptors.response.use(
   res => {
-    // Cache successful GET requests
     if (res.config.method === 'get') {
       const cacheKey = `${res.config.url}-${JSON.stringify(res.config.params || {})}`
       responseCache.set(cacheKey, {
@@ -186,10 +169,10 @@ axios.interceptors.response.use(
       }
     }
 
-    // If we haven't retried yet and it's a network error or 429
+    // Retry logic for network errors or rate limits
     if (!config._retry && (err.code === 'ECONNABORTED' || err.response?.status === 429)) {
       config._retry = true
-      config.timeout = 60000 // Increase timeout for retry to 60 seconds
+      config.timeout = 60000
 
       try {
         return await axios(config)
@@ -198,6 +181,7 @@ axios.interceptors.response.use(
       }
     }
 
+    // Handle auth errors
     if (err.response?.status === 401) {
       auth.logout()
       auth.setMessage('Session expired. Please log in again.')
@@ -219,6 +203,21 @@ watch(
   },
   { immediate: true }
 )
+
+// Router guards with error handling
+router.beforeEach(async (_to, _from, next) => {
+  NProgress.start()
+  try {
+    next()
+  } catch (error) {
+    console.error('Navigation error:', error)
+    next(false)
+  }
+})
+
+router.afterEach(() => {
+  NProgress.done()
+})
 
 // Mount app
 app.mount('#app')
