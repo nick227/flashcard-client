@@ -127,35 +127,12 @@ export default defineConfig(({ mode }): UserConfig => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Core framework - bundle all Vue ecosystem together
-          if (id.includes('node_modules/vue') || 
-              id.includes('node_modules/vue-router') || 
-              id.includes('node_modules/pinia') ||
-              id.includes('node_modules/@vue/') ||
-              id.includes('node_modules/@headlessui/vue') || 
-              id.includes('node_modules/@heroicons/vue')) {
-            return 'vendor';
+          // Only split out very large dependencies
+          if (id.includes('node_modules/lodash')) {
+            return 'lodash';
           }
-          // Data handling
-          if (id.includes('node_modules/axios') || 
-              id.includes('node_modules/lodash')) {
-            return 'data-layer';
-          }
-          // Feature-based chunks - only split if not in vendor
-          if (!id.includes('node_modules')) {
-            if (id.includes('/src/components/')) {
-              return 'components';
-            }
-            if (id.includes('/src/views/')) {
-              return 'views';
-            }
-            if (id.includes('/src/stores/')) {
-              return 'stores';
-            }
-            if (id.includes('/src/composables/')) {
-              return 'composables';
-            }
-          }
+          // Bundle everything else together
+          return 'app';
         },
         // CSS code splitting
         assetFileNames: (assetInfo: PreRenderedAsset) => {
@@ -218,21 +195,8 @@ export default defineConfig(({ mode }): UserConfig => ({
     assetsInlineLimit: 4096,
     modulePreload: {
       polyfill: true,
-      resolveDependencies: (filename, deps, { hostId, hostType }) => {
-        // Always preload vendor and data-layer chunks
-        if (deps.some(dep => dep.includes('vendor') || dep.includes('data-layer'))) {
-          return deps;
-        }
-        // For main entry point, preload critical chunks
-        if (filename.includes('main.ts')) {
-          return deps.filter(dep => {
-            if (dep.endsWith('.css')) return false;
-            return dep.includes('vendor') || 
-                   dep.includes('data-layer') ||
-                   dep.includes('components') ||
-                   dep.includes('stores');
-          });
-        }
+      resolveDependencies: (filename, deps) => {
+        // Preload all dependencies
         return deps;
       }
     }
