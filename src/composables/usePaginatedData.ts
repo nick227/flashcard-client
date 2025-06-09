@@ -1,5 +1,6 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { api, apiEndpoints } from '@/api'
+import { cacheService } from '@/services/cache'
 
 export function usePaginatedData<T>(endpoint: string, options: {
   userId?: number
@@ -17,6 +18,17 @@ export function usePaginatedData<T>(endpoint: string, options: {
     return Math.max(1, Math.ceil(totalItems.value / pageSize))
   })
 
+  // Generate cache key for the current request
+  const getCacheKey = (page: number) => {
+    const params = {
+      page,
+      limit: pageSize,
+      ...options.queryParams,
+      ...(options.userId ? { userId: options.userId } : {})
+    }
+    return `${endpoint}-${JSON.stringify(params)}`
+  }
+
   const fetchData = async (page: number = 1) => {
     loading.value = true
     error.value = null
@@ -29,52 +41,44 @@ export function usePaginatedData<T>(endpoint: string, options: {
         ...options.queryParams
       }
 
-      // Add user ID to query params if available
       if (options.userId) {
         queryParams.userId = options.userId
       }
 
-      console.log('Fetching data from:', endpoint, 'with params:', queryParams)
-      const res = await api.get(endpoint, { params: queryParams })
-      console.log('API response:', res.data)
+      // Use CacheService for request deduplication and caching
+      const cacheKey = getCacheKey(page)
+      const data = await cacheService.getOrSet(
+        cacheKey,
+        async () => {
+          const res = await api.get(endpoint, { params: queryParams })
+          let processedData: T[] = []
+          let processedTotal = 0
 
-      // Handle history endpoint response structure
-      if (endpoint === apiEndpoints.history) {
-        if (res.data?.items) {
-          items.value = res.data.items
-          totalItems.value = res.data.total || res.data.items.length
-        } else {
-          items.value = []
-          totalItems.value = 0
-        }
-      }
-      // Handle standard pagination response
-      else if (res.data && res.data.pagination) {
-        items.value = res.data.items || []
-        const reportedTotal = res.data.pagination.total || 0
-        const actualItems = items.value.length
-        totalItems.value = actualItems < reportedTotal ? actualItems : reportedTotal
-        console.log('Processed paginated data:', {
-          items: items.value,
-          total: totalItems.value,
-          page: currentPage.value
-        })
-      }
-      // Handle array response
-      else if (Array.isArray(res.data)) {
-        items.value = res.data
-        totalItems.value = res.data.length
-      }
-      // Handle single item response
-      else if (res.data) {
-        items.value = [res.data]
-        totalItems.value = 1
-      }
-      // Handle empty response
-      else {
-        items.value = []
-        totalItems.value = 0
-      }
+          // Handle different response structures
+          if (endpoint === apiEndpoints.history) {
+            if (res.data?.items) {
+              processedData = res.data.items
+              processedTotal = res.data.total || res.data.items.length
+            }
+          } else if (res.data && res.data.pagination) {
+            processedData = res.data.items || []
+            const reportedTotal = res.data.pagination.total || 0
+            processedTotal = processedData.length < reportedTotal ? processedData.length : reportedTotal
+          } else if (Array.isArray(res.data)) {
+            processedData = res.data
+            processedTotal = res.data.length
+          } else if (res.data) {
+            processedData = [res.data]
+            processedTotal = 1
+          }
+
+          return { data: processedData, total: processedTotal }
+        },
+        60000 // 1 minute cache
+      )
+
+      items.value = data.data
+      totalItems.value = data.total
 
     } catch (err) {
       error.value = 'Failed to fetch data'
@@ -85,6 +89,11 @@ export function usePaginatedData<T>(endpoint: string, options: {
       loading.value = false
     }
   }
+
+  // Clear cache when query params change
+  watch(() => options.queryParams, () => {
+    cacheService.deleteByPrefix(endpoint)
+  }, { deep: true })
 
   return {
     items,

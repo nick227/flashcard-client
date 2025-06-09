@@ -3,7 +3,9 @@
     <HomeHero />
 
     <!-- Featured Set -->
-    <FeaturedSet :set="featuredSet" @view="startLearning" />
+    <div v-if="featuredSet">
+      <FeaturedSet :set="featuredSet" @view="startLearning" />
+    </div>
 
     <!-- All Sets Grid -->
     <section class="section">
@@ -34,13 +36,13 @@ import { useRouter } from 'vue-router'
 import HomeHero from '../components/sections/HomeHero.vue'
 import SetPreviewCard from '../components/cards/SetPreviewCard.vue'
 import FeaturedSet from '../components/home/FeaturedSet.vue'
-import type { FlashCardSet } from '../types'
+import type { Set } from '@/types/set'
 import { api } from '@/api'
 
 const router = useRouter()
-const sets = ref<FlashCardSet[]>([])
+const sets = ref<Set[]>([])
 const loading = ref(true)
-const featuredSet = ref<FlashCardSet | null>(null)
+const featuredSet = ref<Set | null>(null)
 const error = ref<string | null>(null)
 
 const fetchSets = async () => {
@@ -61,7 +63,26 @@ const fetchSets = async () => {
     sets.value = items || []
     
     // Find a featured set or use the first one
-    featuredSet.value = sets.value[0] || null
+    if (sets.value.length > 0) {
+      const set = sets.value[0]
+      // Ensure all required properties are present
+      featuredSet.value = {
+        ...set,
+        educatorId: set.educatorId || set.userId, // Fallback to userId if educatorId is not present
+        educatorName: set.educatorName || 'Anonymous', // Fallback to Anonymous if educatorName is not present
+        tags: set.tags || [], // Ensure tags is always an array
+        price: set.price || { type: 'free' }, // Ensure price is always present
+        views: set.views || 0,
+        likes: set.likes || 0,
+        cardsCount: set.cardsCount || 0,
+        type: set.type || 'free',
+        isPublic: set.isPublic ?? true,
+        hidden: set.hidden ?? false,
+        thumbnail: set.thumbnail || set.thumbnailUrl || ''
+      }
+    } else {
+      featuredSet.value = null
+    }
   } catch (err: any) {
     console.error('Error fetching sets:', err)
     error.value = err.message || 'Failed to load sets'

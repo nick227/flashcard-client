@@ -76,6 +76,8 @@ import SubscribersTable from '@/components/creator/SubscribersTable.vue'
 import CreatorHero from '@/views/creator/CreatorHero.vue'
 
 const router = useRouter()
+const auth = useAuthStore()
+const user = computed(() => auth.user)
 const sets = ref<FlashCardSet[]>([])
 const loading = ref(true)
 const users = ref<User[]>([])
@@ -86,8 +88,6 @@ const subsLoading = ref(true)
 const salesPage = ref(1)
 const subsPage = ref(1)
 const PAGE_SIZE = 25
-const auth = useAuthStore()
-const user = computed(() => auth.user)
 const LOGGED_IN_USER_ID = user.value?.id
 
 const showDeleteConfirm = ref(false)

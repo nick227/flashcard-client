@@ -3,7 +3,7 @@
     <div class="featured-content">
       <div class="featured-image">
         <a :href="`/sets/${set.id}`">
-          <div class="w-full h-full rounded-xl shadow-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+          <div class="w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
             <img 
               v-if="set.thumbnail && !thumbnailError" 
               :src="set.thumbnail" 
@@ -34,8 +34,12 @@
         <div v-if="set.tags" class="tags-container">
           <span v-for="tag in set.tags" :key="tag" class="tag"><a :href="`/tags/${tag}`">{{ tag }}</a></span>
         </div>
-
+        <!-- set stats section -->
         <div class="flex items-center gap-6 mt-4">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-layer-group text-green-500"></i>
+            <span class="text-gray-600">{{ isLoadingCards ? '...' : cardsCount }}</span>
+          </div>
           <div class="flex items-center gap-2">
             <i class="fas fa-heart text-red-500"></i>
             <span class="text-gray-600">{{ isLoadingLikes ? '...' : likesCount }}</span>
@@ -72,20 +76,23 @@
 </template>
 
 <script setup lang="ts">
-import type { FlashCardSet } from '@/types'
 import { useRouter } from 'vue-router'
 import { ref, watch, computed } from 'vue'
-import { api } from '@/api'
+import { cachedApiEndpoints } from '@/services/CachedApiService'
+import type { Set } from '@/types/set'
 
 const router = useRouter()
 const likesCount = ref(0)
 const viewsCount = ref(0)
+const cardsCount = ref(0)
 const isLoadingLikes = ref(false)
 const isLoadingViews = ref(false)
+const isLoadingCards = ref(false)
+const isLoadingStats = ref(false)
 const thumbnailError = ref(false)
 
 const props = defineProps<{
-  set: FlashCardSet | null
+  set: Set
 }>()
 
 // Computed property for educator image URL
@@ -100,27 +107,33 @@ const getFirstLetter = computed(() => {
   return props.set.title.charAt(0).toUpperCase()
 })
 
+const fetchStats = async () => {
+  if (!props.set?.id) return
+
+  try {
+    isLoadingStats.value = true
+    const [viewsRes, likesRes, cardsRes] = await Promise.all([
+      cachedApiEndpoints.getBatchSetViews([props.set.id]),
+      cachedApiEndpoints.getBatchSetLikes([props.set.id]),
+      cachedApiEndpoints.getBatchSetCards([props.set.id])
+    ])
+    
+    viewsCount.value = (viewsRes as Record<string, number>)[props.set.id] || 0
+    likesCount.value = (likesRes as Record<string, number>)[props.set.id] || 0
+    cardsCount.value = (cardsRes as Record<string, number>)[props.set.id] || 0
+  } catch (error) {
+    console.error('Error fetching stats:', error)
+  } finally {
+    isLoadingStats.value = false
+  }
+}
+
 // Watch for changes to the set prop
 watch(() => props.set, async (newSet) => {
   if (newSet) {
-    await fetchStats(newSet.id)
+    await fetchStats()
   }
 }, { immediate: true })
-
-const fetchStats = async (setId: number) => {
-  try {
-    const [likesRes, viewsRes] = await Promise.all([
-      api.get(`/sets/${setId}/likes`),
-      api.get(`/sets/${setId}/views`)
-    ])
-    likesCount.value = likesRes.data.count || 0
-    viewsCount.value = viewsRes.data.count || 0
-  } catch (err) {
-    console.error('Error fetching stats:', err)
-    likesCount.value = 0
-    viewsCount.value = 0
-  }
-}
 
 function formatDate(date: string) {
   const d = new Date(date)

@@ -1,372 +1,280 @@
 <template>
-  <div class="set-preview-card">
-    <div class="card-image-container">
-      <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })" class="category-badge">{{ set.category }}</div>
-      <div class="image-wrapper">
-        <img 
-          v-if="set.thumbnail && !imageLoadError"
-          @click="goToSet" 
-          :src="set.thumbnail" 
-          :alt="set.title + ' thumbnail'" 
-          class="card-image link"
-          @error="handleImageError"
-          @load="handleImageLoad"
-        />
-        <div 
-          v-else 
-          class="card-image-placeholder"
-          @click="goToSet"
+  <div class="card group">
+    <!-- Image Container -->
+    <div class="relative h-48 overflow-hidden">
+      <img 
+        @click="handleView"
+        :src="imageLoadError ? '/images/default-set.png' : (set.image || set.thumbnail || '/images/default-set.png')" 
+        :alt="set.title"
+        class="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
+        @error="handleImageError"
+        v-if="!imageLoadError"
+      />
+      <div v-if="imageLoadError" class="w-full h-full">
+        <img src="https://picsum.photos/200/300" :alt="set.title" class="w-full h-full object-cover">
+      </div>
+      <!-- Price Badge -->
+      <div class="absolute top-3 right-3">
+        <span 
+          v-if="typeof set.price === 'number' ? set.price > 0 : set.price.type !== 'free'" 
+          class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-full shadow-sm"
         >
+          ${{ typeof set.price === 'number' ? set.price : set.price.amount || 0 }}
+        </span>
+      </div>
+    </div>
+    
+    <!-- Content Container -->
+    <div class="p-5 flex flex-col h-[calc(360px-12rem)]">
+      <!-- Title -->
+      <h3 
+        @click="handleView" 
+        class="text-lg font-semibold mb-2 cursor-pointer line-clamp-1 hover:text-blue-600 transition-colors"
+      >
         {{ set.title }}
+      </h3>
+
+      <!-- Description -->
+      <p class="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">{{ set.description }}</p>
+      
+      <!-- Tags -->
+      <div class="flex flex-wrap gap-1.5 mb-4 min-h-[1.5rem]">
+        <span 
+          v-for="tag in set.tags" 
+          :key="tag"
+          class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full"
+        >
+          {{ tag }}
+        </span>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
+        <a 
+          @click="handleUserView" 
+          class="text-sm text-gray-500 cursor-pointer hover:text-blue-600 transition-colors truncate max-w-[40%]"
+        >
+          {{ set.educatorName }}
+        </a>
+
+        <!-- Stats -->
+        <div class="flex items-center space-x-4 text-sm text-gray-500">
+          <span class="flex items-center" title="Views">
+            <EyeIcon class="w-4 h-4 mr-1" />
+            {{ formatNumber(views) }}
+          </span>
+          <span class="flex items-center" title="Likes">
+            <HeartIcon class="w-4 h-4 mr-1" />
+            {{ formatNumber(likes) }}
+          </span>
+          <span class="flex items-center" title="Cards">
+            <DocumentIcon class="w-4 h-4 mr-1" />
+            {{ formatNumber(cards) }}
+          </span>
         </div>
       </div>
-    </div>
-    <div class="card-content">
-      <div class="card-header w-full text-left">
-        <h3 class="card-title">
-          <a @click="goToSet" class="link">{{ set.title }}</a>
-        </h3>
-        <a :href="`/u/${set.educatorName}`"><h6 class="text-sm text-gray-500 mt-2">{{ set.educatorName || 'Unknown' }}</h6></a>
-        <p class="card-description w-full text-left">{{ set.description }}</p>
-      </div>
-      <div class="card-stats w-full justify-between">
-        <div class="stat-group justify-between w-full flex">
-          <span class="stat">
-            <i class="fas fa-layer-group"></i>
-            {{ cardCount }} cards
-          </span>
-          <span class="stat">
-            <i class="fas fa-eye"></i>
-            {{ viewCount }} views
-          </span>
-          <span class="stat">
-            <i class="fas fa-heart"></i>
-            {{ likeCount }} likes
-          </span>
-        </div>
-      </div>
-      <div class="card-footer w-full text-left">
-        <div class="price-tag" :class="priceClass">
-          <span>{{ priceDisplay }}</span>
-        </div>
-        <TagsList :tags="tags" :removable="false" class="tags-list" />
-      </div>
-    </div>
-    <div class="card-actions">
-      <button class="button button-primary w-full" @click="goToSet">
-        <span class="button-text">Start Learning</span>
-        <span>→</span>
-      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { EyeIcon, HeartIcon, DocumentIcon } from '@heroicons/vue/24/outline'
 import { useRouter } from 'vue-router'
-import { computed, ref, onMounted, watch } from 'vue'
-import TagsList from '@/components/common/TagsList.vue'
-import { api } from '@/api'
-import type { FlashCardSet } from '@/types'
-
-const props = defineProps<{
-  set: FlashCardSet
-}>()
-
-defineEmits(['view'])
+import { cachedApiEndpoints } from '@/services/CachedApiService'
 
 const router = useRouter()
-const viewCount = ref(0)
-const likeCount = ref(0)
-const cardCount = ref(0)
+
+const props = defineProps<{
+  set: {
+    id: number
+    title: string
+    description: string
+    image?: string
+    thumbnail?: string
+    educatorName: string
+    price: number | { type: 'free' | 'premium' | 'subscribers'; amount?: number }
+    tags: string[]
+    views?: number
+    likes?: number
+    cards?: { id: number; setId: number; front: string; back: string; hint?: string }[]
+    cardsCount?: number
+    category?: string
+    createdAt?: string
+    updatedAt?: string
+    type?: string
+    isPublic?: boolean
+    isPurchased?: boolean
+    isLiked?: boolean
+    hidden?: boolean
+    educatorId?: number
+    educatorImage?: string
+  }
+}>()
+
+const emit = defineEmits<{
+  (e: 'view', setId: number): void
+}>()
+
 const imageLoadError = ref(false)
+const isLoadingStats = ref(false)
+const localViews = ref(0)
+const localLikes = ref(0)
+const localCards = ref(0)
 
-const goToSet = () => {
-  router.push({ path: '/study/' + props.set.id })
+const handleView = () => {
+  emit('view', props.set.id)
 }
 
-const tags = computed(() => props.set.tags || [])
-
-const priceDisplay = computed(() => {
-  if (!props.set?.price) return 'Free'
-  
-  switch (props.set.price.type) {
-    case 'free':
-      return 'Free'
-    case 'subscribers':
-      return 'Subscriber Only'
-    case 'premium':
-      return props.set.price.amount ? `$${props.set.price.amount.toFixed(2)}` : 'Free'
-    default:
-      return 'Free'
-  }
-})
-
-const priceClass = computed(() => {
-  if (!props.set?.price) return 'free'
-  
-  switch (props.set.price.type) {
-    case 'free':
-      return 'free'
-    case 'subscribers':
-      return 'subscriber'
-    case 'premium':
-      return 'paid'
-    default:
-      return 'free'
-  }
-})
-
-const fetchSetStats = async () => {
-  try {
-    const [viewsRes, likesRes, cardsRes] = await Promise.all([
-      api.get(`/sets/${props.set.id}/views`),
-      api.get(`/sets/${props.set.id}/likes`),
-      api.get(`/sets/${props.set.id}/cards`)
-    ])
-    viewCount.value = viewsRes.data.count || 0
-    likeCount.value = likesRes.data.count || 0
-    cardCount.value = cardsRes.data.count || 0
-  } catch (err) {
-    console.error('Error fetching set stats:', err)
-    viewCount.value = 0
-    likeCount.value = 0
-    cardCount.value = 0
-  }
-}
-
-function handleImageError() {
+const handleImageError = () => {
   imageLoadError.value = true
 }
 
-function handleImageLoad() {
-  imageLoadError.value = false
+const handleUserView = () => {
+  router.push(`/u/${props.set.educatorName}`)
 }
 
-// Reset error state when set changes
-watch(() => props.set?.thumbnail, () => {
-  imageLoadError.value = false
-})
+// Format number with K/M suffix for large numbers
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M'
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K'
+  }
+  return num.toString()
+}
+
+// Fetch stats for the set
+const fetchStats = async () => {
+  if (!props.set?.id) return
+
+  try {
+    isLoadingStats.value = true
+    console.log('[Stats] Fetching stats for set', props.set.id)
+    
+    const [viewsRes, likesRes, cardsRes] = await Promise.all([
+      cachedApiEndpoints.getBatchSetViews([props.set.id]),
+      cachedApiEndpoints.getBatchSetLikes([props.set.id]),
+      cachedApiEndpoints.getBatchSetCards([props.set.id])
+    ])
+    
+    console.log('[Stats] Raw responses for set', props.set.id, ':', {
+      views: viewsRes,
+      likes: likesRes,
+      cards: cardsRes
+    })
+
+    // Extract data from the message property
+    const viewsData = (viewsRes as { message?: Record<string, number> })?.message || {}
+    const likesData = (likesRes as { message?: Record<string, number> })?.message || {}
+    const cardsData = (cardsRes as { message?: Record<string, number> })?.message || {}
+    
+    console.log('[Stats] Extracted data for set', props.set.id, ':', {
+      viewsData,
+      likesData,
+      cardsData,
+      setId: props.set.id
+    })
+    
+    localViews.value = viewsData[props.set.id] || 0
+    localLikes.value = likesData[props.set.id] || 0
+    localCards.value = cardsData[props.set.id] || 0
+
+    console.log('[Stats] Final stats for set', props.set.id, ':', {
+      views: {
+        value: localViews.value,
+        raw: viewsData[props.set.id],
+        exists: props.set.id in viewsData
+      },
+      likes: {
+        value: localLikes.value,
+        raw: likesData[props.set.id],
+        exists: props.set.id in likesData
+      },
+      cards: {
+        value: localCards.value,
+        raw: cardsData[props.set.id],
+        exists: props.set.id in cardsData
+      }
+    })
+  } catch (error) {
+    console.error('[Stats] Error fetching stats for set', props.set.id, ':', error)
+  } finally {
+    isLoadingStats.value = false
+  }
+}
 
 // Fetch stats when component is mounted
 onMounted(() => {
-  if (props.set?.id) {
-    fetchSetStats();
-  }
-});
+  fetchStats()
+})
 
-// Watch for set ID changes
-watch(() => props.set?.id, (newId) => {
-  if (newId) {
-    fetchSetStats();
+// Computed properties for stats with proper fallbacks
+const views = computed(() => {
+  const value = localViews.value || (typeof props.set.views === 'number' ? props.set.views : 0)
+  console.log('[Stats] Computed views for set', props.set.id, ':', {
+    propValue: props.set.views,
+    localValue: localViews.value,
+    finalValue: value
+  })
+  return value
+})
+
+const likes = computed(() => {
+  const value = localLikes.value || (typeof props.set.likes === 'number' ? props.set.likes : 0)
+  console.log('[Stats] Computed likes for set', props.set.id, ':', {
+    propValue: props.set.likes,
+    localValue: localLikes.value,
+    finalValue: value
+  })
+  return value
+})
+
+const cards = computed(() => {
+  let value = localCards.value
+  if (!value) {
+    if (Array.isArray(props.set.cards)) {
+      value = props.set.cards.length
+    } else if (typeof props.set.cardsCount === 'number') {
+      value = props.set.cardsCount
+    }
   }
-});
+  console.log('[Stats] Computed cards for set', props.set.id, ':', {
+    isArray: Array.isArray(props.set.cards),
+    arrayLength: Array.isArray(props.set.cards) ? props.set.cards.length : null,
+    cardsCount: props.set.cardsCount,
+    localValue: localCards.value,
+    finalValue: value
+  })
+  return value
+})
 </script>
 
 <style scoped>
-.set-preview-card {
-  background: white;
-  border-radius: 1rem;
-  transition: all 0.2s ease;
-  overflow: hidden;
+.card {
+  @apply bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300;
+  min-height: 360px;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  border: 1px solid var(--color-subtle);
 }
 
-.card-image-container {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16/9;
-  overflow: hidden;
-  background: #f3f4f6;
-}
-
-.image-wrapper {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.card-image,
-.card-image-placeholder {
-  width: 100%;
-  height: 100%;
-  transition: transform 0.3s ease;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.card-image-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: gray;
-  color: white;
-  position: relative;
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  flex: 1;
-  text-align: left;
-}
-
-.card-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  text-align: left;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1.4;
-  color: #1a1a1a;
-  margin: 0;
-  width: 100%;
-  text-align: left;
-}
-
-.card-title a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.card-title a:hover {
-  color: #2563eb;
-}
-
-.card-description {
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: #4b5563;
-  margin: 0;
-  width: 100%;
+.line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  text-align: left;
 }
 
-.card-stats {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-top: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.stat-group {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-  white-space: nowrap;
-}
-
-.stat i {
-  font-size: 0.875rem;
-  color: #9ca3af;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-  gap: 1rem;
-}
-
-.price-tag {
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-.price-tag.free {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.price-tag.subscriber {
-  background: #f3e8ff;
-  color: #6b21a8;
-}
-
-.price-tag.paid {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.tags-list {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: flex-start;
-}
-
-.card-actions {
-  padding: 1.5rem;
-  padding-top: 0;
-}
-
-.button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.button-icon {
-  transition: transform 0.2s ease;
-}
-
-.button:hover .button-icon {
-  transform: translateX(2px);
-}
-
-.category-badge {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  z-index: 10;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  backdrop-filter: blur(4px);
-  transition: background-color 0.2s ease;
-}
-
-.category-badge:hover {
-  background: rgba(0, 0, 0, 0.8);
+/* Remove default margin from h3 */
+h3 {
+  margin: 0;
 }
 </style>

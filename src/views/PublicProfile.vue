@@ -6,8 +6,13 @@
     <div v-else-if="educator" class="w-full max-w-6xl">
       <!-- Educator Info Section -->
       <div class="flex items-center gap-6 mb-12">
-        <div class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-          <img v-if="educator.image" :src="educator.image" alt="avatar" class="w-24 h-24 mb-2 rounded-full" />
+        <div class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+          <img 
+            v-if="educator.image" 
+            :src="educator.image" 
+            :alt="educator.name" 
+            class="w-full h-full object-cover"
+          />
           <i v-else class="fa-solid fa-user text-4xl text-gray-400"></i>
         </div>
         <div>
@@ -20,7 +25,10 @@
       <!-- Sets Grid -->
       <div class="mb-8">
         <h2 class="text-2xl font-semibold mb-6">Flash Card Sets</h2>
-        <div v-if="sets && sets.length === 0" class="text-gray-500">
+        <div v-if="loading" class="flex justify-center py-8">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+        <div v-else-if="sets && sets.length === 0" class="text-gray-500">
           This educator hasn't created any sets yet.
         </div>
         <div v-else-if="sets && sets.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -33,6 +41,7 @@
         </div>
       </div>
     </div>
+    <div v-else class="text-red-500">Educator not found</div>
   </div>
 </template>
 
@@ -60,7 +69,24 @@ const totalPages = ref(1)
 const fetchEducator = async () => {
   try {
     const res = await api.get(`/users?name=${targetEducatorName}`)
-    educator.value = Array.isArray(res.data) ? res.data[0] : res.data
+    const userData = Array.isArray(res.data) ? res.data[0] : res.data
+    
+    if (!userData) {
+      error.value = 'Educator not found'
+      return
+    }
+
+    educator.value = {
+      id: userData.id,
+      name: userData.name,
+      email: userData.email,
+      image: userData.image,
+      bio: userData.bio,
+      created_at: userData.created_at,
+      updated_at: userData.updated_at,
+      role: userData.role || { id: 1, name: 'user' }
+    }
+
     if (educator.value && educator.value.id) {
       await fetchSets()
     } else {
@@ -68,6 +94,7 @@ const fetchEducator = async () => {
     }
   } catch (err) {
     console.error('Error fetching educator:', err)
+    error.value = 'Failed to load educator profile'
     educator.value = null
     sets.value = []
   }
@@ -75,19 +102,53 @@ const fetchEducator = async () => {
 
 const fetchSets = async () => {
   try {
+    loading.value = true
     const res = await api.get(`/sets`, {
       params: {
         educator_id: educator.value?.id,
-        page: currentPage.value.toString(),
-        limit: pageSize.value.toString()
+        page: currentPage.value,
+        limit: pageSize.value
       }
     })
-    console.log('API /sets response:', res.data);
-    sets.value = Array.isArray(res.data.items) ? res.data.items : []
+
+    if (!res.data || !res.data.items) {
+      sets.value = []
+      return
+    }
+
+    const items = Array.isArray(res.data.items) ? res.data.items : []
+    sets.value = items.map((set: any) => ({
+      id: set.id,
+      title: set.title,
+      description: set.description,
+      image: set.thumbnailUrl || set.image,
+      thumbnail: set.thumbnailUrl || set.image,
+      educatorName: educator.value?.name || '',
+      price: set.price || { type: 'free' },
+      category: set.category,
+      tags: set.tags || [],
+      createdAt: set.createdAt,
+      updatedAt: set.updatedAt,
+      cardsCount: set.cards?.length || 0,
+      type: set.type || 'public',
+      isPublic: true,
+      isPurchased: false,
+      isLiked: false,
+      hidden: false,
+      views: set.views || 0,
+      likes: set.likes || 0,
+      educatorId: educator.value?.id,
+      educatorImage: educator.value?.image,
+      cards: undefined
+    }))
+
     totalPages.value = res.data.pagination?.totalPages || 1
   } catch (err) {
     console.error('Error fetching sets:', err)
+    error.value = 'Failed to load sets'
     sets.value = []
+  } finally {
+    loading.value = false
   }
 }
 
@@ -97,6 +158,7 @@ const viewSet = (setId: number) => {
 
 onMounted(async () => {
   loading.value = true
+  error.value = ''
   await fetchEducator()
   loading.value = false
 })

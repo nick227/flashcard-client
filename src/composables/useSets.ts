@@ -1,180 +1,294 @@
-import { ref, type Ref } from 'vue'
-import type { FlashCardSet } from '@/types'
-import { api, fetchCategories } from '@/api/index'
+import { ref, computed, reactive, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { cachedApi } from '@/services/CachedApiService'
+import type { Set } from '@/types/set'
+import type { Category } from '@/types/category'
+import axios from 'axios'
+import debounce from 'lodash/debounce'
 
-interface Category {
-  id: number
-  name: string
-  setCount: number
+interface FetchState<T> {
+  data: T | null
+  loading: boolean
+  error: string | null
+  isInitialized: boolean
 }
 
-interface UseSetsOptions {
-  initialCategory?: string
-  initialSortOrder?: string
-  initialSetType?: string
-  pageSize?: number
-  autoLoad?: boolean
-}
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const DEBOUNCE_DELAY = 300 // ms
 
-interface UseSetsReturn {
-  sets: Ref<FlashCardSet[]>
-  loading: Ref<boolean>
-  selectedCategory: Ref<string>
-  sortOrder: Ref<string>
-  categories: Ref<Category[]>
-  hasMore: Ref<boolean>
-  error: Ref<string | null>
-  selectedSetType: Ref<string>
-  searchQuery: Ref<string>
-  loadSets: (reset?: boolean) => Promise<void>
-  resetPagination: () => void
-  updateCategory: (category: string) => void
-  updateSortOrder: (order: string) => void
-  updateSetType: (type: string) => void
-  updateSearch: (query: string) => void
-}
+export function useSets() {
+  const route = useRoute()
+  const state = reactive<FetchState<Set[]>>({
+    data: null,
+    loading: false,
+    error: null,
+    isInitialized: false
+  })
 
-export function useSets(options: UseSetsOptions = {}): UseSetsReturn {
-  const {
-    initialCategory = '',
-    initialSortOrder = 'newest',
-    initialSetType = '',
-    pageSize = 9,
-    autoLoad = true
-  } = options
-
-  const sets = ref<FlashCardSet[]>([])
-  const loading = ref(false)
-  const selectedCategory = ref(initialCategory)
-  const sortOrder = ref(initialSortOrder)
-  const categories = ref<Category[]>([])
   const currentPage = ref(1)
+  const categories = ref<Category[]>([])
   const hasMore = ref(true)
-  const error = ref<string | null>(null)
-  const selectedSetType = ref(initialSetType)
+  const selectedCategory = ref('')
+  const sortOrder = ref('featured')
   const searchQuery = ref('')
-  const debounceTimeout = ref<number | null>(null)
+  const selectedSetType = ref('')
+  const isTransitioning = ref(false)
 
-  const resetPagination = () => {
-    sets.value = []
-    currentPage.value = 1
-    hasMore.value = true
-    error.value = null
-    loadSets()
-  }
+  // Debounced load function to prevent rapid API calls
+  const debouncedLoad = debounce(async (forceRefresh = false) => {
+    await loadSets(forceRefresh)
+  }, DEBOUNCE_DELAY)
 
-  const loadSets = async (reset = false) => {
-    if (loading.value) return
-
+  // Helper function to make batch requests
+  const makeBatchRequests = async (batchIds: number[], type: 'views' | 'likes' | 'cards') => {
+    const batchKey = batchIds.join(',')
+    
     try {
-      loading.value = true
-      error.value = null
-
-      if (reset) {
-        sets.value = []
-        currentPage.value = 1
-        hasMore.value = true
-      }
-
-      const params = new URLSearchParams({
-        page: currentPage.value.toString(),
-        limit: pageSize.toString(),
-        sortOrder: sortOrder.value
+      const response = await cachedApi.get<Record<string, number>>(`/sets/batch/${type}`, { ids: batchKey }, {
+        ttl: CACHE_TTL
       })
-
-      if (selectedCategory.value) {
-        params.append('category', selectedCategory.value)
-      }
-
-      if (selectedSetType.value) {
-        params.append('setType', selectedSetType.value)
-      }
-
-      if (searchQuery.value.trim()) {
-        params.append('search', searchQuery.value.trim())
-      }
-
-      const setsRes = await api.get(`/sets?${params.toString()}`)
-      const { items } = setsRes.data
-
-      if (reset) {
-        sets.value = items
-      } else {
-        sets.value = [...sets.value, ...items]
-      }
-
-      hasMore.value = items.length === pageSize
-      
-      if (items.length > 0) {
-        currentPage.value++
-      }
-
-      if (categories.value.length === 0) {
-        const categoriesRes = await fetchCategories(true)
-        categories.value = categoriesRes.map(cat => ({
-          id: cat.id,
-          name: cat.name,
-          setCount: cat.setCount || 0
-        }))
-      }
-    } catch (err: any) {
-      error.value = err.message || 'Error loading sets'
-      console.error('Error loading sets:', err)
-      if (reset) {
-        sets.value = []
-      }
-    } finally {
-      loading.value = false
+      return response
+    } catch (error) {
+      console.error(`[Stats] Error fetching batch ${type}:`, error)
+      throw error
     }
   }
 
+  // Fetch additional set details in batches
+  const fetchSetDetails = async (sets: Set[]) => {
+    const batchIds = sets.map(set => set.id)
+    
+    try {
+      const [viewsData, likesData, cardsData] = await Promise.all([
+        makeBatchRequests(batchIds, 'views'),
+        makeBatchRequests(batchIds, 'likes'),
+        makeBatchRequests(batchIds, 'cards')
+      ])
+
+      return sets.map(set => ({
+        ...set,
+        views: viewsData?.[set.id] || 0,
+        likes: likesData?.[set.id] || 0,
+        cardsCount: cardsData?.[set.id] || 0
+      }))
+    } catch (error) {
+      console.error('[Stats] Error fetching set details:', error)
+      return sets.map(set => ({
+        ...set,
+        views: 0,
+        likes: 0,
+        cardsCount: 0
+      }))
+    }
+  }
+
+  // Prefetch next page details
+  const prefetchNextPageDetails = async () => {
+    if (!hasMore.value || !state.data) return
+
+    const nextPageSets = state.data.slice(
+      currentPage.value * 12,
+      (currentPage.value + 1) * 12
+    )
+
+    if (nextPageSets.length === 0) return
+
+    const batchIds = nextPageSets.map(set => set.id)
+    
+    try {
+      await Promise.all([
+        makeBatchRequests(batchIds, 'views'),
+        makeBatchRequests(batchIds, 'likes'),
+        makeBatchRequests(batchIds, 'cards')
+      ])
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        console.log('[Stats] Batch request cancelled')
+      } else {
+        console.warn('[Stats] Error prefetching next page details:', error)
+      }
+    }
+  }
+
+  // Fetch categories with caching
+  const fetchCategories = async () => {
+    try {
+      const response = await cachedApi.get<Category[]>('/categories', { inUse: 'true' }, {
+        ttl: CACHE_TTL,
+        key: 'categories:inUse',
+        forceRefresh: false
+      })
+      
+      if (Array.isArray(response)) {
+        const processedCategories = response.map(cat => ({
+          ...cat,
+          setCount: cat.setCount || 0
+        })).filter(cat => cat.setCount > 0)
+        categories.value = processedCategories
+      } else {
+        categories.value = []
+      }
+    } catch (e) {
+      console.error('[Stats] Error fetching categories:', e)
+      categories.value = []
+    }
+  }
+
+  // Fetch sets with caching
+  const loadSets = async (forceRefresh = false) => {
+    if (state.loading) return
+    state.loading = true
+    state.error = null
+    isTransitioning.value = true
+
+    try {
+      const params = {
+        page: currentPage.value,
+        limit: 12,
+        category: selectedCategory.value || undefined,
+        search: searchQuery.value || undefined,
+        setType: selectedSetType.value || undefined,
+        sortOrder: sortOrder.value || 'featured'
+      }
+      
+      const cacheKey = `sets:${JSON.stringify({
+        ...params,
+        page: currentPage.value
+      })}`
+      
+      const response = await cachedApi.get<{ items: Set[], pagination: { total: number, hasMore: boolean } }>('/sets', params, {
+        ttl: CACHE_TTL,
+        forceRefresh,
+        key: cacheKey
+      })
+
+      if (!response || !Array.isArray(response.items)) {
+        state.data = currentPage.value === 1 ? [] : state.data
+        hasMore.value = false
+        return
+      }
+
+      const setsData = response.items
+
+      if (setsData.length === 0) {
+        state.data = currentPage.value === 1 ? [] : state.data
+        hasMore.value = false
+        return
+      }
+
+      const newSets = await fetchSetDetails(setsData)
+      
+      if (currentPage.value === 1) {
+        state.data = newSets
+      } else {
+        state.data = [...(state.data || []), ...newSets]
+      }
+
+      const total = response.pagination?.total || 0
+      const totalPages = Math.ceil(total / params.limit)
+      hasMore.value = currentPage.value < totalPages
+      
+      if (hasMore.value && setsData.length > 0) {
+        currentPage.value++
+      }
+
+      // Prefetch next page details if available
+      if (hasMore.value) {
+        prefetchNextPageDetails()
+      }
+    } catch (e) {
+      console.error('[Stats] Error fetching sets:', e)
+      state.error = e instanceof Error ? e.message : 'Failed to fetch sets'
+      if (currentPage.value === 1) {
+        state.data = []
+      }
+      hasMore.value = false
+    } finally {
+      state.loading = false
+      // Add a small delay before ending transition to allow animations to complete
+      setTimeout(() => {
+        isTransitioning.value = false
+      }, 300)
+    }
+  }
+
+  // Watch for route changes to trigger prefetching
+  watch(
+    () => route.query,
+    () => {
+      if (state.isInitialized) {
+        currentPage.value = 1
+        state.data = []
+        hasMore.value = true
+        debouncedLoad(true)
+      }
+    }
+  )
+
+  // Initialize sets data
+  const initialize = async () => {
+    if (state.isInitialized) return
+    try {
+      await Promise.all([
+        loadSets(),
+        fetchCategories()
+      ])
+      state.isInitialized = true
+    } catch (e) {
+      console.error('Error initializing sets data:', e)
+      state.error = e instanceof Error ? e.message : 'Failed to initialize sets data'
+    }
+  }
+
+  // Update functions with transition handling
   const updateCategory = (category: string) => {
     selectedCategory.value = category
-    loadSets(true)
+    currentPage.value = 1
+    state.data = []
+    hasMore.value = true
+    debouncedLoad(true)
   }
 
   const updateSortOrder = (order: string) => {
     sortOrder.value = order
-    loadSets(true)
+    currentPage.value = 1
+    state.data = []
+    hasMore.value = true
+    debouncedLoad(true)
   }
 
   const updateSetType = (type: string) => {
     selectedSetType.value = type
-    loadSets(true)
+    currentPage.value = 1
+    state.data = []
+    hasMore.value = true
+    debouncedLoad(true)
   }
 
   const updateSearch = (query: string) => {
     searchQuery.value = query
-    if (debounceTimeout.value) {
-      clearTimeout(debounceTimeout.value)
-    }
-    
-    if (!query.trim()) {
-      loadSets(true)
-      return
-    }
-    
-    debounceTimeout.value = window.setTimeout(() => {
-      loadSets(true)
-    }, 300)
-  }
-
-  if (autoLoad) {
-    loadSets()
+    currentPage.value = 1
+    state.data = []
+    hasMore.value = true
+    debouncedLoad(true)
   }
 
   return {
-    sets,
-    loading,
+    state,
+    sets: computed(() => state.data),
+    loading: computed(() => state.loading),
+    error: computed(() => state.error),
+    currentPage,
     selectedCategory,
     sortOrder,
+    searchQuery,
+    selectedSetType,
     categories,
     hasMore,
-    error,
-    selectedSetType,
-    searchQuery,
+    isTransitioning,
     loadSets,
-    resetPagination,
+    fetchCategories,
+    initialize,
     updateCategory,
     updateSortOrder,
     updateSetType,

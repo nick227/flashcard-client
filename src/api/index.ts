@@ -1,6 +1,7 @@
 // API layer placeholder
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
+import { cacheService } from '@/services/cache'
 
 // Ensure we have a valid API URL
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -33,42 +34,67 @@ export const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
+  withCredentials: true, // Add this to handle CORS credentials
   validateStatus: (status) => status >= 200 && status < 300
 });
 
 // Add request interceptor to automatically add auth token
 api.interceptors.request.use(
-  (config) => {
-    const auth = useAuthStore();
-    if (auth.jwt) {
-      config.headers.Authorization = `Bearer ${auth.jwt}`;
+  async (config) => {
+    if (!config) {
+      console.error('[API] Request interceptor received undefined config')
+      return Promise.reject(new Error('Invalid request configuration'))
     }
-    return config;
+
+    const auth = useAuthStore()
+    if (auth.jwt) {
+      config.headers.Authorization = `Bearer ${auth.jwt}`
+    }
+
+    return config
   },
   (error) => {
-    console.error('API Request Error:', error);
-    return Promise.reject(error);
+    console.error('[API] Request Error:', error)
+    return Promise.reject(error)
   }
-);
+)
 
-// Add response interceptor to handle 401 errors
+// Add response interceptor to handle auth errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`[API] Response: ${response.config.url}`)
+    return response
+  },
   (error) => {
+    // Handle auth errors
     if (error.response?.status === 401) {
-      const auth = useAuthStore();
-      auth.logout();
-      auth.setMessage('Session expired. Please log in again.');
-      window.location.href = '/login';
+      const auth = useAuthStore()
+      auth.logout()
+      auth.setMessage('Session expired. Please log in again.')
+      window.location.href = '/login'
+      return Promise.reject(error)
     }
-    return Promise.reject(error);
+
+    // Handle 404 errors gracefully
+    if (error.response?.status === 404) {
+      console.warn(`[API] Resource not found: ${error.config?.url}`)
+      // Return empty data for 404s instead of throwing
+      return { data: null, status: 200, statusText: 'OK' }
+    }
+
+    // Handle undefined config
+    if (!error.config) {
+      console.error('[API] Request error with undefined config:', error)
+      return Promise.reject(new Error('Invalid request configuration'))
+    }
+
+    return Promise.reject(error)
   }
-);
+)
 
 /**
  * Creates a new set and its cards in the backend.
  * @param formData - The form data containing the set and cards
- * @param onProgress - Optional progress callback
  * @returns The created set and cards
  */
 export async function createSetWithCards(formData: FormData) {
@@ -82,6 +108,8 @@ export async function createSetWithCards(formData: FormData) {
       validateStatus: (status) => status >= 200 && status < 300
     });
 
+    // Invalidate sets cache after creation
+    cacheService.deleteByPrefix('sets:');
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -123,6 +151,8 @@ export async function updateSetWithCards(setId: number, formData: FormData) {
       validateStatus: (status) => status >= 200 && status < 300
     });
 
+    // Invalidate sets cache after update
+    cacheService.deleteByPrefix('sets:');
     console.log('Frontend: Update response:', response.data);
     return response.data;
   } catch (error) {
@@ -165,8 +195,8 @@ export async function fetchCategories(inUseOnly: boolean = false): Promise<{ id:
  * Fetch unique tags from sets (if sets have tags array), else fallback to static tags.
  */
 export async function fetchAvailableTags() {
-  const res = await api.get('/tags')
-  return res.data.map((tag: { id: number, name: string }) => tag.name)
+  const res = await api.get('/tags');
+  return res.data.map((tag: { id: number, name: string }) => tag.name);
 }
 
 /**
@@ -175,14 +205,19 @@ export async function fetchAvailableTags() {
  */
 export async function fetchTags() {
   const res = await api.get('/tags');
-  return res.data; // Expecting [{ id, name }, ...]
+  return res.data;
 }
 
 export async function assignTagsToSet(setId: number, tags: string[]) {
-  return api.post('/set_tags', { setId, tags });
+  const response = await api.post('/set_tags', { setId, tags });
+  // Invalidate tags cache after modification
+  cacheService.deleteByPrefix('tags:');
+  return response;
 }
 
 export async function removeTagFromSet(setId: number, tagName: string) {
-  return api.post(`/sets/${setId}/remove-tag`, { setId, tagName });
-} 
-
+  const response = await api.post(`/sets/${setId}/remove-tag`, { setId, tagName });
+  // Invalidate tags cache after modification
+  cacheService.deleteByPrefix('tags:');
+  return response;
+}

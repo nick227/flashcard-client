@@ -24,16 +24,25 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAuthenticated: (state) => !!state.user,
     isAdmin: (state) => state.user?.role === 'admin',
-    isEducator: (state) => state.user?.role === 'educator'
+    isEducator: (state) => {
+      console.log('Checking educator role:', state.user?.role)
+      return state.user?.role === 'educator'
+    }
   },
 
   actions: {
     setUser(user: User | null) {
+      console.log('Setting user:', user)
       this.user = user
     },
 
     setJwt(jwt: string | null) {
       this.jwt = jwt
+      if (jwt) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${jwt}`
+      } else {
+        delete api.defaults.headers.common['Authorization']
+      }
     },
 
     setRefreshToken(refreshToken: string | null) {
@@ -47,12 +56,14 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials: { email: string; password: string }) {
       try {
         const res = await api.post('/auth/login', credentials)
+        console.log('Login response:', res.data)
         this.setUser(res.data.user)
         this.setJwt(res.data.token)
         this.setRefreshToken(res.data.refreshToken)
         this.setMessage('')
         return res.data
       } catch (error) {
+        console.error('Login error:', error)
         this.error = 'Login failed. Please check your credentials.'
         throw error
       }
@@ -61,17 +72,20 @@ export const useAuthStore = defineStore('auth', {
     async register(userData: { name: string; email: string; password: string }) {
       try {
         const res = await api.post('/auth/register', userData)
+        console.log('Register response:', res.data)
         this.setUser(res.data.user)
         this.setJwt(res.data.token)
         this.setRefreshToken(res.data.refreshToken)
         return res.data
       } catch (error) {
+        console.error('Register error:', error)
         this.error = 'Registration failed. Please try again.'
         throw error
       }
     },
 
     logout() {
+      console.log('Logging out user')
       this.setUser(null)
       this.setJwt(null)
       this.setRefreshToken(null)
@@ -92,6 +106,17 @@ export const useAuthStore = defineStore('auth', {
       } catch (e) {
         console.error('AuthStore: /users/me failed', e)
         this.logout()
+      }
+    },
+
+    async updateRole(role: 'user' | 'educator' | 'admin') {
+      try {
+        const res = await api.patch('/users/role', { role })
+        this.setUser(res.data)
+        return res.data
+      } catch (error) {
+        console.error('Error updating role:', error)
+        throw error
       }
     }
   },

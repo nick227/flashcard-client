@@ -29,7 +29,7 @@
                 <div class="footer-latest">
                     <h3>Flash Cards</h3>
                     <div class="latest-sets">
-                        <a v-for="set in sets" 
+                        <a v-for="set in latestSets" 
                            :key="set.id" 
                            :href="'/sets/' + set.id" 
                            class="latest-set-item">
@@ -126,9 +126,17 @@ import { useCategories } from '@/composables/useCategories'
 import { useSets } from '@/composables/useSets'
 import StatsSection from './StatsSection.vue'
 import NewsletterSubscribe from './NewsletterSubscribe.vue'
+import { onMounted, computed } from 'vue'
 
 const { categories } = useCategories()
-const { sets } = useSets({ pageSize: 5, initialSortOrder: 'newest' })
+const { sets, initialize } = useSets()
+
+// Get latest 5 sets
+const latestSets = computed(() => sets.value?.slice(0, 5) || [])
+
+onMounted(async () => {
+  await initialize()
+})
 
 const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {

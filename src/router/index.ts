@@ -1,69 +1,129 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import Home from '../views/Home.vue'
-import Study from '../views/Study.vue'
-import BrowseSets from '../views/BrowseSets.vue'
-import LoginRegister from '../views/LoginRegister.vue'
 import { useAuthStore } from '@/stores/auth'
-import About from '../views/About.vue'
-import Privacy from '../views/Privacy.vue'
-import Terms from '../views/Terms.vue'
+
+// Lazy load components
+const Home = () => import('../views/Home.vue')
+const Study = () => import('../views/Study.vue')
+const BrowseSets = () => import('../views/BrowseSets.vue')
+const LoginRegister = () => import('../views/LoginRegister.vue')
+const About = () => import('../views/About.vue')
+const Privacy = () => import('../views/Privacy.vue')
+const Terms = () => import('../views/Terms.vue')
+const NotFound = () => import('../views/NotFound.vue')
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', component: Home },
-  { path: '/study', component: Study },
-  { path: '/study/:setId', component: Study },
+  { 
+    path: '/', 
+    component: Home,
+    meta: { 
+      title: 'Home'
+    }
+  },
+  { 
+    path: '/study', 
+    component: Study,
+    meta: { 
+      title: 'Study'
+    }
+  },
+  { 
+    path: '/study/:setId', 
+    component: Study,
+    props: true,
+    meta: { 
+      title: 'Study Set'
+    }
+  },
   { 
     path: '/sets/:setId',
     name: 'SetView',
     component: () => import('@/views/SetView.vue'),
-    props: true
+    props: true,
+    meta: { 
+      title: 'Set Details'
+    }
   },
   { 
     path: '/browse',
     component: BrowseSets,
+    meta: { 
+      title: 'Browse Sets'
+    },
     children: [
-      { path: '', component: BrowseSets },
-      { path: ':category', component: BrowseSets }
+      { 
+        path: '', 
+        component: BrowseSets
+      },
+      { 
+        path: ':category', 
+        component: BrowseSets,
+        props: true
+      }
     ]
   },
-  { path: '/login', component: LoginRegister },
+  { 
+    path: '/login', 
+    component: LoginRegister,
+    meta: { 
+      title: 'Login / Register',
+      guest: true
+    }
+  },
   {
     path: '/creator',
     name: 'CreatorDashboard',
     component: () => import('@/views/creator/CreatorDashboard.vue'),
-    meta: { requiresAuth: true, requiresRole: 'educator' }
+    meta: { 
+      requiresAuth: true,
+      title: 'Creator Dashboard'
+    }
   },
   {
     path: '/creator/wizard/:setId?',
     name: 'SetWizard',
     component: () => import('@/views/creator/SetWizard.vue'),
-    meta: { requiresAuth: true, requiresRole: 'educator' }
+    props: true,
+    meta: { 
+      requiresAuth: true, 
+      title: 'Set Wizard'
+    }
   },
   {
     path: '/create',
     name: 'CreateSet',
     component: () => import('@/views/creator/SetWizard.vue'),
-    meta: { requiresAuth: true, requiresRole: 'educator' }
+    meta: { 
+      requiresAuth: true, 
+      title: 'Create Set'
+    }
   },
   {
     path: '/profile',
     name: 'UserProfile',
     component: () => import('@/views/UserProfile.vue'),
-    meta: { requiresAuth: true }
+    meta: { 
+      requiresAuth: true,
+      title: 'Profile'
+    }
   },
   {
     path: '/u/:userName',
     name: 'PublicProfile',
     component: () => import('@/views/PublicProfile.vue'),
-    meta: { requiresAuth: false }
+    props: true,
+    meta: { 
+      requiresAuth: false,
+      title: 'Public Profile'
+    }
   },
   {
     path: '/purchase-success',
     name: 'PurchaseSuccess',
     component: () => import('../views/PurchaseSuccess.vue'),
     meta: {
-      requiresAuth: true
+      requiresAuth: true,
+      title: 'Purchase Successful'
     }
   },
   {
@@ -71,7 +131,8 @@ const routes: RouteRecordRaw[] = [
     name: 'About',
     component: About,
     meta: {
-      requiresAuth: true
+      requiresAuth: false,
+      title: 'About'
     }
   },
   {
@@ -79,7 +140,8 @@ const routes: RouteRecordRaw[] = [
     name: 'Privacy',
     component: Privacy,
     meta: {
-      requiresAuth: true
+      requiresAuth: false,
+      title: 'Privacy Policy'
     }
   },
   {
@@ -87,7 +149,16 @@ const routes: RouteRecordRaw[] = [
     name: 'Terms',
     component: Terms,
     meta: {
-      requiresAuth: true
+      requiresAuth: false,
+      title: 'Terms of Service'
+    }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: NotFound,
+    meta: {
+      title: 'Page Not Found'
     }
   }
 ]
@@ -95,23 +166,65 @@ const routes: RouteRecordRaw[] = [
 export const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior() {
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
     return { top: 0 }
-  },
+  }
 })
 
-router.beforeEach(async (to, _from, next) => {
+// Navigation guards
+router.beforeEach(async (_to, _from, next) => {
   const auth = useAuthStore()
+  
+  console.log('Navigation guard - Route:', _to.path)
+  console.log('Navigation guard - Auth state:', {
+    isAuthenticated: auth.isAuthenticated,
+    isEducator: auth.isEducator,
+    user: auth.user
+  })
+  
+  // Update page title
+  document.title = `${_to.meta.title} | Flashcard Academy` || 'Flashcard Academy'
+  
+  // Handle authentication
   if (auth.jwt && !auth.user) {
-    await auth.fetchUser()
+    console.log('JWT exists but no user, fetching user...')
+    try {
+      await auth.fetchUser()
+      console.log('User fetched:', auth.user)
+    } catch (error) {
+      console.error('Failed to fetch user:', error)
+      auth.logout()
+      auth.setMessage('Session expired. Please log in again.')
+      return next('/login')
+    }
   }
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+
+  // Guest routes
+  if (_to.meta.guest && auth.isAuthenticated) {
+    console.log('Guest route accessed while authenticated, redirecting to home')
+    return next('/')
+  }
+
+  // Auth required routes
+  if (_to.meta.requiresAuth && !auth.isAuthenticated) {
+    console.log('Auth required route accessed without auth, redirecting to login')
     auth.setMessage('Please log in to access this page.')
     return next('/login')
   }
-  if (to.meta.requiresOwnership && auth.user?.id !== Number(to.params.id)) {
-    auth.setMessage('You can only access your own data.')
-    return next('/unauthorized')
+
+  // Role required routes
+  if (_to.meta.requiresRole && !auth.isEducator) {
+    console.log('Role required route accessed without proper role:', {
+      requiredRole: _to.meta.requiresRole,
+      userRole: auth.user?.role
+    })
+    auth.setMessage('You need to be an educator to access this page.')
+    return next('/')
   }
+
+  console.log('Navigation guard - Proceeding to route')
   next()
 })
