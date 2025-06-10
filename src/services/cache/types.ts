@@ -81,12 +81,12 @@ declare global {
 }
 
 export interface CacheService {
-  get<T>(key: string): T | null
-  set<T>(key: string, data: T, ttl?: number): void
+  get<T>(key: string): Promise<T | null>
+  set<T>(key: string, data: T, ttl?: number): Promise<void>
   getOrSet<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<T>
-  delete(key: string): void
-  deleteByPrefix(prefix: string): void
-  clear(): void
+  delete(key: string): Promise<void>
+  deleteByPrefix(prefix: string): Promise<void>
+  clear(): Promise<void>
   getStats(): CacheStats
   setLogging(enabled: boolean): void
   stopCleanupInterval(): void

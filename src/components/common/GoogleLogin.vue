@@ -42,10 +42,10 @@ type GoogleUser = {
 
 function setUser(userObj: any, token: string) {
   console.log('Setting user data:', { userObj, token })
+  auth.user = userObj
   auth.jwt = token
   localStorage.setItem('jwt', token)
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-  auth.user = userObj
   localStorage.setItem('user', JSON.stringify(userObj))
   console.log('User data set successfully')
 }

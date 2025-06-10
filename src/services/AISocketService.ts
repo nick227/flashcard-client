@@ -85,6 +85,12 @@ class AISocketService {
             return
         }
 
+        // Update auth checks to use isAuthenticated
+        if (!auth.isAuthenticated) {
+            console.warn('Socket connection attempted without auth')
+            return
+        }
+
         console.log('Initializing socket connection:', {
             baseUrl,
             isDev,

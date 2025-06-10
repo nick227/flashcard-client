@@ -7,9 +7,16 @@ import { VitePWA } from 'vite-plugin-pwa';
 // https://vite.dev/config/
 export default defineConfig(function (_a) {
     var mode = _a.mode;
-    return ({
+    var port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+    return {
         plugins: [
-            vue(),
+            vue({
+                template: {
+                    compilerOptions: {
+                        isCustomElement: function (tag) { return tag.includes('-'); }
+                    }
+                }
+            }),
             // Gzip and Brotli compression for production builds
             viteCompression({
                 algorithm: 'gzip',
@@ -67,46 +74,14 @@ export default defineConfig(function (_a) {
                                 },
                                 cacheableResponse: {
                                     statuses: [0, 200]
-                                },
-                                backgroundSync: {
-                                    name: 'api-queue',
-                                    options: {
-                                        maxRetentionTime: 24 * 60 * 60
-                                    }
-                                },
-                                matchOptions: {
-                                    ignoreSearch: true
-                                }
-                            }
-                        },
-                        {
-                            urlPattern: /\.(?:png|jpg|jpeg|svg|gif)$/,
-                            handler: 'CacheFirst',
-                            options: {
-                                cacheName: 'images',
-                                expiration: {
-                                    maxEntries: 60,
-                                    maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
-                                }
-                            }
-                        },
-                        {
-                            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-                            handler: 'CacheFirst',
-                            options: {
-                                cacheName: 'google-fonts-cache',
-                                expiration: {
-                                    maxEntries: 10,
-                                    maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-                                },
-                                cacheableResponse: {
-                                    statuses: [0, 200]
                                 }
                             }
                         }
-                    ],
-                    cleanupOutdatedCaches: true,
-                    sourcemap: false
+                    ]
+                },
+                devOptions: {
+                    enabled: true,
+                    type: 'module'
                 }
             }),
             // Bundle visualizer (only in development)
@@ -119,44 +94,21 @@ export default defineConfig(function (_a) {
         ].filter(Boolean),
         resolve: {
             alias: {
-                '@': path.resolve(__dirname, './src')
-            }
+                '@': path.resolve(__dirname, './src'),
+                'vue': path.resolve(__dirname, 'node_modules/vue/dist/vue.esm-bundler.js')
+            },
+            dedupe: ['vue']
         },
         build: {
             rollupOptions: {
                 output: {
-                    manualChunks: function (id) {
-                        // Core framework
-                        if (id.includes('node_modules/vue') ||
-                            id.includes('node_modules/vue-router') ||
-                            id.includes('node_modules/pinia')) {
-                            return 'vue-core';
-                        }
-                        // UI components
-                        if (id.includes('node_modules/@headlessui/vue') ||
-                            id.includes('node_modules/@heroicons/vue')) {
-                            return 'ui-components';
-                        }
-                        // Data handling
-                        if (id.includes('node_modules/axios') ||
-                            id.includes('node_modules/lodash')) {
-                            return 'data-layer';
-                        }
-                        // Feature-based chunks
-                        if (id.includes('/src/components/')) {
-                            return 'components';
-                        }
-                        if (id.includes('/src/views/')) {
-                            return 'views';
-                        }
-                        if (id.includes('/src/stores/')) {
-                            return 'stores';
-                        }
-                        if (id.includes('/src/composables/')) {
-                            return 'composables';
-                        }
+                    // Optimized chunk strategy
+                    manualChunks: {
+                        'critical': ['./src/style.css', './src/App.vue'],
+                        'vue-vendor': ['vue', 'vue-router', 'pinia'],
+                        'utils-vendor': ['axios', 'lodash']
                     },
-                    // CSS code splitting
+                    // Vercel-specific asset handling
                     assetFileNames: function (assetInfo) {
                         var info = assetInfo.name;
                         if (info && info.endsWith('.css')) {
@@ -172,110 +124,77 @@ export default defineConfig(function (_a) {
                     }
                 }
             },
+            // Vercel-specific build settings
             chunkSizeWarningLimit: 1000,
-            // Disable source maps in production for security
-            sourcemap: mode !== 'production',
-            // Modern browser target
+            sourcemap: mode !== 'production', // Disable sourcemaps in production for Vercel
             target: 'es2015',
-            // Minification options
             minify: 'terser',
             terserOptions: {
                 compress: {
                     drop_console: mode === 'production',
                     drop_debugger: mode === 'production',
                     pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
-                    passes: 3,
-                    dead_code: true,
-                    unsafe: false,
-                    unsafe_math: false,
-                    unsafe_proto: false,
-                    unsafe_regexp: false,
-                    unsafe_undefined: false,
-                    unused: true,
-                    toplevel: true,
-                    keep_fnames: true,
-                    keep_classnames: true
+                    passes: 2,
+                    keep_fnames: false,
+                    keep_classnames: false,
+                    unsafe: false
                 },
                 mangle: {
-                    toplevel: true,
-                    safari10: true,
-                    properties: {
-                        regex: /^_/,
-                        reserved: ['__proto__', 'constructor', 'prototype']
-                    }
+                    keep_fnames: false,
+                    keep_classnames: false,
+                    reserved: [
+                        '__proto__',
+                        'constructor',
+                        'prototype',
+                        'Vue',
+                        'vue',
+                        'initialize',
+                        'createApp',
+                        'defineComponent',
+                        'ref',
+                        'computed',
+                        'watch',
+                        'onMounted',
+                        'onUnmounted'
+                    ]
                 },
                 format: {
                     comments: false
                 }
             },
-            // Performance hints
             reportCompressedSize: true,
-            // CSS optimization
-            cssCodeSplit: true,
+            cssCodeSplit: true, // Enable CSS code splitting for Vercel
             cssMinify: mode === 'production',
-            // Build optimization
             assetsInlineLimit: 4096,
             modulePreload: {
-                polyfill: true,
-                resolveDependencies: function (filename, deps, _a) {
-                    var hostId = _a.hostId, hostType = _a.hostType;
-                    if (filename.includes('main.ts') || filename.includes('style.css')) {
-                        return deps.filter(function (dep) {
-                            if (dep.endsWith('.css'))
-                                return false;
-                            return dep.includes('main') ||
-                                dep.includes('vendor') ||
-                                dep.includes('router') ||
-                                dep.includes('store') ||
-                                dep.includes('api');
-                        });
-                    }
-                    return deps;
-                }
-            }
-        },
-        server: {
-            port: 5173,
-            strictPort: true,
-            proxy: {
-                '/api': {
-                    target: 'http://localhost:5000',
-                    changeOrigin: true,
-                    secure: false,
-                    ws: true
-                },
-                '/socket.io': {
-                    target: 'http://localhost:5000',
-                    changeOrigin: true,
-                    ws: true
-                }
+                polyfill: true
             },
-            // Faster HMR
-            hmr: {
-                overlay: false
-            },
-            // Watch options for better performance
-            watch: {
-                usePolling: false,
-                interval: 100,
-                ignored: ['**/node_modules/**', '**/dist/**']
-            }
+            // Critical CSS handling
+            cssTarget: 'chrome61'
         },
         optimizeDeps: {
-            include: ['vue', 'vue-router', 'pinia', 'axios', 'lodash']
+            include: [
+                'vue',
+                'vue-router',
+                'pinia',
+                'axios',
+                'lodash',
+                '@vue/runtime-core',
+                '@vue/runtime-dom',
+                '@vue/shared'
+            ],
+            exclude: ['@vueuse/core']
         },
         esbuild: {
-            target: 'esnext',
-            // Tree shaking
+            target: 'es2015',
             treeShaking: true,
-            // Legal comments
             legalComments: 'none'
         },
-        experimental: {
-            renderBuiltUrl: function (filename, _a) {
-                var hostType = _a.hostType, hostId = _a.hostId;
-                return filename;
-            }
+        // Vercel-specific server settings
+        server: {
+            port: port,
+            strictPort: true,
+            host: true
         }
-    });
+    };
 });

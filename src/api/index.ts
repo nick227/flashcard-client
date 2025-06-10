@@ -1,7 +1,7 @@
 // API layer placeholder
 import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
-import { cacheService } from '@/services/cache'
+import { cacheService } from '@/plugins/cache'
 
 // Ensure we have a valid API URL
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -27,67 +27,51 @@ export const apiEndpoints = {
   history: `${BASE_URL}/api/history`,
 };
 
-// Create axios instance with proper configuration
+// Create axios instance
 export const api = axios.create({
-  baseURL: `${BASE_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  },
-  withCredentials: true, // Add this to handle CORS credentials
-  validateStatus: (status) => status >= 200 && status < 300
-});
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  timeout: 30000
+})
 
-// Add request interceptor to automatically add auth token
-api.interceptors.request.use(
-  async (config) => {
-    if (!config) {
-      console.error('[API] Request interceptor received undefined config')
-      return Promise.reject(new Error('Invalid request configuration'))
+// Add cache service to axios instance
+api.interceptors.response.use(
+  response => {
+    // Cache successful GET requests
+    if (response.config.method === 'get') {
+      const cacheKey = `${response.config.url}${JSON.stringify(response.config.params || {})}`
+      cacheService.set(cacheKey, response.data, 5 * 60 * 1000) // 5 minutes
     }
-
-    const auth = useAuthStore()
-    if (auth.jwt) {
-      config.headers.Authorization = `Bearer ${auth.jwt}`
-    }
-
-    return config
+    return response
   },
-  (error) => {
-    console.error('[API] Request Error:', error)
+  error => {
     return Promise.reject(error)
   }
 )
 
-// Add response interceptor to handle auth errors
-api.interceptors.response.use(
-  (response) => {
-    console.log(`[API] Response: ${response.config.url}`)
-    return response
+// Add auth interceptor
+api.interceptors.request.use(
+  config => {
+    const auth = useAuthStore()
+    if (auth.jwt) {
+      config.headers.Authorization = `Bearer ${auth.jwt}`
+    }
+    return config
   },
-  (error) => {
-    // Handle auth errors
+  error => {
+    return Promise.reject(error)
+  }
+)
+
+// Add error interceptor
+api.interceptors.response.use(
+  response => response,
+  error => {
     if (error.response?.status === 401) {
       const auth = useAuthStore()
       auth.logout()
       auth.setMessage('Session expired. Please log in again.')
       window.location.href = '/login'
-      return Promise.reject(error)
     }
-
-    // Handle 404 errors gracefully
-    if (error.response?.status === 404) {
-      console.warn(`[API] Resource not found: ${error.config?.url}`)
-      // Return empty data for 404s instead of throwing
-      return { data: null, status: 200, statusText: 'OK' }
-    }
-
-    // Handle undefined config
-    if (!error.config) {
-      console.error('[API] Request error with undefined config:', error)
-      return Promise.reject(new Error('Invalid request configuration'))
-    }
-
     return Promise.reject(error)
   }
 )

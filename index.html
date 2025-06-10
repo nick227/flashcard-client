@@ -13,8 +13,7 @@
     <link rel="manifest" href="/manifest.webmanifest">
     <title>Flashcard Academy</title>
     <!-- Preload critical assets -->
-    <link rel="preload" href="/assets/vendor.js" as="script">
-    <link rel="preload" href="/assets/app.js" as="script">
+    <link rel="modulepreload" href="./src/main.ts" crossorigin>
     <!-- Font preloading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +27,7 @@
             <img src="/flashcard.svg" alt="Loading..." width="48" height="48" />
         </div>
     </div>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="./src/main.ts"></script>
 </body>
 
 </html>

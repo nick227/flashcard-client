@@ -10,15 +10,6 @@ const STORAGE_RETRY_DELAY = 1000 // 1 second
 const BATCH_TIMEOUT = 30000 // 30 seconds
 const CLEANUP_BATCH_SIZE = 100
 
-let isVueReady = false
-
-// Initialize Vue readiness check
-if (typeof window !== 'undefined') {
-  window.addEventListener('load', () => {
-    isVueReady = true
-  })
-}
-
 export class CacheService {
   private cache: Map<string, CacheEntry<any>>
   private options: CacheOptions
@@ -28,7 +19,6 @@ export class CacheService {
   private batchQueue: Map<string, Array<() => Promise<any>>> = new Map()
   private batchTimeouts: Map<string, number> = new Map()
   private events: CacheEvents = {}
-  private currentMemoryUsage = ref(0)
   private storage: CacheStorage
   private batchManager: BatchManager
   private locks: Map<string, Promise<void>> = new Map()
@@ -36,6 +26,7 @@ export class CacheService {
   private initialized = false
 
   // Vue reactive properties
+  private readonly currentMemoryUsage = ref(0)
   public readonly size = ref(0)
   public readonly memoryUsage = computed(() => this.currentMemoryUsage.value)
   public readonly hitRate = computed(() => {
@@ -52,22 +43,16 @@ export class CacheService {
       ...this.options,
       timeout: BATCH_TIMEOUT
     })
-
-    // Initialize after Vue is ready
-    if (typeof window !== 'undefined') {
-      if (isVueReady) {
-        this.initialize()
-      } else {
-        window.addEventListener('load', () => this.initialize())
-      }
-    }
   }
 
-  private async initialize() {
+  async initialize() {
     if (this.initialized) return
     this.initialized = true
 
     try {
+      // Initialize storage first
+      await this.storage.initialize()
+
       if (this.options.persist) {
         await this.loadFromStorage()
       }
@@ -76,13 +61,14 @@ export class CacheService {
         this.startCleanupInterval()
       }
 
-      // Monitor memory pressure
-      if (typeof performance !== 'undefined' && performance.memory) {
+      // Monitor memory pressure if available
+      if (typeof performance !== 'undefined' && 'memory' in performance) {
         setInterval(() => this.checkMemoryPressure(), 60000) // Check every minute
       }
     } catch (error) {
       console.error('[Cache] Initialization error:', error)
       this.events.onError?.(error as Error)
+      throw error // Re-throw to allow caller to handle
     }
   }
 
@@ -95,6 +81,15 @@ export class CacheService {
       console.error('[Cache] Failed to load from storage:', error)
       this.events.onError?.(error as Error)
     }
+  }
+
+  private updateMemoryUsage() {
+    let total = 0
+    for (const entry of this.cache.values()) {
+      total += entry.size || 0
+    }
+    this.currentMemoryUsage.value = total
+    this.checkMemoryPressure()
   }
 
   private async saveToStorage() {
@@ -117,25 +112,30 @@ export class CacheService {
     }
   }
 
-  private updateMemoryUsage() {
-    let total = 0
-    for (const entry of this.cache.values()) {
-      total += entry.size || 0
-    }
-    this.currentMemoryUsage.value = total
-    this.checkMemoryPressure()
-  }
-
   private checkMemoryPressure() {
-    if (typeof performance !== 'undefined' && performance.memory) {
-      const usedHeap = performance.memory.usedJSHeapSize
-      const totalHeap = performance.memory.totalJSHeapSize
-      const memoryPressure = usedHeap / totalHeap
+    try {
+      if (typeof performance !== 'undefined' && 'memory' in performance) {
+        const memory = (performance as any).memory
+        const usedHeap = memory.usedJSHeapSize
+        const totalHeap = memory.totalJSHeapSize
+        const memoryPressure = usedHeap / totalHeap
 
-      if (memoryPressure > MEMORY_WARNING_THRESHOLD) {
-        console.warn('[Cache] High memory pressure detected:', memoryPressure)
-        this.events.onMemoryPressure?.(memoryPressure)
-        this.evictLRU(Math.ceil(this.cache.size * 0.1)) // Evict 10% of entries
+        if (memoryPressure > MEMORY_WARNING_THRESHOLD) {
+          console.warn('[Cache] High memory pressure detected:', memoryPressure)
+          this.events.onMemoryPressure?.(memoryPressure)
+          this.evictLRU(Math.ceil(this.cache.size * 0.1)) // Evict 10% of entries
+        }
+      } else if (this.currentMemoryUsage.value > (this.options.maxMemoryBytes || Infinity)) {
+        // Fallback to our own memory tracking if performance.memory is not available
+        console.warn('[Cache] Memory limit exceeded:', this.currentMemoryUsage.value)
+        this.events.onMemoryPressure?.(1)
+        this.evictLRU(Math.ceil(this.cache.size * 0.1))
+      }
+    } catch (error) {
+      console.error('[Cache] Error checking memory pressure:', error)
+      // If we can't check memory pressure, be conservative and evict some entries
+      if (this.cache.size > 1000) {
+        this.evictLRU(Math.ceil(this.cache.size * 0.1))
       }
     }
   }
@@ -492,37 +492,3 @@ export class CacheService {
     this.options.logging = enabled
   }
 }
-
-/**
- * Singleton instance for app-wide use
- */
-export const cacheService = new CacheService({
-  ttl: 5 * 60 * 1000,
-  maxSize: 1000,
-  autoCleanup: true,
-  cleanupInterval: 60 * 1000,
-  logging: true,
-  batchWindow: 50,
-  persist: true,
-  storageType: 'localStorage',
-  maxMemoryBytes: 50 * 1024 * 1024
-}, {
-  onEvict: (key, reason) => {
-    console.log(`[Cache] Entry evicted: ${key} (${reason})`)
-  },
-  onExpire: (key) => {
-    console.log(`[Cache] Entry expired: ${key}`)
-  },
-  onError: (error) => {
-    console.error('[Cache] Error:', error)
-  },
-  onMemoryPressure: (pressure) => {
-    console.warn('[Cache] Memory pressure:', pressure)
-  },
-  onCacheHit: (key) => {
-    console.log(`[Cache] Hit: ${key}`)
-  },
-  onCacheMiss: (key) => {
-    console.log(`[Cache] Miss: ${key}`)
-  }
-})

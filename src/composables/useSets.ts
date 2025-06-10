@@ -35,8 +35,8 @@ export function useSets() {
   const isTransitioning = ref(false)
 
   // Debounced load function to prevent rapid API calls
-  const debouncedLoad = debounce(async (forceRefresh = false) => {
-    await loadSets(forceRefresh)
+  const debouncedLoad = debounce(async () => {
+    await loadSets()
   }, DEBOUNCE_DELAY)
 
   // Helper function to make batch requests
@@ -115,8 +115,7 @@ export function useSets() {
     try {
       const response = await cachedApi.get<Category[]>('/categories', { inUse: 'true' }, {
         ttl: CACHE_TTL,
-        key: 'categories:inUse',
-        forceRefresh: false
+        key: 'categories:inUse'
       })
       
       if (Array.isArray(response)) {
@@ -135,7 +134,7 @@ export function useSets() {
   }
 
   // Fetch sets with caching
-  const loadSets = async (forceRefresh = false) => {
+  const loadSets = async () => {
     if (state.loading) return
     state.loading = true
     state.error = null
@@ -158,7 +157,6 @@ export function useSets() {
       
       const response = await cachedApi.get<{ items: Set[], pagination: { total: number, hasMore: boolean } }>('/sets', params, {
         ttl: CACHE_TTL,
-        forceRefresh,
         key: cacheKey
       })
 
@@ -218,7 +216,7 @@ export function useSets() {
         currentPage.value = 1
         state.data = []
         hasMore.value = true
-        debouncedLoad(true)
+        debouncedLoad()
       }
     }
   )
@@ -244,7 +242,7 @@ export function useSets() {
     currentPage.value = 1
     state.data = []
     hasMore.value = true
-    debouncedLoad(true)
+    debouncedLoad()
   }
 
   const updateSortOrder = (order: string) => {
@@ -252,7 +250,7 @@ export function useSets() {
     currentPage.value = 1
     state.data = []
     hasMore.value = true
-    debouncedLoad(true)
+    debouncedLoad()
   }
 
   const updateSetType = (type: string) => {
@@ -260,7 +258,7 @@ export function useSets() {
     currentPage.value = 1
     state.data = []
     hasMore.value = true
-    debouncedLoad(true)
+    debouncedLoad()
   }
 
   const updateSearch = (query: string) => {
@@ -268,7 +266,7 @@ export function useSets() {
     currentPage.value = 1
     state.data = []
     hasMore.value = true
-    debouncedLoad(true)
+    debouncedLoad()
   }
 
   return {

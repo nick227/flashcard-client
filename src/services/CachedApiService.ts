@@ -1,138 +1,76 @@
 import { api } from '@/api'
-import { cacheService } from './cache/CacheService'
+import { cacheService } from '@/plugins/cache'
 
 interface CacheConfig {
   ttl?: number
   key?: string
-  forceRefresh?: boolean
-  invalidatePrefix?: string // If set, invalidate all cache keys with this prefix after mutation
+  invalidatePrefix?: string
 }
 
 export class CachedApiService {
-  private api = api
+  private baseUrl: string
+  private defaultTTL: number
 
-  /**
-   * Generate a cache key for an API request, with stable param ordering
-   */
-  private generateCacheKey(endpoint: string, params?: any): string {
-    if (!params) return `api:${endpoint}`
-    
-    // Sort params to ensure consistent cache keys
-    const sortedParams = Object.keys(params)
-      .sort()
-      .reduce((acc, key) => {
-        if (params[key] !== undefined) {
-          acc[key] = params[key]
-        }
-        return acc
-      }, {} as Record<string, any>)
-
-    return `api:${endpoint}:${JSON.stringify(sortedParams)}`
+  constructor(baseUrl: string, defaultTTL: number = 5 * 60 * 1000) {
+    this.baseUrl = baseUrl
+    this.defaultTTL = defaultTTL
   }
 
-  /**
-   * Make a cached GET request
-   */
-  async get<T>(url: string, params: Record<string, any> = {}, options: CacheConfig = {}): Promise<T> {
-    const cacheKey = options.key || this.generateCacheKey(url, params)
-    console.log('Cache request:', { url, params, cacheKey, options })
-
-    try {
-      // If forceRefresh is true, skip cache
-      if (options.forceRefresh) {
-        console.log('Force refresh requested, skipping cache')
-        const response = await this.fetchFromApi<T>(url, params)
-        await this.set(cacheKey, response, options.ttl)
-        return response
-      }
-
-      // Try to get from cache first
-      const cached = await this.getFromCache<T>(cacheKey)
-      if (cached) {
-        console.log('Cache hit:', cacheKey)
-        return cached
-      }
-
-      console.log('Cache miss:', cacheKey)
-      const response = await this.fetchFromApi<T>(url, params)
-      await this.set(cacheKey, response, options.ttl)
-      return response
-    } catch (error) {
-      console.error('Cache operation failed:', error)
-      // On cache error, try direct API call
-      return this.fetchFromApi<T>(url, params)
-    }
+  private getCacheKey(endpoint: string, params?: any): string {
+    const key = params ? `${endpoint}|${JSON.stringify(params)}` : endpoint
+    return `${this.baseUrl}|${key}`
   }
 
-  private async fetchFromApi<T>(url: string, params: Record<string, any>): Promise<T> {
-    console.log('Fetching from API:', { url, params })
-    try {
-      const response = await this.api.get<{ data: T }>(url, { params })
-      console.log('Raw API response:', response.data)
-      // Handle the server's response format
-      if (response.data && 'data' in response.data) {
-        return response.data.data
-      }
-      return response.data
-    } catch (error) {
-      console.error('API request failed:', error)
-      throw error
-    }
+  async get<T>(endpoint: string, params?: any, config: CacheConfig = {}): Promise<T> {
+    const cacheKey = config.key || this.getCacheKey(endpoint, params)
+    const cached = await this.getFromCache<T>(cacheKey)
+    if (cached) return cached
+
+    const response = await api.get<T>(`${this.baseUrl}${endpoint}`, { params })
+    await this.setInCache(cacheKey, response.data, config.ttl || this.defaultTTL)
+    return response.data
   }
 
-  /**
-   * POST with optional cache invalidation by prefix
-   */
-  async post<T>(endpoint: string, data?: any, config?: CacheConfig): Promise<T> {
-    const response = await api.post(endpoint, data)
-    if (config?.invalidatePrefix) {
+  async post<T>(endpoint: string, data: any, config: CacheConfig = {}): Promise<T> {
+    const response = await api.post<T>(`${this.baseUrl}${endpoint}`, data)
+    if (config.invalidatePrefix) {
       cacheService.deleteByPrefix(config.invalidatePrefix)
     }
     return response.data
   }
 
-  /**
-   * PUT with optional cache invalidation by prefix
-   */
-  async put<T>(endpoint: string, data?: any, config?: CacheConfig): Promise<T> {
-    const response = await api.put(endpoint, data)
-    if (config?.invalidatePrefix) {
+  async put<T>(endpoint: string, data: any, config: CacheConfig = {}): Promise<T> {
+    const response = await api.put<T>(`${this.baseUrl}${endpoint}`, data)
+    if (config.invalidatePrefix) {
       cacheService.deleteByPrefix(config.invalidatePrefix)
     }
     return response.data
   }
 
-  /**
-   * DELETE with optional cache invalidation by prefix
-   */
-  async delete<T>(endpoint: string, config?: CacheConfig): Promise<T> {
-    const response = await api.delete(endpoint)
-    if (config?.invalidatePrefix) {
+  async patch<T>(endpoint: string, data: any, config: CacheConfig = {}): Promise<T> {
+    const response = await api.patch<T>(`${this.baseUrl}${endpoint}`, data)
+    if (config.invalidatePrefix) {
       cacheService.deleteByPrefix(config.invalidatePrefix)
     }
     return response.data
   }
 
-  /**
-   * Invalidate cache for a specific endpoint
-   */
-  invalidateCache(endpoint: string, params?: any): void {
-    const cacheKey = this.generateCacheKey(endpoint, params)
-    cacheService.delete(cacheKey)
+  async delete(endpoint: string, config: CacheConfig = {}): Promise<void> {
+    await api.delete(`${this.baseUrl}${endpoint}`)
+    if (config.invalidatePrefix) {
+      cacheService.deleteByPrefix(config.invalidatePrefix)
+    }
   }
 
-  /**
-   * Invalidate all cache entries for an endpoint (by prefix)
-   */
-  invalidateByPrefix(endpoint: string): void {
-    const prefix = `api:${endpoint}`
+  async invalidateCache(key: string): Promise<void> {
+    cacheService.delete(key)
+  }
+
+  async invalidateCacheByPrefix(prefix: string): Promise<void> {
     cacheService.deleteByPrefix(prefix)
   }
 
-  /**
-   * Invalidate all cache
-   */
-  invalidateAllCache(): void {
+  async clearCache(): Promise<void> {
     cacheService.clear()
   }
 
@@ -140,13 +78,13 @@ export class CachedApiService {
     return await cacheService.get(cacheKey)
   }
 
-  private async set(cacheKey: string, data: any, ttl?: number): Promise<void> {
+  private async setInCache<T>(cacheKey: string, data: T, ttl: number): Promise<void> {
     await cacheService.set(cacheKey, data, ttl)
   }
 }
 
 // Create a singleton instance
-export const cachedApi = new CachedApiService()
+export const cachedApi = new CachedApiService('/api')
 
 // Pre-configured cached API methods for common endpoints
 export const cachedApiEndpoints = {

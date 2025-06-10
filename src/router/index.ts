@@ -181,7 +181,6 @@ router.beforeEach(async (_to, _from, next) => {
   console.log('Navigation guard - Route:', _to.path)
   console.log('Navigation guard - Auth state:', {
     isAuthenticated: auth.isAuthenticated,
-    isEducator: auth.isEducator,
     user: auth.user
   })
   
@@ -189,15 +188,14 @@ router.beforeEach(async (_to, _from, next) => {
   document.title = `${_to.meta.title} | Flashcard Academy` || 'Flashcard Academy'
   
   // Handle authentication
-  if (auth.jwt && !auth.user) {
-    console.log('JWT exists but no user, fetching user...')
+  if (!auth.user) {
+    console.log('No user, checking auth...')
     try {
-      await auth.fetchUser()
-      console.log('User fetched:', auth.user)
+      await auth.checkAuth()
+      console.log('Auth checked:', auth.user)
     } catch (error) {
-      console.error('Failed to fetch user:', error)
+      console.error('Failed to check auth:', error)
       auth.logout()
-      auth.setMessage('Session expired. Please log in again.')
       return next('/login')
     }
   }
@@ -211,17 +209,15 @@ router.beforeEach(async (_to, _from, next) => {
   // Auth required routes
   if (_to.meta.requiresAuth && !auth.isAuthenticated) {
     console.log('Auth required route accessed without auth, redirecting to login')
-    auth.setMessage('Please log in to access this page.')
     return next('/login')
   }
 
   // Role required routes
-  if (_to.meta.requiresRole && !auth.isEducator) {
+  if (_to.meta.requiresRole && auth.user?.role !== _to.meta.requiresRole) {
     console.log('Role required route accessed without proper role:', {
       requiredRole: _to.meta.requiresRole,
       userRole: auth.user?.role
     })
-    auth.setMessage('You need to be an educator to access this page.')
     return next('/')
   }
 

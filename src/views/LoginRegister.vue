@@ -97,33 +97,33 @@ const onSubmit = async (formData: { email: string; password: string; name?: stri
   }
 }
 
-const handleLogin = async (formData: { email: string; password: string }) => {
+async function handleLogin(formData: { email: string; password: string }) {
   try {
-    await auth.login({ email: formData.email, password: formData.password })
+    await auth.login({
+      email: formData.email,
+      password: formData.password
+    })
     router.push('/')
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Login failed:', error)
   }
 }
 
 const handleRegister = async (formData: { email: string; password: string; name?: string; bio?: string }) => {
   if (!formData.name || !formData.email || !formData.password) {
-    error.value = 'All fields are required'
+    auth.setMessage('Please fill in all fields')
     return
   }
 
   try {
-    loading.value = true
     await auth.register({
-      name: formData.name,
+      name: formData.name || '',
       email: formData.email,
       password: formData.password
     })
     router.push('/')
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Registration failed'
-  } finally {
-    loading.value = false
+  } catch (error) {
+    console.error('Registration failed:', error)
   }
 }
 

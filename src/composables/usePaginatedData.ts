@@ -1,6 +1,6 @@
 import { ref, computed, watch } from 'vue'
 import { api, apiEndpoints } from '@/api'
-import { cacheService } from '@/services/cache'
+import { cacheService } from '@/plugins/cache'
 
 // Cache duration - 5 minutes for paginated data
 const CACHE_DURATION = 5 * 60 * 1000

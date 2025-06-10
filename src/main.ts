@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import axios from 'axios'
 import { watch } from 'vue'
 import './polyfills/modulepreload'
+import { cachePlugin } from '@/plugins/cache'
 
 // Debug logging
 console.log('[Debug] Starting app initialization')
@@ -76,77 +77,56 @@ app.use(GoogleSignInPlugin, {
   clientId: GOOGLE_CLIENT_ID
 })
 
-// Router
-console.log('[Debug] Setting up Router')
+// Initialize plugins
+app.use(cachePlugin)
 app.use(router)
 
-// Auth setup
-console.log('[Debug] Setting up Auth')
+// Initialize auth
 const auth = useAuthStore()
+auth.checkAuth().catch(console.error)
 
-// Set initial auth header
-axios.defaults.headers.common['Authorization'] = auth.jwt ? `Bearer ${auth.jwt}` : ''
+// Mount app
+app.mount('#app')
 
 // Request deduplication cache
-const pendingRequests = new Map<string, Promise<any>>()
+const requestCache = new Map<string, Promise<any>>()
 
-// Development logging with request deduplication
-if (!isProd) {
-  axios.interceptors.request.use(request => {
-    const requestKey = [
-      request.method?.toLowerCase(),
-      request.url,
-      JSON.stringify(request.params || {}),
-      JSON.stringify(request.data || {}),
-      request.headers?.['Authorization'] || ''
-    ].join('|')
-    
-    if (pendingRequests.has(requestKey)) {
-      console.log('Deduplicating request:', requestKey)
-      return Promise.reject({
-        __CANCEL__: true,
-        message: 'Request deduplicated',
-        promise: pendingRequests.get(requestKey)
-      })
-    }
-    
-    const requestPromise = new Promise((resolve, reject) => {
-      request.__requestKey = requestKey
-      request.__resolve = resolve
-      request.__reject = reject
-    })
-    
-    pendingRequests.set(requestKey, requestPromise)
-    requestPromise.finally(() => {
-      if (pendingRequests.get(requestKey) === requestPromise) {
-        pendingRequests.delete(requestKey)
+// Add request deduplication interceptor
+axios.interceptors.request.use(config => {
+  const cacheKey = `${config.method}-${config.url}-${JSON.stringify(config.params || {})}`
+  if (requestCache.has(cacheKey)) {
+    return Promise.reject(new Error('Duplicate request'))
+  }
+  const promise = new Promise((resolve, reject) => {
+    config.adapter = async (config) => {
+      try {
+        const response = await axios(config)
+        resolve(response)
+        return response
+      } catch (error) {
+        reject(error)
+        throw error
       }
-    })
-    
-    return request
+    }
   })
+  requestCache.set(cacheKey, promise)
+  return config
+})
 
-  axios.interceptors.response.use(
-    response => {
-      if (response.config.__requestKey) {
-        const requestPromise = pendingRequests.get(response.config.__requestKey)
-        if (requestPromise) {
-          response.config.__resolve?.(response)
-        }
-      }
-      return response
-    },
-    error => {
-      if (error.config?.__requestKey) {
-        const requestPromise = pendingRequests.get(error.config.__requestKey)
-        if (requestPromise) {
-          error.config.__reject?.(error)
-        }
-      }
-      return Promise.reject(error)
+axios.interceptors.response.use(
+  response => {
+    const cacheKey = `${response.config.method}-${response.config.url}-${JSON.stringify(response.config.params || {})}`
+    requestCache.delete(cacheKey)
+    return response
+  },
+  error => {
+    if (error.config) {
+      const cacheKey = `${error.config.method}-${error.config.url}-${JSON.stringify(error.config.params || {})}`
+      requestCache.delete(cacheKey)
     }
-  )
-}
+    return Promise.reject(error)
+  }
+)
 
 // Global axios error handling with retry logic and caching
 const responseCache = new Map()
@@ -190,8 +170,8 @@ axios.interceptors.response.use(
 
     // Handle auth errors
     if (err.response?.status === 401) {
-      auth.logout()
-      auth.setMessage('Session expired. Please log in again.')
+      auth?.logout()
+      auth?.setMessage('Session expired. Please log in again.')
       window.location.href = '/login'
     }
     return Promise.reject(err)
@@ -200,7 +180,7 @@ axios.interceptors.response.use(
 
 // JWT watcher
 watch(
-  () => auth.jwt,
+  () => auth?.jwt,
   (newJwt) => {
     console.log('[Debug] JWT changed:', newJwt ? 'New token set' : 'Token cleared')
     if (newJwt) {
@@ -228,7 +208,3 @@ router.afterEach(() => {
   console.log('[Debug] Router navigation completed')
   NProgress.done()
 })
-
-// Mount app
-console.log('[Debug] Mounting app')
-app.mount('#app')

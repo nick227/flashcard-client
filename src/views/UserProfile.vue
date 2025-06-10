@@ -187,23 +187,8 @@ const updateUserImage = async (event: Event) => {
 
   try {
     uploading.value = true
-    const formData = new FormData()
     const file = target.files[0]
-    formData.append('image', file)
-
-    const token = auth.jwt
-    if (!token) throw new Error('No authentication token found')
-
-    const res = await api.patch(`${apiEndpoints.users}/${user.value?.id}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
-      }
-    })
-
-    if (user.value && res.data.image) {
-      auth.setUser({ ...user.value, image: res.data.image })
-    }
+    await updateProfileImage(file)
   } catch (err) {
     console.error('Failed to upload image:', err)
   } finally {
@@ -318,10 +303,7 @@ const handleBioUpdate = async (event: FocusEvent) => {
   const target = event.target as HTMLTextAreaElement
   const bio = target.value
   try {
-    const res = await api.patch(`/users/${user.value?.id}/bio`, { bio })
-    if (user.value) {
-      auth.setUser({ ...user.value, bio: res.data.bio })
-    }
+    await updateBio(bio)
   } catch (error) {
     console.error('Error updating bio:', error)
   }
@@ -332,6 +314,44 @@ const handleImageError = () => {
   imageError.value = true
   if (user.value) {
     user.value.image = undefined
+  }
+}
+
+// Update profile image
+async function updateProfileImage(file: File) {
+  if (!user.value) return
+  
+  try {
+    const formData = new FormData()
+    formData.append('image', file)
+    
+    const res = await api.post('/users/profile/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    auth.setUser({
+      ...user.value,
+      image: res.data.image
+    })
+  } catch (error) {
+    console.error('Failed to update profile image:', error)
+  }
+}
+
+// Update bio
+async function updateBio(bio: string) {
+  if (!user.value) return
+  
+  try {
+    const res = await api.patch('/users/profile/bio', { bio })
+    auth.setUser({
+      ...user.value,
+      bio: res.data.bio
+    })
+  } catch (error) {
+    console.error('Failed to update bio:', error)
   }
 }
 </script>

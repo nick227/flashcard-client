@@ -3,13 +3,11 @@
     <NotificationToast />
     <Navbar />
     <div class="main-content">
-      <router-view v-slot="{ Component, route }">
-        <transition name="fade" mode="out-in">
-          <keep-alive :include="['BrowseSets']">
-            <component :is="Component" :key="route.path" />
-          </keep-alive>
-        </transition>
-      </router-view>
+      <transition name="fade" mode="out-in">
+        <keep-alive :include="['BrowseSets']">
+          <router-view :key="route.path" />
+        </keep-alive>
+      </transition>
     </div>
     <Footer />
   </div>
