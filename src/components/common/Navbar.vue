@@ -24,4 +24,9 @@
 
 <script setup lang="ts">
 import AuthWidget from '@/components/common/AuthWidget.vue'
+
+// Handle HMR
+if (import.meta.hot) {
+  import.meta.hot.accept()
+}
 </script>

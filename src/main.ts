@@ -4,7 +4,7 @@ import App from './App.vue'
 import { router } from './router'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 import { createPinia } from 'pinia'
-import piniaPersist from 'pinia-plugin-persistedstate'
+// import piniaPersist from 'pinia-plugin-persistedstate'
 import GoogleSignInPlugin from 'vue3-google-login'
 import { useAuthStore } from '@/stores/auth'
 import axios from 'axios'
@@ -12,14 +12,12 @@ import { watch } from 'vue'
 import './polyfills/modulepreload'
 import { cachePlugin } from '@/plugins/cache'
 
-// Debug logging
-console.log('[Debug] Starting app initialization')
-
 // Production configuration
 const isProd = import.meta.env.PROD
-const API_URL = isProd ? 'https://api.flashcardacademy.com' : 'http://localhost:5000'
+const API_URL = import.meta.env.VITE_API_URL || (isProd ? 'https://flashcard-server-production.up.railway.app' : 'http://localhost:5000')
 
 // Configure axios defaults
+console.log('[Debug] Configuring axios')
 axios.defaults.baseURL = API_URL
 axios.defaults.timeout = 30000 // 30 seconds
 
@@ -33,6 +31,7 @@ declare module 'axios' {
 }
 
 // NProgress
+console.log('[Debug] Setting up NProgress')
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 NProgress.configure({ 
@@ -61,14 +60,12 @@ app.config.errorHandler = (err, instance, info) => {
 // Performance monitoring
 app.config.performance = isProd
 
-// Initialize Pinia with persistence
-console.log('[Debug] Initializing Pinia')
+// Initialize Pinia without persistence for testing
 const pinia = createPinia()
-pinia.use(piniaPersist)
+// pinia.use(piniaPersist)
 app.use(pinia)
 
 // Google Sign In Configuration
-console.log('[Debug] Setting up Google Sign In')
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 if (!GOOGLE_CLIENT_ID) {
   console.error('[Debug] VITE_GOOGLE_CLIENT_ID is not defined')
@@ -83,10 +80,18 @@ app.use(router)
 
 // Initialize auth
 const auth = useAuthStore()
-auth.checkAuth().catch(console.error)
 
-// Mount app
-app.mount('#app')
+// Initialize auth without top-level await
+auth.checkAuth().catch(error => {
+  console.error('[Debug] Auth check failed:', error)
+})
+
+// Mount app with error boundary
+try {
+  app.mount('#app')
+} catch (error) {
+  console.error('[Debug] App mount failed:', error)
+}
 
 // Request deduplication cache
 const requestCache = new Map<string, Promise<any>>()
@@ -182,7 +187,6 @@ axios.interceptors.response.use(
 watch(
   () => auth?.jwt,
   (newJwt) => {
-    console.log('[Debug] JWT changed:', newJwt ? 'New token set' : 'Token cleared')
     if (newJwt) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${newJwt}`
     } else {
@@ -194,7 +198,6 @@ watch(
 
 // Router guards with error handling
 router.beforeEach(async (_to, _from, next) => {
-  console.log('[Debug] Router navigation started')
   NProgress.start()
   try {
     next()
@@ -205,6 +208,5 @@ router.beforeEach(async (_to, _from, next) => {
 })
 
 router.afterEach(() => {
-  console.log('[Debug] Router navigation completed')
   NProgress.done()
 })

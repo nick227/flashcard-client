@@ -1,80 +1,246 @@
 // API layer placeholder
 import axios from 'axios'
+import type { AxiosInstance } from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import { cacheService } from '@/plugins/cache'
 
-// Ensure we have a valid API URL
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// API Configuration Singleton
+class ApiConfig {
+  private static instance: ApiConfig
+  private readonly baseUrl: string
+  private readonly api: AxiosInstance
 
-// Validate the base URL
-if (!BASE_URL.startsWith('http')) {
-  console.error('Invalid API URL:', BASE_URL);
-  throw new Error('Invalid API URL configuration');
+  private constructor() {
+    // Ensure we have a valid API URL
+    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+    
+    // Validate the base URL
+    if (!this.baseUrl.startsWith('http')) {
+      console.error('Invalid API URL:', this.baseUrl)
+      throw new Error('Invalid API URL configuration')
+    }
+
+    // Remove trailing slash if present
+    this.baseUrl = this.baseUrl.replace(/\/$/, '')
+
+    console.log('API Base URL:', this.baseUrl)
+
+    // Create axios instance with better error handling
+    this.api = axios.create({
+      baseURL: `${this.baseUrl}/api/`,
+      timeout: 30000,
+      validateStatus: (status) => status >= 200 && status < 300
+    })
+
+    // Add cache service to axios instance
+    this.api.interceptors.response.use(
+      response => {
+        // Cache successful GET requests
+        if (response.config.method === 'get') {
+          const cacheKey = `${response.config.url}${JSON.stringify(response.config.params || {})}`
+          cacheService.set(cacheKey, response.data, 5 * 60 * 1000) // 5 minutes
+        }
+        return response
+      },
+      error => Promise.reject(error)
+    )
+
+    // Add auth interceptor
+    this.api.interceptors.request.use(
+      config => {
+        const auth = useAuthStore()
+        if (auth.jwt) {
+          config.headers.Authorization = `Bearer ${auth.jwt}`
+        }
+        return config
+      },
+      error => Promise.reject(error)
+    )
+
+    // Add error interceptor
+    this.api.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response?.status === 401) {
+          const auth = useAuthStore()
+          auth.logout()
+        }
+        return Promise.reject(error)
+      }
+    )
+  }
+
+  public static getInstance(): ApiConfig {
+    if (!ApiConfig.instance) {
+      ApiConfig.instance = new ApiConfig()
+    }
+    return ApiConfig.instance
+  }
+
+  public getApi(): AxiosInstance {
+    return this.api
+  }
+
+  public getBaseUrl(): string {
+    return this.baseUrl
+  }
+
+  public getEndpoint(path: string): string {
+    // Remove any leading slashes to prevent double slashes
+    const cleanPath = path.replace(/^\/+/, '')
+    return `${this.baseUrl}/api/${cleanPath}`
+  }
 }
 
-console.log('API Base URL:', BASE_URL); // Debug log
+// Export singleton instance
+export const apiConfig = ApiConfig.getInstance()
 
+// Export axios instance
+export const api = apiConfig.getApi()
+
+// API Endpoints
 export const apiEndpoints = {
-  baseUrl: BASE_URL,
-  sets: `${BASE_URL}/api/sets`,
-  cards: `${BASE_URL}/api/cards`,
-  users: `${BASE_URL}/api/users`,
-  userLikes: `${BASE_URL}/api/userLikes`,
-  purchases: `${BASE_URL}/api/purchases`,
-  subscriptions: `${BASE_URL}/api/subscriptions`,
-  checkout: `${BASE_URL}/api/checkout`,
-  sales: `${BASE_URL}/api/sales`,
-  history: `${BASE_URL}/api/history`,
-};
-
-// Create axios instance
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
-  timeout: 30000
-})
-
-// Add cache service to axios instance
-api.interceptors.response.use(
-  response => {
-    // Cache successful GET requests
-    if (response.config.method === 'get') {
-      const cacheKey = `${response.config.url}${JSON.stringify(response.config.params || {})}`
-      cacheService.set(cacheKey, response.data, 5 * 60 * 1000) // 5 minutes
-    }
-    return response
+  auth: {
+    login: 'auth/login',
+    logout: 'auth/logout',
+    me: 'auth/me',
+    register: 'auth/register',
+    refresh: 'auth/refresh'
   },
-  error => {
-    return Promise.reject(error)
-  }
-)
-
-// Add auth interceptor
-api.interceptors.request.use(
-  config => {
-    const auth = useAuthStore()
-    if (auth.jwt) {
-      config.headers.Authorization = `Bearer ${auth.jwt}`
-    }
-    return config
+  sets: {
+    base: 'sets',
+    count: 'sets/count',
+    likes: (setId: number) => `sets/${setId}/likes`,
+    userLikes: (setId: number) => `sets/${setId}/likes/user`,
+    batch: (type: string) => `sets/batch/${type}`,
+    toggleLike: (setId: number) => `sets/${setId}/like`,
+    getUserLikes: (userId: number) => `sets/liked?userId=${userId}`
   },
-  error => {
-    return Promise.reject(error)
-  }
-)
+  cards: 'cards',
+  users: 'users',
+  userLikes: 'user-likes',
+  purchases: 'purchases',
+  subscriptions: 'subscriptions',
+  checkout: 'checkout',
+  sales: 'sales',
+  history: {
+    base: 'history',
+    user: (userId: number) => `history/user/${userId}`,
+    set: (setId: number) => `history/set/${setId}`
+  },
+  categories: 'categories',
+  tags: 'tags',
+  setTags: 'set-tags'
+}
 
-// Add error interceptor
-api.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.status === 401) {
-      const auth = useAuthStore()
-      auth.logout()
-      auth.setMessage('Session expired. Please log in again.')
-      window.location.href = '/login'
+// Helper function to get full API URL
+export const getApiUrl = (endpoint: string): string => {
+  return apiConfig.getEndpoint(endpoint)
+}
+
+// Auth API functions
+export const authApi = {
+  async login(credentials: { email: string; password: string }) {
+    try {
+      const response = await api.post(apiEndpoints.auth.login, credentials)
+      return response.data
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          throw new Error('Invalid credentials')
+        }
+        throw new Error(error.response?.data?.message || 'Login failed')
+      }
+      throw error
     }
-    return Promise.reject(error)
+  },
+
+  async register(userData: { name: string; email: string; password: string }) {
+    try {
+      const response = await api.post(apiEndpoints.auth.register, userData)
+      return response.data
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 409) {
+          throw new Error('Email already registered')
+        }
+        throw new Error(error.response?.data?.message || 'Registration failed')
+      }
+      throw error
+    }
+  },
+
+  async logout() {
+    try {
+      await api.post(apiEndpoints.auth.logout)
+    } catch (error) {
+      // Don't throw on logout failure - just log it
+      console.error('Logout error:', error)
+    }
+  },
+
+  async checkAuth() {
+    try {
+      const response = await api.get(apiEndpoints.auth.me)
+      return response.data
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          return null
+        }
+        throw new Error(error.response?.data?.message || 'Auth check failed')
+      }
+      throw error
+    }
   }
-)
+}
+
+/**
+ * Fetch categories from the backend.
+ * @param inUseOnly - Optional parameter to fetch only categories that are in use by sets. Defaults to false (all categories).
+ * @returns Promise with array of categories { id: number, name: string, setCount: number }
+ */
+export async function fetchCategories(inUseOnly: boolean = false): Promise<{ id: number; name: string; setCount: number }[]> {
+  try {
+    const params = inUseOnly ? { inUse: 'true' } : undefined;
+    const res = await api.get(apiEndpoints.categories, { params });
+    return res.data;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    throw new Error('Failed to fetch categories');
+  }
+}
+
+/**
+ * Fetch unique tags from sets (if sets have tags array), else fallback to static tags.
+ */
+export async function fetchAvailableTags() {
+  const res = await api.get(apiEndpoints.tags);
+  return res.data.map((tag: { id: number, name: string }) => tag.name);
+}
+
+/**
+ * Fetch all tags from the backend.
+ * Returns array of { id, name }
+ */
+export async function fetchTags() {
+  const res = await api.get(apiEndpoints.tags);
+  return res.data;
+}
+
+export async function assignTagsToSet(setId: number, tags: string[]) {
+  const response = await api.post(apiEndpoints.setTags, { setId, tags });
+  // Invalidate tags cache after modification
+  cacheService.deleteByPrefix('tags:');
+  return response;
+}
+
+export async function removeTagFromSet(setId: number, tagName: string) {
+  const response = await api.post(`${apiEndpoints.sets.base}/${setId}/remove-tag`, { setId, tagName });
+  // Invalidate tags cache after modification
+  cacheService.deleteByPrefix('tags:');
+  return response;
+}
 
 /**
  * Creates a new set and its cards in the backend.
@@ -83,7 +249,7 @@ api.interceptors.response.use(
  */
 export async function createSetWithCards(formData: FormData) {
   try {
-    const response = await axios.post(apiEndpoints.sets, formData, {
+    const response = await api.post(apiEndpoints.sets.base, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
@@ -126,7 +292,7 @@ export async function updateSetWithCards(setId: number, formData: FormData) {
       console.log(pair[0], pair[1]);
     }
 
-    const response = await axios.put(`${apiEndpoints.sets}/${setId}`, formData, {
+    const response = await api.put(`${apiEndpoints.sets.base}/${setId}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },
@@ -157,51 +323,4 @@ export async function updateSetWithCards(setId: number, formData: FormData) {
     }
     throw new Error('Failed to update set. Please try again.');
   }
-}
-
-/**
- * Fetch categories from the backend.
- * @param inUseOnly - Optional parameter to fetch only categories that are in use by sets. Defaults to false (all categories).
- * @returns Promise with array of categories { id: number, name: string, setCount: number }
- */
-export async function fetchCategories(inUseOnly: boolean = false): Promise<{ id: number; name: string; setCount: number }[]> {
-  try {
-    const params = inUseOnly ? { inUse: 'true' } : undefined;
-    const res = await api.get('/categories', { params });
-    return res.data;
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    throw new Error('Failed to fetch categories');
-  }
-}
-
-/**
- * Fetch unique tags from sets (if sets have tags array), else fallback to static tags.
- */
-export async function fetchAvailableTags() {
-  const res = await api.get('/tags');
-  return res.data.map((tag: { id: number, name: string }) => tag.name);
-}
-
-/**
- * Fetch all tags from the backend.
- * Returns array of { id, name }
- */
-export async function fetchTags() {
-  const res = await api.get('/tags');
-  return res.data;
-}
-
-export async function assignTagsToSet(setId: number, tags: string[]) {
-  const response = await api.post('/set_tags', { setId, tags });
-  // Invalidate tags cache after modification
-  cacheService.deleteByPrefix('tags:');
-  return response;
-}
-
-export async function removeTagFromSet(setId: number, tagName: string) {
-  const response = await api.post(`/sets/${setId}/remove-tag`, { setId, tagName });
-  // Invalidate tags cache after modification
-  cacheService.deleteByPrefix('tags:');
-  return response;
 }

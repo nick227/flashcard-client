@@ -78,7 +78,7 @@ export function usePaginatedData<T>(endpoint: string, options: {
           let processedTotal = 0
 
           // Handle different response structures
-          if (endpoint === apiEndpoints.history) {
+          if (endpoint === apiEndpoints.history.base) {
             if (res.data?.items) {
               processedData = res.data.items
               processedTotal = res.data.total || res.data.items.length

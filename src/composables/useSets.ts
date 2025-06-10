@@ -1,6 +1,7 @@
 import { ref, computed, reactive, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { cachedApi } from '@/services/CachedApiService'
+import { apiEndpoints } from '@/api'
 import type { Set } from '@/types/set'
 import type { Category } from '@/types/category'
 import axios from 'axios'
@@ -44,9 +45,11 @@ export function useSets() {
     const batchKey = batchIds.join(',')
     
     try {
-      const response = await cachedApi.get<Record<string, number>>(`/sets/batch/${type}`, { ids: batchKey }, {
-        ttl: CACHE_TTL
-      })
+      const response = await cachedApi.get<Record<string, number>>(
+        apiEndpoints.sets.batch(type), 
+        { ids: batchKey }, 
+        { ttl: CACHE_TTL }
+      )
       return response
     } catch (error) {
       console.error(`[Stats] Error fetching batch ${type}:`, error)
@@ -113,10 +116,14 @@ export function useSets() {
   // Fetch categories with caching
   const fetchCategories = async () => {
     try {
-      const response = await cachedApi.get<Category[]>('/categories', { inUse: 'true' }, {
-        ttl: CACHE_TTL,
-        key: 'categories:inUse'
-      })
+      const response = await cachedApi.get<Category[]>(
+        apiEndpoints.categories, 
+        { inUse: 'true' }, 
+        {
+          ttl: CACHE_TTL,
+          key: 'categories:inUse'
+        }
+      )
       
       if (Array.isArray(response)) {
         const processedCategories = response.map(cat => ({
@@ -155,10 +162,14 @@ export function useSets() {
         page: currentPage.value
       })}`
       
-      const response = await cachedApi.get<{ items: Set[], pagination: { total: number, hasMore: boolean } }>('/sets', params, {
-        ttl: CACHE_TTL,
-        key: cacheKey
-      })
+      const response = await cachedApi.get<{ items: Set[], pagination: { total: number, hasMore: boolean } }>(
+        apiEndpoints.sets.base, 
+        params, 
+        {
+          ttl: CACHE_TTL,
+          key: cacheKey
+        }
+      )
 
       if (!response || !Array.isArray(response.items)) {
         state.data = currentPage.value === 1 ? [] : state.data

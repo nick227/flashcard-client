@@ -55,7 +55,7 @@ export class StorageError extends HistoryError {
 export class ViewHistoryService {
   async startViewing(setId: number): Promise<ViewHistory> {
     try {
-      const response = await api.post(apiEndpoints.history, { 
+      const response = await api.post(apiEndpoints.history.base, { 
         set_id: setId,
         num_cards_viewed: 0,
         completed: false

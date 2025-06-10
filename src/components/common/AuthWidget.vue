@@ -1,116 +1,136 @@
 <template>
-  <div class="auth-widget flex items-center gap-2">
-    <template v-if="auth.isAuthenticated && auth.user">
-      <a href="/profile" class="flex items-center gap-2">
+  <div v-if="isInitialized" class="auth-widget">
+    <div v-if="auth.isAuthenticated" class="user-info">
+      <div class="avatar-container">
         <img 
           v-if="!imageLoadError" 
-          :src="auth.user.image || defaultAvatar" 
-          alt="avatar" 
-          class="avatar"
+          :src="auth.user?.image || defaultAvatar" 
+          :alt="auth.user?.name || 'User avatar'"
           @error="handleImageError"
           @load="handleImageLoad"
+          class="avatar"
         />
-        <div v-else class="avatar avatar-fallback">
-          {{ getInitials(auth.user.name || auth.user.email) }}
+        <div v-else class="avatar-fallback">
+          {{ userInitials }}
         </div>
-      </a>
-      <a v-if="isDesktop" href="/profile" class="flex items-center gap-2">
-        <span class="user-email">{{ auth.user.email }}</span>
-      </a>
-    </template>
-    <template v-else>
-      <router-link to="/login" class="button button-accent px-4 py-1 text-sm">Login / Register</router-link>
-    </template>
+      </div>
+      <div v-if="isDesktop" class="user-details">
+        <span class="user-name">{{ auth.user?.name || 'User' }}</span>
+        <span class="user-email">{{ auth.user?.email }}</span>
+      </div>
+    </div>
+    <router-link v-else to="/login" class="login-link">
+      Sign In
+    </router-link>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { ref, watch } from 'vue'
 
 const auth = useAuthStore()
-const defaultAvatar = 'https://ui-avatars.com/api/?name=U&background=2563eb&color=fff&size=32'
+const isInitialized = ref(false)
 const imageLoadError = ref(false)
-const isDesktop = ref(window.innerWidth > 768)
+const defaultAvatar = '/images/default-avatar.png'
+const isDesktop = ref(window.innerWidth >= 768)
 
-function handleImageError() {
+const handleImageError = () => {
   imageLoadError.value = true
 }
 
-function handleImageLoad() {
+const handleImageLoad = () => {
   imageLoadError.value = false
 }
 
-function getInitials(input: string): string {
-  if (!input) return 'U'
-  
-  // Handle email addresses
-  if (input.includes('@')) {
-    return input.charAt(0).toUpperCase()
-  }
-  
-  // Clean and normalize the input
-  const cleanName = input
-    .replace(/[^a-zA-Z\s]/g, '') // Remove special characters
-    .trim()
-    .split(/\s+/) // Split on any whitespace
-    
-  if (cleanName.length === 0) return 'U'
-  
-  // Get initials, handling single names
-  const initials = cleanName.length === 1
-    ? cleanName[0].slice(0, 2).toUpperCase()
-    : cleanName
-        .slice(0, 2)
-        .map(word => word.charAt(0))
-        .join('')
-        .toUpperCase()
-  
-  return initials || 'U'
+const userInitials = computed(() => {
+  const name = auth.user?.name || auth.user?.email || ''
+  return name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+})
+
+const handleResize = () => {
+  isDesktop.value = window.innerWidth >= 768
 }
 
-// Reset error state when user or image changes
-watch(
-  () => [auth.user?.id, auth.user?.image],
-  () => {
-    imageLoadError.value = false
-  },
-  { deep: true }
-)
+onMounted(() => {
+  handleResize()
+  window.addEventListener('resize', handleResize)
+  isInitialized.value = true
+})
 
-console.log('AuthWidget: user', auth.user)
-console.log('AuthWidget: isAuthenticated', auth.isAuthenticated)
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 </script>
 
 <style scoped>
 .auth-widget {
-  min-width: 0;
+  display: flex;
+  align-items: center;
 }
-.avatar {
-  width: 2rem;
-  height: 2rem;
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.avatar-container {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  object-fit: cover;
-  background: #e5e7eb;
-  flex-shrink: 0; /* Prevent avatar from shrinking */
+  overflow: hidden;
+  background: var(--color-bg-secondary);
 }
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .avatar-fallback {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #2563eb;
+  background: var(--color-primary);
   color: white;
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  letter-spacing: 0.5px;
+  font-weight: 500;
 }
-.user-email {
-  font-size: 0.98em;
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 500;
   color: var(--color-text);
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.user-email {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.login-link {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  background: var(--color-primary);
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.login-link:hover {
+  background: var(--color-primary-dark);
 }
 </style> 

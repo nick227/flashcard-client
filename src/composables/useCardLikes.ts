@@ -1,80 +1,55 @@
 import { ref } from 'vue'
-import { api } from '@/api'
+import { api, apiEndpoints } from '@/api'
 
 export function useCardLikes(setId: number) {
   const likes = ref(0)
   const userLiked = ref(false)
   const loading = ref(false)
 
-  const fetchLikes = async () => {
+  const fetchSetLikes = async () => {
     try {
-      loading.value = true
-      const [likesRes, userLikesRes] = await Promise.all([
-        api.get(`/sets/${setId}/likes`),
-        api.get(`/sets/${setId}/likes/user`)
-      ])
-      likes.value = likesRes.data.count || 0
-      userLiked.value = userLikesRes.data.liked || false
-      console.log('Fetched likes state:', { likes: likes.value, userLiked: userLiked.value })
-    } catch (err) {
-      console.error('Error fetching likes:', err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const toggleLike = async () => {
-    try {
-      loading.value = true
-      const res = await api.post(`/sets/${setId}/like`)
-      likes.value = res.data.likes || 0
-      userLiked.value = res.data.liked || false
-      console.log('Toggled like state:', { likes: likes.value, userLiked: userLiked.value })
-      return res.data
-    } catch (err) {
-      console.error('Error toggling like:', err)
-      throw err
-    } finally {
-      loading.value = false
+      const response = await api.get(apiEndpoints.sets.likes(setId))
+      likes.value = response.data.count || 0
+    } catch (error) {
+      console.error('Error fetching set likes:', error)
     }
   }
 
   const fetchUserLikeForSet = async () => {
     try {
-      const res = await api.get(`/sets/${setId}/likes/user`)
-      userLiked.value = res.data.liked || false
-      console.log('Fetched user like state:', userLiked.value)
-      return res.data
-    } catch (err) {
-      console.error('Error fetching user like:', err)
+      const response = await api.get(apiEndpoints.sets.userLikes(setId))
+      userLiked.value = response.data.liked || false
+    } catch (error) {
+      console.error('Error fetching user like:', error)
       userLiked.value = false
-      return { liked: false }
     }
   }
 
-  const fetchSetLikes = async () => {
+  const toggleLike = async () => {
+    if (loading.value) return
+    loading.value = true
+
     try {
-      const res = await api.get(`/sets/${setId}/likes`)
-      likes.value = res.data.count || 0
-      console.log('Fetched set likes:', likes.value)
-      return res.data
-    } catch (err) {
-      console.error('Error fetching set likes:', err)
-      likes.value = 0
-      return { count: 0 }
+      const response = await api.post(apiEndpoints.sets.toggleLike(setId))
+      userLiked.value = response.data.liked
+      if (userLiked.value) {
+        likes.value++
+      } else {
+        likes.value = Math.max(0, likes.value - 1)
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error)
+    } finally {
+      loading.value = false
     }
   }
-
-  // Initialize likes state
-  fetchLikes()
 
   return {
     likes,
     userLiked,
     loading,
-    fetchLikes,
-    toggleLike,
+    fetchSetLikes,
     fetchUserLikeForSet,
-    fetchSetLikes
+    toggleLike
   }
 } 

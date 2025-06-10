@@ -155,53 +155,22 @@ const fetchStats = async () => {
 
   try {
     isLoadingStats.value = true
-    console.log('[Stats] Fetching stats for set', props.set.id)
     
     const [viewsRes, likesRes, cardsRes] = await Promise.all([
       cachedApiEndpoints.getBatchSetViews([props.set.id]),
       cachedApiEndpoints.getBatchSetLikes([props.set.id]),
       cachedApiEndpoints.getBatchSetCards([props.set.id])
     ])
-    
-    console.log('[Stats] Raw responses for set', props.set.id, ':', {
-      views: viewsRes,
-      likes: likesRes,
-      cards: cardsRes
-    })
 
     // Extract data from the message property
     const viewsData = (viewsRes as { message?: Record<string, number> })?.message || {}
     const likesData = (likesRes as { message?: Record<string, number> })?.message || {}
     const cardsData = (cardsRes as { message?: Record<string, number> })?.message || {}
     
-    console.log('[Stats] Extracted data for set', props.set.id, ':', {
-      viewsData,
-      likesData,
-      cardsData,
-      setId: props.set.id
-    })
-    
     localViews.value = viewsData[props.set.id] || 0
     localLikes.value = likesData[props.set.id] || 0
     localCards.value = cardsData[props.set.id] || 0
-
-    console.log('[Stats] Final stats for set', props.set.id, ':', {
-      views: {
-        value: localViews.value,
-        raw: viewsData[props.set.id],
-        exists: props.set.id in viewsData
-      },
-      likes: {
-        value: localLikes.value,
-        raw: likesData[props.set.id],
-        exists: props.set.id in likesData
-      },
-      cards: {
-        value: localCards.value,
-        raw: cardsData[props.set.id],
-        exists: props.set.id in cardsData
-      }
-    })
+    
   } catch (error) {
     console.error('[Stats] Error fetching stats for set', props.set?.id, ':', error)
   } finally {
@@ -212,13 +181,6 @@ const fetchStats = async () => {
 // Fetch stats when component is mounted
 onMounted(() => {
   if (!props.set) return
-  console.log('[SetPreviewCard] Mounted with set:', {
-    id: props.set.id,
-    hasTags: !!props.set.tags,
-    tagsType: props.set.tags ? typeof props.set.tags : 'undefined',
-    isArray: Array.isArray(props.set.tags),
-    tagsLength: props.set.tags ? props.set.tags.length : 0
-  });
   fetchStats()
 })
 
@@ -226,22 +188,12 @@ onMounted(() => {
 const views = computed(() => {
   if (!props.set) return 0
   const value = localViews.value || (typeof props.set.views === 'number' ? props.set.views : 0)
-  console.log('[Stats] Computed views for set', props.set.id, ':', {
-    propValue: props.set.views,
-    localValue: localViews.value,
-    finalValue: value
-  })
   return value
 })
 
 const likes = computed(() => {
   if (!props.set) return 0
   const value = localLikes.value || (typeof props.set.likes === 'number' ? props.set.likes : 0)
-  console.log('[Stats] Computed likes for set', props.set.id, ':', {
-    propValue: props.set.likes,
-    localValue: localLikes.value,
-    finalValue: value
-  })
   return value
 })
 
@@ -255,13 +207,6 @@ const cards = computed(() => {
       value = props.set.cardsCount
     }
   }
-  console.log('[Stats] Computed cards for set', props.set.id, ':', {
-    isArray: Array.isArray(props.set.cards),
-    arrayLength: Array.isArray(props.set.cards) ? props.set.cards.length : null,
-    cardsCount: props.set.cardsCount,
-    localValue: localCards.value,
-    finalValue: value
-  })
   return value
 })
 </script>

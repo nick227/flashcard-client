@@ -162,7 +162,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import { api } from '@/api'
+import { api, getApiUrl, apiEndpoints } from '@/api'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
 import CardControls from './CardControls.vue'
 import CardGrid from './CardGrid.vue'
@@ -303,7 +303,7 @@ const fetchSet = async () => {
     return
   }
   try {
-    const res = await api.get(`/sets/${props.setId}`)
+    const res = await api.get(getApiUrl(`${apiEndpoints.sets.base}/${props.setId}`))
     console.log('Raw API response:', res.data)
     set.value = res.data
 

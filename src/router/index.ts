@@ -175,52 +175,41 @@ export const router = createRouter({
 })
 
 // Navigation guards
-router.beforeEach(async (_to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
   
-  console.log('Navigation guard - Route:', _to.path)
-  console.log('Navigation guard - Auth state:', {
-    isAuthenticated: auth.isAuthenticated,
-    user: auth.user
-  })
-  
   // Update page title
-  document.title = `${_to.meta.title} | Flashcard Academy` || 'Flashcard Academy'
+  document.title = `${to.meta.title} | Flashcard Academy` || 'Flashcard Academy'
   
+  // Skip auth check for guest routes
+  if (to.meta.guest) {
+    if (auth.isAuthenticated) {
+      return next('/')
+    }
+    return next()
+  }
+
   // Handle authentication
-  if (!auth.user) {
-    console.log('No user, checking auth...')
+  if (!auth.isAuthenticated) {
     try {
       await auth.checkAuth()
-      console.log('Auth checked:', auth.user)
     } catch (error) {
-      console.error('Failed to check auth:', error)
-      auth.logout()
-      return next('/login')
+      // Only redirect to login if not already going there
+      if (to.path !== '/login') {
+        return next('/login')
+      }
     }
   }
 
-  // Guest routes
-  if (_to.meta.guest && auth.isAuthenticated) {
-    console.log('Guest route accessed while authenticated, redirecting to home')
-    return next('/')
-  }
-
   // Auth required routes
-  if (_to.meta.requiresAuth && !auth.isAuthenticated) {
-    console.log('Auth required route accessed without auth, redirecting to login')
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return next('/login')
   }
 
   // Role required routes
-  if (_to.meta.requiresRole && auth.user?.role !== _to.meta.requiresRole) {
-    console.log('Role required route accessed without proper role:', {
-      requiredRole: _to.meta.requiresRole,
-      userRole: auth.user?.role
-    })
+  if (to.meta.requiresRole && auth.user?.role !== to.meta.requiresRole) {
     return next('/')
   }
 
-  console.log('Navigation guard - Proceeding to route')
   next()
 })

@@ -3,11 +3,13 @@
     <NotificationToast />
     <Navbar />
     <div class="main-content">
-      <transition name="fade" mode="out-in">
-        <keep-alive :include="['BrowseSets']">
-          <router-view :key="route.path" />
-        </keep-alive>
-      </transition>
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <keep-alive :include="['BrowseSets']">
+            <component :is="Component" :key="route.path" />
+          </keep-alive>
+        </transition>
+      </router-view>
     </div>
     <Footer />
   </div>
@@ -60,7 +62,7 @@ onMounted(() => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.15s ease;
+  transition: opacity 0.3s ease;
 }
 
 .fade-enter-from,
