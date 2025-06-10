@@ -113,18 +113,21 @@ export default defineConfig(({ mode }): UserConfig => ({
           }
           // Bundle all app code together
           return 'app';
-        }
+        },
+        // Add source map comment
+        sourcemapExcludeSources: false
       }
     },
     chunkSizeWarningLimit: 1000,
-    sourcemap: mode !== 'production',
+    // Enable source maps for debugging
+    sourcemap: true,
     target: 'es2015',
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: mode === 'production',
-        drop_debugger: mode === 'production',
-        pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
+        drop_console: false, // Keep console logs for debugging
+        drop_debugger: false, // Keep debugger statements
+        pure_funcs: [], // Don't remove any functions
         passes: 2,
         keep_fnames: true,
         keep_classnames: true
@@ -134,7 +137,7 @@ export default defineConfig(({ mode }): UserConfig => ({
         keep_classnames: true
       },
       format: {
-        comments: false
+        comments: true // Keep comments for debugging
       }
     },
     reportCompressedSize: true,

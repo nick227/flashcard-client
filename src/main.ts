@@ -11,6 +11,9 @@ import axios from 'axios'
 import { watch } from 'vue'
 import './polyfills/modulepreload'
 
+// Debug logging
+console.log('[Debug] Starting app initialization')
+
 // Production configuration
 const isProd = import.meta.env.PROD
 const API_URL = isProd ? 'https://api.flashcardacademy.com' : 'http://localhost:5000'
@@ -41,16 +44,16 @@ NProgress.configure({
 // Create app with error handling
 const app = createApp(App)
 
-// Error handler with production logging
+// Enhanced error handler with more details
 app.config.errorHandler = (err, instance, info) => {
-  console.error('Vue Error:', err)
-  if (isProd) {
-    // Add production error reporting here (e.g., Sentry)
-    console.error('Component:', instance?.$options?.name || 'Unknown')
-    console.error('Info:', info)
-  } else {
-    console.error('Component:', instance)
-    console.error('Info:', info)
+  console.error('[Debug] Vue Error:', err)
+  console.error('[Debug] Error Component:', instance?.$options?.name || 'Unknown')
+  console.error('[Debug] Error Info:', info)
+  console.error('[Debug] Error Stack:', err instanceof Error ? err.stack : 'No stack trace')
+  
+  // Log component tree if available
+  if (instance) {
+    console.error('[Debug] Component Tree:', instance.$parent ? 'Has parent' : 'Root component')
   }
 }
 
@@ -58,23 +61,27 @@ app.config.errorHandler = (err, instance, info) => {
 app.config.performance = isProd
 
 // Initialize Pinia with persistence
+console.log('[Debug] Initializing Pinia')
 const pinia = createPinia()
 pinia.use(piniaPersist)
 app.use(pinia)
 
 // Google Sign In Configuration
+console.log('[Debug] Setting up Google Sign In')
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 if (!GOOGLE_CLIENT_ID) {
-  console.error('VITE_GOOGLE_CLIENT_ID is not defined')
+  console.error('[Debug] VITE_GOOGLE_CLIENT_ID is not defined')
 }
 app.use(GoogleSignInPlugin, {
   clientId: GOOGLE_CLIENT_ID
 })
 
 // Router
+console.log('[Debug] Setting up Router')
 app.use(router)
 
 // Auth setup
+console.log('[Debug] Setting up Auth')
 const auth = useAuthStore()
 
 // Set initial auth header
@@ -195,6 +202,7 @@ axios.interceptors.response.use(
 watch(
   () => auth.jwt,
   (newJwt) => {
+    console.log('[Debug] JWT changed:', newJwt ? 'New token set' : 'Token cleared')
     if (newJwt) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${newJwt}`
     } else {
@@ -206,18 +214,21 @@ watch(
 
 // Router guards with error handling
 router.beforeEach(async (_to, _from, next) => {
+  console.log('[Debug] Router navigation started')
   NProgress.start()
   try {
     next()
   } catch (error) {
-    console.error('Navigation error:', error)
+    console.error('[Debug] Navigation error:', error)
     next(false)
   }
 })
 
 router.afterEach(() => {
+  console.log('[Debug] Router navigation completed')
   NProgress.done()
 })
 
 // Mount app
+console.log('[Debug] Mounting app')
 app.mount('#app')
