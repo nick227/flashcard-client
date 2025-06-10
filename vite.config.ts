@@ -98,51 +98,81 @@ export default defineConfig(({ mode }): UserConfig => ({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Bundle all Vue-related code together
+          // Core Vue framework
           if (id.includes('node_modules/vue') || 
               id.includes('node_modules/vue-router') || 
-              id.includes('node_modules/pinia') ||
-              id.includes('node_modules/@vue/') ||
-              id.includes('node_modules/@headlessui/vue') || 
+              id.includes('node_modules/pinia')) {
+            return 'vue-core';
+          }
+          
+          // UI libraries
+          if (id.includes('node_modules/@headlessui/vue') || 
               id.includes('node_modules/@heroicons/vue')) {
-            return 'vendor';
+            return 'ui-libs';
           }
-          // Bundle all other dependencies
-          if (id.includes('node_modules')) {
-            return 'deps';
+          
+          // Data and utilities
+          if (id.includes('node_modules/axios') || 
+              id.includes('node_modules/lodash') ||
+              id.includes('node_modules/date-fns')) {
+            return 'utils';
           }
-          // Bundle all app code together
-          return 'app';
+          
+          // App code - keep it together for now
+          if (id.includes('/src/')) {
+            return 'app';
+          }
+          
+          // Everything else
+          return 'vendor';
         },
-        // Add source map comment
-        sourcemapExcludeSources: false
+        // CSS code splitting
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name;
+          if (info && info.endsWith('.css')) {
+            return 'assets/css/[name]-[hash][extname]';
+          }
+          if (info && /\.(png|jpe?g|gif|svg|webp|avif)$/.test(info)) {
+            return 'assets/images/[name]-[hash][extname]';
+          }
+          if (info && /\.(woff2?|eot|ttf|otf)$/.test(info)) {
+            return 'assets/fonts/[name]-[hash][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
+        }
       }
     },
     chunkSizeWarningLimit: 1000,
-    // Enable source maps for debugging
-    sourcemap: true,
-    target: 'es2015',
+    // Disable source maps in production for security
+    sourcemap: mode !== 'production',
+    // Modern browser target
+    target: 'esnext',
+    // Minification options
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false, // Keep console logs for debugging
-        drop_debugger: false, // Keep debugger statements
-        pure_funcs: [], // Don't remove any functions
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production',
+        pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
         passes: 2,
         keep_fnames: true,
         keep_classnames: true
       },
       mangle: {
         keep_fnames: true,
-        keep_classnames: true
+        keep_classnames: true,
+        reserved: ['__proto__', 'constructor', 'prototype', 'Ie']
       },
       format: {
-        comments: true // Keep comments for debugging
+        comments: false
       }
     },
+    // Performance hints
     reportCompressedSize: true,
+    // CSS optimization
     cssCodeSplit: true,
     cssMinify: mode === 'production',
+    // Build optimization
     assetsInlineLimit: 4096,
     modulePreload: {
       polyfill: true
