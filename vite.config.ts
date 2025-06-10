@@ -98,32 +98,8 @@ export default defineConfig(({ mode }): UserConfig => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Keep Vue and its ecosystem together
-          if (id.includes('node_modules/vue') || 
-              id.includes('node_modules/vue-router') || 
-              id.includes('node_modules/pinia') ||
-              id.includes('node_modules/@vue/')) {
-            return 'vue-core';
-          }
-          // Keep UI components together
-          if (id.includes('node_modules/@headlessui/vue') || 
-              id.includes('node_modules/@heroicons/vue')) {
-            return 'ui-components';
-          }
-          // Keep utilities together
-          if (id.includes('node_modules/axios') || 
-              id.includes('node_modules/lodash') ||
-              id.includes('node_modules/date-fns')) {
-            return 'utils';
-          }
-          // Keep app code together
-          if (id.includes('/src/')) {
-            return 'app';
-          }
-          // Everything else
-          return 'vendor';
-        },
+        // Single chunk strategy
+        manualChunks: undefined,
         // Vercel-specific asset handling
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name;
