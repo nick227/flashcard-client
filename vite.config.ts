@@ -90,14 +90,41 @@ export default defineConfig(({ mode }): UserConfig => ({
   ].filter(Boolean),
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      'vue': path.resolve(__dirname, 'node_modules/vue/dist/vue.esm-bundler.js')
     },
     dedupe: ['vue']
   },
   build: {
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: (id) => {
+          // Keep Vue and its ecosystem together
+          if (id.includes('node_modules/vue') || 
+              id.includes('node_modules/vue-router') || 
+              id.includes('node_modules/pinia') ||
+              id.includes('node_modules/@vue/')) {
+            return 'vue-core';
+          }
+          // Keep UI components together
+          if (id.includes('node_modules/@headlessui/vue') || 
+              id.includes('node_modules/@heroicons/vue')) {
+            return 'ui-components';
+          }
+          // Keep utilities together
+          if (id.includes('node_modules/axios') || 
+              id.includes('node_modules/lodash') ||
+              id.includes('node_modules/date-fns')) {
+            return 'utils';
+          }
+          // Keep app code together
+          if (id.includes('/src/')) {
+            return 'app';
+          }
+          // Everything else
+          return 'vendor';
+        },
+        // Vercel-specific asset handling
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name;
           if (info && info.endsWith('.css')) {
@@ -113,43 +140,76 @@ export default defineConfig(({ mode }): UserConfig => ({
         }
       }
     },
+    // Vercel-specific build settings
     chunkSizeWarningLimit: 1000,
-    sourcemap: true,
+    sourcemap: mode !== 'production', // Disable sourcemaps in production for Vercel
     target: 'es2015',
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: false,
-        drop_debugger: false,
-        pure_funcs: [],
+        drop_console: mode === 'production', // Remove console in production
+        drop_debugger: mode === 'production',
+        pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
         passes: 1,
         keep_fnames: true,
-        keep_classnames: true
+        keep_classnames: true,
+        unsafe: false
       },
       mangle: {
         keep_fnames: true,
         keep_classnames: true,
-        reserved: ['__proto__', 'constructor', 'prototype', 'Ie', 'Vue', 'vue']
+        reserved: [
+          '__proto__', 
+          'constructor', 
+          'prototype', 
+          'Ie', 
+          'Vue', 
+          'vue',
+          'Yl',
+          'initialize',
+          'createApp',
+          'defineComponent',
+          'ref',
+          'computed',
+          'watch',
+          'onMounted',
+          'onUnmounted'
+        ]
       },
       format: {
-        comments: true
+        comments: false // Remove comments in production
       }
     },
     reportCompressedSize: true,
-    cssCodeSplit: false,
-    cssMinify: false,
+    cssCodeSplit: true, // Enable CSS code splitting for Vercel
+    cssMinify: mode === 'production',
     assetsInlineLimit: 4096,
     modulePreload: {
       polyfill: true
     }
   },
   optimizeDeps: {
-    include: ['vue', 'vue-router', 'pinia', 'axios', 'lodash'],
+    include: [
+      'vue',
+      'vue-router',
+      'pinia',
+      'axios',
+      'lodash',
+      '@vue/runtime-core',
+      '@vue/runtime-dom',
+      '@vue/shared'
+    ],
     exclude: ['@vueuse/core']
   },
   esbuild: {
     target: 'es2015',
     treeShaking: true,
     legalComments: 'none'
+  },
+  // Vercel-specific server settings
+  server: {
+    port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+    strictPort: true,
+    host: true
   }
 }))
