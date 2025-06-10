@@ -97,36 +97,7 @@ export default defineConfig(({ mode }): UserConfig => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Core Vue framework
-          if (id.includes('node_modules/vue') || 
-              id.includes('node_modules/vue-router') || 
-              id.includes('node_modules/pinia')) {
-            return 'vue-core';
-          }
-          
-          // UI libraries
-          if (id.includes('node_modules/@headlessui/vue') || 
-              id.includes('node_modules/@heroicons/vue')) {
-            return 'ui-libs';
-          }
-          
-          // Data and utilities
-          if (id.includes('node_modules/axios') || 
-              id.includes('node_modules/lodash') ||
-              id.includes('node_modules/date-fns')) {
-            return 'utils';
-          }
-          
-          // App code - keep it together for now
-          if (id.includes('/src/')) {
-            return 'app';
-          }
-          
-          // Everything else
-          return 'vendor';
-        },
-        // CSS code splitting
+        manualChunks: undefined,
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name;
           if (info && info.endsWith('.css')) {
@@ -143,36 +114,30 @@ export default defineConfig(({ mode }): UserConfig => ({
       }
     },
     chunkSizeWarningLimit: 1000,
-    // Disable source maps in production for security
-    sourcemap: mode !== 'production',
-    // Modern browser target
-    target: 'esnext',
-    // Minification options
+    sourcemap: true,
+    target: 'es2015',
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: mode === 'production',
-        drop_debugger: mode === 'production',
-        pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
-        passes: 2,
+        drop_console: false,
+        drop_debugger: false,
+        pure_funcs: [],
+        passes: 1,
         keep_fnames: true,
         keep_classnames: true
       },
       mangle: {
         keep_fnames: true,
         keep_classnames: true,
-        reserved: ['__proto__', 'constructor', 'prototype', 'Ie']
+        reserved: ['__proto__', 'constructor', 'prototype', 'Ie', 'Vue', 'vue']
       },
       format: {
-        comments: false
+        comments: true
       }
     },
-    // Performance hints
     reportCompressedSize: true,
-    // CSS optimization
-    cssCodeSplit: true,
-    cssMinify: mode === 'production',
-    // Build optimization
+    cssCodeSplit: false,
+    cssMinify: false,
     assetsInlineLimit: 4096,
     modulePreload: {
       polyfill: true
@@ -183,7 +148,7 @@ export default defineConfig(({ mode }): UserConfig => ({
     exclude: ['@vueuse/core']
   },
   esbuild: {
-    target: 'esnext',
+    target: 'es2015',
     treeShaking: true,
     legalComments: 'none'
   }
