@@ -213,10 +213,10 @@ export const useAuthStore = defineStore('auth', () => {
           lastAuthCheck.value = now
           return true
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch user data:', error)
         // If we get a 401/403, clear the invalid token
-        if (error.response?.status === 401 || error.response?.status === 403) {
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
           setJwt(null)
           setUser(null)
           if (isBrowser) {
