@@ -76,6 +76,7 @@
         display: flex;
         align-items: center;
         gap: 1.5rem;
+        margin-right: 35px;
     }
     
     .navbar-link {
@@ -134,7 +135,6 @@
         }
         .navbar-actions {
             width: 100%;
-            flex-wrap: wrap;
             justify-content: center;
             gap: 0.75rem;
         }

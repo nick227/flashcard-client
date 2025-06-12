@@ -310,6 +310,7 @@ watch([() => props.text, () => props.imageUrl], ([newText, newImageUrl]) => {
   transition: all 0.3s ease-in-out;
   border: 1px solid var(--color-border);
   box-sizing: border-box;
+  line-height: 1.5;
 }
 
 .media-text:focus {

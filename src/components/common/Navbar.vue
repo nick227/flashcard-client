@@ -1,6 +1,6 @@
 <template>
   <nav class="navbar mb-2">
-    <div class="navbar-inner">
+    <div class="navbar-inner container">
       <div class="navbar-masthead">
         <router-link to="/" class="navbar-logo">
           <svg width="40" height="40" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" class="logo-svg">
@@ -13,8 +13,8 @@
       </div>
       <div class="navbar-actions">
         <router-link to="/" class="navbar-link" active-class="active">Home</router-link>
-        <router-link to="/browse" class="navbar-link" active-class="active">Browse Sets</router-link>
-        <router-link to="/creator" class="navbar-link" active-class="active">Start Teaching</router-link>
+        <router-link to="/browse" class="navbar-link" active-class="active">Browse</router-link>
+        <router-link to="/creator" class="navbar-link" active-class="active">Create</router-link>
         <div class="navbar-divider"></div>
         <AuthWidget />
       </div>

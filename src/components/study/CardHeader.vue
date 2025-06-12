@@ -35,7 +35,7 @@
           </div>
         </div>
         <!-- Set title -->
-        <h1 ref="titleElement" class="text-2xl font-bold flex-1 set-title">{{ set.title }}</h1>
+        <h1 class="text-2xl font-bold flex-1 set-title">{{ set.title }}</h1>
     </div>
       <!-- Action Buttons -->
       <div class="flex items-center justify-end sm:justify-end gap-4 title-buttons w-full mb-2">
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FlashCardSet } from '@/types'
 import LikeButton from './LikeButton.vue'
@@ -58,7 +58,6 @@ import LikeButton from './LikeButton.vue'
 const router = useRouter()
 const avatarError = ref(false)
 const thumbnailError = ref(false)
-const titleElement = ref<HTMLElement | null>(null)
 
 const props = defineProps<{
   set: FlashCardSet
@@ -111,28 +110,6 @@ const getFirstLetter = computed(() => {
   if (!props.set.title) return '?'
   return props.set.title.charAt(0).toUpperCase()
 })
-
-// Update font size based on content length
-const updateTitleSize = () => {
-  if (titleElement.value && window.innerWidth > 768) {
-    const charCount = titleElement.value.textContent?.length || 0
-    titleElement.value.style.setProperty('--char-count', charCount.toString())
-  }
-}
-
-// Watch for title changes
-watch(() => props.set.title, () => {
-  nextTick(updateTitleSize)
-})
-
-onMounted(() => {
-  nextTick(updateTitleSize)
-  window.addEventListener('resize', updateTitleSize)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateTitleSize)
-})
 </script>
 
 <style scoped>
@@ -143,7 +120,7 @@ onUnmounted(() => {
 }
 
 .set-title {
-  font-size: clamp(2rem, calc(4rem - (max(0, var(--char-count) - 25) * 0.04rem)), 4rem);
+  font-size: 3rem;
   margin-top: 0;
   line-height: 1.2;
   overflow-wrap: break-word;
@@ -152,6 +129,7 @@ onUnmounted(() => {
   max-width: 100%;
   min-height: 60px;
   transition: font-size 0.2s ease;
+  padding: 10px 0;
 }
 
 .title-buttons {
