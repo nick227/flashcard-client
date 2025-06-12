@@ -66,13 +66,63 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await authApi.login(credentials)
-      setJwt(response.token)
-      setUser(response.user)
+      // Clear any existing auth data first
+      setJwt(null)
+      setUser(null)
       setMessage(null)
-      return response
+      if (isBrowser) {
+        localStorage.removeItem('jwt')
+        cacheService.delete('user')
+      }
+
+      // Attempt login
+      const response = await authApi.login(credentials)
+      console.log('Login response:', response)
+
+      if (!response?.token || !response?.user) {
+        throw new Error('Invalid login response')
+      }
+
+      // Set JWT first
+      setJwt(response.token)
+
+      // Then set user data
+      setUser(response.user)
+
+      // Verify the token works by making a test request
+      try {
+        const verifyResponse = await api.get('/users/me')
+        console.log('Token verification response:', verifyResponse.data)
+        
+        if (!verifyResponse.data) {
+          throw new Error('Token verification failed')
+        }
+        
+        // Update user data with verified response
+        setUser(verifyResponse.data)
+        setMessage(null)
+        return response
+      } catch (verifyError) {
+        console.error('Token verification failed:', verifyError)
+        // Clear everything if verification fails
+        setJwt(null)
+        setUser(null)
+        if (isBrowser) {
+          localStorage.removeItem('jwt')
+          cacheService.delete('user')
+        }
+        throw new Error('Failed to verify authentication')
+      }
     } catch (err: any) {
+      console.error('Login error:', err)
       error.value = err.response?.data?.message || 'Login failed'
+      // Ensure everything is cleared on error
+      setJwt(null)
+      setUser(null)
+      if (isBrowser) {
+        localStorage.removeItem('jwt')
+        cacheService.delete('user')
+      }
       throw err
     } finally {
       loading.value = false
@@ -101,15 +151,26 @@ export const useAuthStore = defineStore('auth', () => {
     if (!isBrowser) return
     loading.value = true
     error.value = null
+    
+    // Clear everything first to prevent any retries
+    setJwt(null)
+    setUser(null)
+    setMessage(null)
+    if (isBrowser) {
+      localStorage.removeItem('jwt')
+      cacheService.delete('user')
+    }
+    
+    // Navigate to login immediately
+    router.push('/login')
+    
+    // Then attempt to call the logout endpoint, but don't wait for it
     try {
       await authApi.logout()
     } catch (err: any) {
-      console.error('Logout error:', err)
+      console.error('Logout API call failed:', err)
+      // Ignore the error since we've already cleared everything
     } finally {
-      setJwt(null)
-      setUser(null)
-      setMessage(null)
-      router.push('/login')
       loading.value = false
     }
   }
@@ -144,12 +205,25 @@ export const useAuthStore = defineStore('auth', () => {
       setJwt(token)
 
       // Get fresh user data
-      const response = await api.get('/users/me')
-      console.log('Fresh user data from /me:', response.data)
-      if (response.data) {
-        setUser(response.data)
-        lastAuthCheck.value = now
-        return true
+      try {
+        const response = await api.get('/users/me')
+        console.log('Fresh user data from /me:', response.data)
+        if (response.data) {
+          setUser(response.data)
+          lastAuthCheck.value = now
+          return true
+        }
+      } catch (error) {
+        console.error('Failed to fetch user data:', error)
+        // If we get a 401/403, clear the invalid token
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          setJwt(null)
+          setUser(null)
+          if (isBrowser) {
+            localStorage.removeItem('jwt')
+            cacheService.delete('user')
+          }
+        }
       }
       return false
     } catch (error) {
@@ -157,6 +231,10 @@ export const useAuthStore = defineStore('auth', () => {
       // Clear JWT and user data on error
       setJwt(null)
       setUser(null)
+      if (isBrowser) {
+        localStorage.removeItem('jwt')
+        cacheService.delete('user')
+      }
       return false
     }
   }
