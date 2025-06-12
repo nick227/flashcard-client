@@ -1,3 +1,5 @@
+export type MediaType = 'text' | 'image' | 'youtube' | 'link'
+
 export function useMediaUtils() {
   const isYouTubeUrl = (url: string | null | undefined): boolean => {
     if (!url) return false
@@ -13,8 +15,29 @@ export function useMediaUtils() {
     return match ? `https://www.youtube.com/embed/${match[1]}` : cleanUrl
   }
 
+  const isImageUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false
+    return url.includes('cloudinary.com') || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url)
+  }
+
+  const isWebUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false
+    return /^https?:\/\//i.test(url)
+  }
+
+  const getMediaType = (text: string | null | undefined): MediaType => {
+    if (!text) return 'text'
+    if (isImageUrl(text)) return 'image'
+    if (isYouTubeUrl(text)) return 'youtube'
+    if (isWebUrl(text)) return 'link'
+    return 'text'
+  }
+
   return {
     isYouTubeUrl,
-    getYouTubeEmbedUrl
+    getYouTubeEmbedUrl,
+    isImageUrl,
+    isWebUrl,
+    getMediaType
   }
 } 

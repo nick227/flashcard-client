@@ -14,6 +14,8 @@ export interface FlashCard {
 
 export type Card = FlashCard;
 
+export type CardSide = 'front' | 'back';
+
 export interface CardSet {
   id: number;
   title: string;

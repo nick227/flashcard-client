@@ -17,9 +17,13 @@
                 <i class="fa fa-trash"></i>
               </button>
             </div>
-            <div v-else class="media-text full-size" contenteditable="true"
+            <div v-else 
+              class="media-text full-size" 
+              contenteditable="true"
+              :style="fontSizes[idx - 1].style"
               :ref="el => editableDivs[idx - 1] = el as HTMLElement | null"
-              @input="e => onInput(idx - 1, e, val => emit('update', val))"></div>
+              @input="e => onInput(idx - 1, e, val => emit('update', val))">
+            </div>
           </div>
         </div>
       </div>
@@ -36,15 +40,20 @@
       <div class="content-flex full-size" :class="`layout-${layout}`">
         <div class="content-container full-size">
           <div v-for="idx in areaCount" :key="idx" class="content-area full-size">
-            <CardMedia 
-              v-if="mediaTypes[idx - 1] !== 'text'" 
-              :type="mediaTypes[idx - 1]"
-              :url="contentAreas[idx - 1]" 
-              :alt="contentAreas[idx - 1]" 
-              class="media-preview"
-              :data-media-type="mediaTypes[idx - 1]"
-            />
-            <div v-else class="media-text full-size view-mode" v-html="contentAreas[idx - 1]"></div>
+            <div v-if="mediaTypes[idx - 1] !== 'text'" class="media-container" :data-media-type="mediaTypes[idx - 1]">
+              <CardMedia 
+                :type="mediaTypes[idx - 1]" 
+                :url="contentAreas[idx - 1]" 
+                :alt="contentAreas[idx - 1]" 
+                class="media-preview"
+                :data-media-type="mediaTypes[idx - 1]"
+              />
+            </div>
+            <div v-else 
+              class="media-text full-size view-mode" 
+              :style="fontSizes[idx - 1].style"
+              v-html="transformContent(contentAreas[idx - 1])">
+            </div>
           </div>
         </div>
       </div>
@@ -57,9 +66,12 @@ import { ref, watch, computed, nextTick } from 'vue'
 import { useCardContent } from '@/composables/useCardContent'
 import CardControlsBar from './CardControlsBar.vue'
 import CardMedia from './CardMedia.vue'
-import { aiSocketService } from '@/services/AISocketService'
 import Toaster from '@/components/common/Toaster.vue'
 import { useToaster } from '@/composables/useToaster'
+import { useMediaUtils } from '@/composables/useMediaUtils'
+import { useContentTransform } from '@/composables/useContentTransform'
+import { useDynamicFontSize } from '@/composables/useDynamicFontSize'
+import { aiCardService } from '@/services/AICardService'
 
 const props = defineProps<{ 
   text: string, 
@@ -68,7 +80,7 @@ const props = defineProps<{
   title?: string,
   description?: string,
   category?: string,
-  imageUrl?: string  // Add imageUrl prop
+  imageUrl?: string
 }>()
 const emit = defineEmits(['update'])
 
@@ -93,34 +105,32 @@ const {
 console.log('CardContent contentAreas:', contentAreas.value)
 
 const { toasts, toast } = useToaster()
+const { getMediaType } = useMediaUtils()
+const { transformContent } = useContentTransform('full')
 
 // Local DOM refs for editable divs (plain array)
 const editableDivs: (HTMLElement | null)[] = []
-
-// Media type detection utility
-function getMediaType(text: string) {
-  console.log('getMediaType input:', text)
-  if (!text) return 'text'
-  // Check if it's a Cloudinary URL
-  if (text.includes('cloudinary.com')) {
-    console.log('Detected Cloudinary URL')
-    return 'image'
-  }
-  // Check for other image URLs
-  if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(text)) {
-    console.log('Detected image URL')
-    return 'image'
-  }
-  if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(text)) return 'youtube'
-  if (/^https?:\/\//i.test(text)) return 'link'
-  return 'text'
-}
 
 const mediaTypes = computed(() => {
   const types = contentAreas.value.map(area => getMediaType(area))
   console.log('mediaTypes computed:', types)
   return types
 })
+
+// Create dynamic font size handlers for each content area
+const fontSizes = computed(() => 
+  contentAreas.value.map(text => {
+    // Use different font size ranges for front and back
+    const isBack = props.side === 'back'
+    return useDynamicFontSize(text, {
+      minChars: isBack ? 12 : 8, // Back can have smaller min chars
+      maxChars: isBack ? 300 : 250, // Back can have more chars
+      minSize: isBack ? 0.8 : 0.5, // Back can have smaller min size
+      maxSize: isBack ? 3.5 : 4, // Back can have smaller max size
+      unit: 'em'
+    })
+  })
+)
 
 function removeMedia(idx: number) {
   contentAreas.value[idx] = ''
@@ -143,50 +153,43 @@ function addMedia() {
 
 // AI Generate for single card face
 const aiLoading = ref(false)
-function aiGenerate() {
-  if (aiLoading.value) return;
-  aiLoading.value = true;
-  // Determine which side and content to generate
-  let side: 'front' | 'back' = props.side || (contentAreas.value.length === 2 ? 'front' : 'front');
-  let idx = side === 'front' ? 0 : 1;
-  // If only one area, always use idx 0
-  if (contentAreas.value.length === 1) idx = 0;
-  const otherSideContent = contentAreas.value.length === 2 ? contentAreas.value[1 - idx] : '';
-  const title = props.title || '';
-  const description = props.description || '';
-  const category = props.category || '';
-  console.log('aiGenerate params', {
-    side,
-    title,
-    description,
-    category,
-    otherSideContent
-  });
+async function aiGenerate() {
+  if (aiLoading.value) return
+  
+  aiLoading.value = true
   toast('Generating card...', 'info')
-  aiSocketService.generateSingleCardFace(
-    side,
-    title,
-    description,
-    category,
-    otherSideContent,
-    {
+
+  // Determine which side and content to generate
+  let side: 'front' | 'back' = props.side || (contentAreas.value.length === 2 ? 'front' : 'front')
+  let idx = side === 'front' ? 0 : 1
+  // If only one area, always use idx 0
+  if (contentAreas.value.length === 1) idx = 0
+  const otherSideContent = contentAreas.value.length === 2 ? contentAreas.value[1 - idx] : ''
+
+  try {
+    await aiCardService.generateCardFace({
+      side,
+      title: props.title || '',
+      description: props.description || '',
+      category: props.category || '',
+      otherSideContent,
       onResult: (text: string) => {
-        contentAreas.value[idx] = text;
+        contentAreas.value[idx] = text
         // Update the editable div content
         if (editableDivs[idx]) {
-          editableDivs[idx]!.innerHTML = text;
+          editableDivs[idx]!.innerHTML = text
         }
-        console.log('CardContent emitting update', { idx, text, contentAreas: contentAreas.value });
-        emit('update', contentAreas.value.length === 1 ? text : contentAreas.value.join('\n'));
-        aiLoading.value = false;
+        console.log('CardContent emitting update', { idx, text, contentAreas: contentAreas.value })
+        emit('update', contentAreas.value.length === 1 ? text : contentAreas.value.join('\n'))
         toast('Card generated successfully', 'success')
       },
       onError: (err: string) => {
-        aiLoading.value = false;
         toast('AI error: ' + err, 'error')
       }
-    }
-  );
+    })
+  } finally {
+    aiLoading.value = false
+  }
 }
 
 // Watch for both text and imageUrl changes
@@ -311,6 +314,8 @@ watch([() => props.text, () => props.imageUrl], ([newText, newImageUrl]) => {
   border: 1px solid var(--color-border);
   box-sizing: border-box;
   line-height: 1.5;
+  /* Remove fixed font size to allow dynamic sizing */
+  font-size: inherit;
 }
 
 .media-text:focus {

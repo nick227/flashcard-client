@@ -43,6 +43,7 @@
     position: relative;
     font-family: var(--font-main);
     cursor: text;
+    overflow-y: auto;
 }
 
 
