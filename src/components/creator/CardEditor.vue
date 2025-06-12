@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch } from 'vue'
 import type { FlashCard } from '@/types/card'
 import CardContent from '@/components/common/CardContent.vue'
 import type { CardViewMode } from '@/composables/useCardMediaStyles'
