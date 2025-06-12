@@ -4,6 +4,7 @@
       <div class="card-side front">
         <CardContent
           :text="card.front.text"
+          :imageUrl="card.front.imageUrl || undefined"
           mode="edit"
           side="front"
           :title="props.title || ''"
@@ -15,6 +16,7 @@
       <div class="card-side back">
         <CardContent
           :text="card.back.text"
+          :imageUrl="card.back.imageUrl || undefined"
           mode="edit"
           side="back"
           :title="props.title || ''"

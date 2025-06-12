@@ -24,8 +24,8 @@
 
 .hero {
     min-height: 320px;
-    padding: var(--hero-padding-y) var(--hero-padding-x);
-    background: var(--hero-bg);
+    width: calc(100% - 3rem);
+    padding: 0 1.5rem;
     color: var(--hero-color);
     border-radius: var(--hero-radius);
     margin-bottom: var(--space-xl, 4rem);
@@ -172,10 +172,6 @@
 }
 
 @media (max-width: 768px) {
-    .hero {
-        padding: var(--space-lg, 3rem 1.5rem);
-        min-height: 280px;
-    }
     .hero-title {
         font-size: 2rem;
     }

@@ -29,7 +29,8 @@ class ApiConfig {
     this.api = axios.create({
       baseURL: `${this.baseUrl}/api/`,
       timeout: 30000,
-      validateStatus: (status) => status >= 200 && status < 300
+      validateStatus: (status) => status >= 200 && status < 300,
+      withCredentials: true
     })
 
     // Add cache service to axios instance
@@ -41,18 +42,6 @@ class ApiConfig {
           cacheService.set(cacheKey, response.data, 5 * 60 * 1000) // 5 minutes
         }
         return response
-      },
-      error => Promise.reject(error)
-    )
-
-    // Add auth interceptor
-    this.api.interceptors.request.use(
-      config => {
-        const auth = useAuthStore()
-        if (auth.jwt) {
-          config.headers.Authorization = `Bearer ${auth.jwt}`
-        }
-        return config
       },
       error => Promise.reject(error)
     )

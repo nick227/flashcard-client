@@ -93,11 +93,6 @@ const loadingMessage = computed(() => {
 // Use the current page from props
 const currentPage = computed(() => {
   const page = typeof props.currentPage === 'number' ? props.currentPage : props.currentPage.value
-  console.log('DataGrid - Current Page:', {
-    page,
-    rawValue: props.currentPage,
-    isRef: typeof props.currentPage !== 'number'
-  })
   return page
 })
 
@@ -105,24 +100,11 @@ const currentPage = computed(() => {
 const totalPages = computed(() => {
   const total = typeof props.totalItems === 'number' ? props.totalItems : props.totalItems.value
   const pages = Math.max(1, Math.ceil(total / props.pageSize))
-  console.log('DataGrid - Total Pages:', {
-    total,
-    pageSize: props.pageSize,
-    calculatedPages: pages,
-    rawTotal: props.totalItems,
-    isRef: typeof props.totalItems !== 'number'
-  })
   return pages
 })
 
 const itemsArray = computed(() => {
   const items = Array.isArray(props.items) ? props.items : props.items.value || []
-  console.log('DataGrid - Items Array:', {
-    length: items.length,
-    rawItems: props.items,
-    isRef: !Array.isArray(props.items),
-    firstItem: items[0]
-  })
   return items
 })
 
@@ -130,38 +112,17 @@ const itemsArray = computed(() => {
 const showPagination = computed(() => {
   const total = typeof props.totalItems === 'number' ? props.totalItems : props.totalItems.value
   const shouldShow = total > props.pageSize
-  console.log('Show Pagination Check:', {
-    total,
-    pageSize: props.pageSize,
-    shouldShow,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    itemsLength: itemsArray.value.length
-  })
   return shouldShow
 })
 
 // Handle page changes
 const changePage = async (page: number) => {
   const isLoading = typeof props.loading === 'boolean' ? props.loading : props.loading.value
-  console.log('DataGrid - Page Change Attempt:', {
-    requestedPage: page,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    isLoading,
-    itemsLength: itemsArray.value.length
-  })
   
   if (page < 1 || page > totalPages.value || isLoading) {
-    console.log('DataGrid - Page Change Rejected:', {
-      reason: page < 1 ? 'below minimum' : 
-              page > totalPages.value ? 'above maximum' : 
-              'loading in progress'
-    })
     return
   }
   
-  console.log('DataGrid - Emitting Page Change:', page)
   emit('page-change', page)
 }
 
@@ -169,11 +130,6 @@ const changePage = async (page: number) => {
 const canGoPrevious = computed(() => {
   const loading = typeof props.loading === 'boolean' ? props.loading : props.loading.value
   const canGo = !loading && currentPage.value > 1
-  console.log('Can Go Previous:', {
-    loading,
-    currentPage: currentPage.value,
-    canGo
-  })
   return canGo
 })
 
@@ -181,15 +137,6 @@ const canGoNext = computed(() => {
   const loading = typeof props.loading === 'boolean' ? props.loading : props.loading.value
   const total = typeof props.totalItems === 'number' ? props.totalItems : props.totalItems.value
   const canGo = !loading && currentPage.value < totalPages.value && total > props.pageSize && itemsArray.value.length === props.pageSize
-  console.log('Can Go Next:', {
-    loading,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    total,
-    pageSize: props.pageSize,
-    itemsLength: itemsArray.value.length,
-    canGo
-  })
   return canGo
 })
 </script>

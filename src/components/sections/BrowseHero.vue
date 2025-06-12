@@ -14,18 +14,12 @@
 
 <style scoped>
 .hero {
-  width: 100%;
   background: var(--color-subtle);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
 }
 
 .hero-content {
-  width: 100%;
+  width: calc(100% - 3rem);
   margin: 0 auto;
-  padding: 0 1.5rem;
   text-align: center;
   display: flex;
   flex-direction: column;

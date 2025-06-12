@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { ref, onMounted, watch, nextTick, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FlashCardSet } from '@/types'
 import LikeButton from './LikeButton.vue'
@@ -114,7 +114,7 @@ const getFirstLetter = computed(() => {
 
 // Update font size based on content length
 const updateTitleSize = () => {
-  if (titleElement.value) {
+  if (titleElement.value && window.innerWidth > 768) {
     const charCount = titleElement.value.textContent?.length || 0
     titleElement.value.style.setProperty('--char-count', charCount.toString())
   }
@@ -127,6 +127,11 @@ watch(() => props.set.title, () => {
 
 onMounted(() => {
   nextTick(updateTitleSize)
+  window.addEventListener('resize', updateTitleSize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateTitleSize)
 })
 </script>
 
@@ -138,14 +143,15 @@ onMounted(() => {
 }
 
 .set-title {
-  font-size: clamp(1.8em, calc(8em - (var(--char-count) * 0.15em)), 4em);
+  font-size: clamp(2rem, calc(4rem - (max(0, var(--char-count) - 25) * 0.04rem)), 4rem);
   margin-top: 0;
-  line-height: 1.23;
+  line-height: 1.2;
   overflow-wrap: break-word;
   word-wrap: break-word;
   hyphens: auto;
   max-width: 100%;
   min-height: 60px;
+  transition: font-size 0.2s ease;
 }
 
 .title-buttons {
@@ -201,6 +207,12 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .set-title {
+    font-size: 2rem;
+    line-height: 1.2;
+    padding: 15px 0;
+  }
+  
   .title-buttons {
     text-align: center;
     display: flex;

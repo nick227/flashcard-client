@@ -6,9 +6,13 @@
       <div class="content-flex full-size" :class="`layout-${layout}`">
         <div class="content-container full-size">
           <div v-for="idx in areaCount" :key="idx" class="content-area full-size">
-            <div v-if="mediaTypes[idx - 1] !== 'text' && contentAreas[idx - 1]" class="media-container">
-              <CardMedia :type="mediaTypes[idx - 1]" :url="contentAreas[idx - 1]" :alt="contentAreas[idx - 1]"
-                class="media-preview" />
+            <div v-if="mediaTypes[idx - 1] !== 'text'" class="media-container" :data-media-type="mediaTypes[idx - 1]">
+              <CardMedia 
+                :type="mediaTypes[idx - 1]" 
+                :url="contentAreas[idx - 1]" 
+                :alt="contentAreas[idx - 1]"
+                class="media-preview" 
+              />
               <button class="media-trash" @click="removeMedia(idx - 1)" title="Remove media">
                 <i class="fa fa-trash"></i>
               </button>
@@ -32,8 +36,14 @@
       <div class="content-flex full-size" :class="`layout-${layout}`">
         <div class="content-container full-size">
           <div v-for="idx in areaCount" :key="idx" class="content-area full-size">
-            <CardMedia v-if="mediaTypes[idx - 1] !== 'text' && contentAreas[idx - 1]" :type="mediaTypes[idx - 1]"
-              :url="contentAreas[idx - 1]" :alt="contentAreas[idx - 1]" class="media-preview" />
+            <CardMedia 
+              v-if="mediaTypes[idx - 1] !== 'text'" 
+              :type="mediaTypes[idx - 1]"
+              :url="contentAreas[idx - 1]" 
+              :alt="contentAreas[idx - 1]" 
+              class="media-preview"
+              :data-media-type="mediaTypes[idx - 1]"
+            />
             <div v-else class="media-text full-size view-mode" v-html="contentAreas[idx - 1]"></div>
           </div>
         </div>
@@ -51,8 +61,24 @@ import { aiSocketService } from '@/services/AISocketService'
 import Toaster from '@/components/common/Toaster.vue'
 import { useToaster } from '@/composables/useToaster'
 
-const props = defineProps<{ text: string, mode?: 'edit' | 'view', side?: 'front' | 'back', title?: string, description?: string, category?: string }>()
+const props = defineProps<{ 
+  text: string, 
+  mode?: 'edit' | 'view', 
+  side?: 'front' | 'back',
+  title?: string,
+  description?: string,
+  category?: string,
+  imageUrl?: string  // Add imageUrl prop
+}>()
 const emit = defineEmits(['update'])
+
+// Add debug logging for props
+console.log('CardContent props:', {
+  text: props.text,
+  imageUrl: props.imageUrl,
+  mode: props.mode,
+  side: props.side
+})
 
 const {
   layout,
@@ -63,6 +89,9 @@ const {
   initialize
 } = useCardContent(props.text)
 
+// Add debug logging for content areas
+console.log('CardContent contentAreas:', contentAreas.value)
+
 const { toasts, toast } = useToaster()
 
 // Local DOM refs for editable divs (plain array)
@@ -70,16 +99,28 @@ const editableDivs: (HTMLElement | null)[] = []
 
 // Media type detection utility
 function getMediaType(text: string) {
+  console.log('getMediaType input:', text)
   if (!text) return 'text'
-  if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(text)) return 'image'
+  // Check if it's a Cloudinary URL
+  if (text.includes('cloudinary.com')) {
+    console.log('Detected Cloudinary URL')
+    return 'image'
+  }
+  // Check for other image URLs
+  if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(text)) {
+    console.log('Detected image URL')
+    return 'image'
+  }
   if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(text)) return 'youtube'
   if (/^https?:\/\//i.test(text)) return 'link'
   return 'text'
 }
 
-const mediaTypes = computed(() =>
-  contentAreas.value.map(area => getMediaType(area))
-)
+const mediaTypes = computed(() => {
+  const types = contentAreas.value.map(area => getMediaType(area))
+  console.log('mediaTypes computed:', types)
+  return types
+})
 
 function removeMedia(idx: number) {
   contentAreas.value[idx] = ''
@@ -148,17 +189,24 @@ function aiGenerate() {
   );
 }
 
-watch(() => props.text, (val) => {
-  console.log('CardContent - Initializing with text:', val);
-  initialize(val)
-  // After initializing contentAreas, update the editable divs
-  nextTick(() => {
-    contentAreas.value.forEach((content, idx) => {
-      if (editableDivs[idx]) {
-        editableDivs[idx]!.innerHTML = content;
+// Watch for both text and imageUrl changes
+watch([() => props.text, () => props.imageUrl], ([newText, newImageUrl]) => {
+  console.log('CardContent - Initializing with:', { text: newText, imageUrl: newImageUrl });
+  
+  // If we have an imageUrl, use it as the content
+  if (newImageUrl) {
+    console.log('CardContent - Using imageUrl as content:', newImageUrl);
+    contentAreas.value[0] = newImageUrl;
+    // Update the editable div if it exists
+    nextTick(() => {
+      if (editableDivs[0]) {
+        editableDivs[0]!.innerHTML = '';
       }
     });
-  });
+  } else {
+    console.log('CardContent - Using text as content:', newText);
+    initialize(newText);
+  }
 }, { immediate: true })
 </script>
 
@@ -250,7 +298,7 @@ watch(() => props.text, (val) => {
 .media-text {
   flex: 1 1 0;
   min-height: 100px;
-  padding: 0.5rem;
+  padding: 3rem;
   border-radius: 4px;
   outline: none;
   width: 100%;
@@ -274,12 +322,12 @@ watch(() => props.text, (val) => {
 }
 
 .media-preview {
-  margin-bottom: 0.5rem;
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  object-fit: contain;
 }
 
 .media-text.view-mode {
@@ -302,6 +350,9 @@ watch(() => props.text, (val) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--color-white);
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .media-trash {

@@ -110,7 +110,7 @@ const onError = (e: Event) => {
   justify-content: center;
   overflow: hidden;
   border-radius: 8px;
-  background: #f5f5f5;
+  background: transparent;
 }
 
 .card-media.is-loading::before {
@@ -120,15 +120,14 @@ const onError = (e: Event) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, #f0f0f0 25%, #212d9c 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
 }
 
 .media-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  width: 100%;
+  object-fit: cover;
 }
 
 .media-iframe {

@@ -18,6 +18,7 @@
       <div v-show="!isFlipped" class="card-face front">
         <CardContent 
           :text="card?.front?.text || ''"
+          :imageUrl="card?.front?.imageUrl || undefined"
           :mode="editable ? 'edit' : 'view'"
           side="front"
           :title="props.title || ''"
@@ -29,6 +30,7 @@
       <div v-show="isFlipped" class="card-face back">
         <CardContent 
           :text="card?.back?.text || ''"
+          :imageUrl="card?.back?.imageUrl || undefined"
           :mode="editable ? 'edit' : 'view'"
           side="back"
           :title="props.title || ''"
@@ -299,22 +301,26 @@ onUnmounted(() => {
 })
 
 const onFrontUpdate = (text: string) => {
+  console.log('FlashCardScaffold - Front update:', { text, imageUrl: props.card.front.imageUrl });
   const updatedCard = {
     ...props.card,
     front: {
       ...props.card.front,
-      text
+      text,
+      imageUrl: props.card.front.imageUrl
     }
   }
   emit('update:card', updatedCard)
 }
 
 const onBackUpdate = (text: string) => {
+  console.log('FlashCardScaffold - Back update:', { text, imageUrl: props.card.back.imageUrl });
   const updatedCard = {
     ...props.card,
     back: {
       ...props.card.back,
-      text
+      text,
+      imageUrl: props.card.back.imageUrl
     }
   }
   emit('update:card', updatedCard)

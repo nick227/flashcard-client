@@ -20,7 +20,7 @@
           />
           <!-- AI Generation Loading State -->
           <div v-if="isGeneratingThumbnail" class="flex items-center justify-center h-full w-full bg-gray-50">
-            <div class="flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <div class="p-8 text-center">
               <div class="relative">
                 <!-- Outer spinning ring -->
                 <div class="w-20 h-20 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>

@@ -4,6 +4,7 @@
       <div class="card-face front">
         <CardContent
           :text="card.front.text"
+          :imageUrl="card.front.imageUrl || undefined"
           :mode="isEditing ? 'edit' : 'view'"
           side="front"
           :title="props.title || ''"
@@ -15,6 +16,7 @@
       <div class="card-face back">
         <CardContent
           :text="card.back.text"
+          :imageUrl="card.back.imageUrl || undefined"
           :mode="isEditing ? 'edit' : 'view'"
           side="back"
           :title="props.title || ''"

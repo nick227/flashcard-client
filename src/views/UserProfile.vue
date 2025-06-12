@@ -41,8 +41,23 @@
             <p class="text-gray-600 mb-1">{{ user.email }}</p>
             <p class="text-gray-500">{{ user.role }}</p>
             <div class="mt-2">
-              <textarea v-model="user.bio" class="w-full p-2 border rounded-lg" placeholder="Add a bio..." rows="3"
-                @blur="handleBioUpdate"></textarea>
+              <div v-if="!isEditingBio" 
+                @click="startEditingBio"
+                class="bio-display p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group relative">
+                <p v-if="user.bio" class="whitespace-pre-wrap">{{ user.bio }}</p>
+                <p v-else class="text-gray-400 italic">Add a bio...</p>
+                <div class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <i class="fas fa-edit text-gray-400"></i>
+                </div>
+              </div>
+              <textarea v-else
+                ref="bioTextarea"
+                v-model="editingBio"
+                class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Add a bio..."
+                rows="3"
+                @blur="handleBioUpdate"
+                @keydown.esc="cancelBioEdit"></textarea>
             </div>
           </div>
         </div>
@@ -116,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, apiEndpoints } from '@/api'
 import DataGrid from '@/components/common/DataGrid.vue'
@@ -136,10 +151,33 @@ import type { ViewHistory } from '@/services/historyService'
 // Router and auth store setup
 const router = useRouter()
 const auth = useAuthStore()
-const user = computed(() => auth.user)
+const user = computed(() => {
+  const userData = auth.user
+  console.log('UserProfile - Current user data:', userData)
+  return userData
+})
 const isAuthenticated = computed(() => auth.isAuthenticated)
 const imageError = ref(false)
 const uploading = ref(false)
+
+// Bio editing state
+const isEditingBio = ref(false)
+const editingBio = ref('')
+const bioTextarea = ref<HTMLTextAreaElement | null>(null)
+
+// Watch for user changes to ensure bio is loaded
+watch(() => user.value, (newUser) => {
+  if (newUser) {
+    console.log('UserProfile - User data updated:', {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      bio: newUser.bio,
+      role: newUser.role,
+      image: newUser.image
+    })
+  }
+}, { immediate: true })
 
 // Initialize paginated data
 const favoritesEndpoint = computed(() => {
@@ -234,32 +272,24 @@ const triggerFileInput = () => {
 }
 
 // Fetch initial data
-onMounted(() => {
+onMounted(async () => {
   if (isAuthenticated.value) {
-    console.log('Fetching initial data for user:', user.value?.id)
-    favorites.fetchData().then(data => {
-      console.log('Favorites data received:', data)
-    }).catch(error => {
-      console.error('Error fetching favorites:', error)
-    })
+    console.log('UserProfile - Fetching initial data for user:', user.value?.id)
+    try {
+      // Force refresh user data
+      const response = await api.get('/users/me')
+      console.log('UserProfile - Fresh user data from /me:', response.data)
+      if (response.data) {
+        auth.setUser(response.data)
+      }
+    } catch (error) {
+      console.error('UserProfile - Error fetching user data:', error)
+    }
     
-    purchases.fetchData().then(data => {
-      console.log('Purchases data received:', data)
-    }).catch(error => {
-      console.error('Error fetching purchases:', error)
-    })
-    
-    subscriptions.fetchData().then(data => {
-      console.log('Subscriptions data received:', data)
-    }).catch(error => {
-      console.error('Error fetching subscriptions:', error)
-    })
-    
-    viewHistory.fetchData().then(data => {
-      console.log('View history data received:', data)
-    }).catch(error => {
-      console.error('Error fetching view history:', error)
-    })
+    favorites.fetchData()
+    purchases.fetchData()
+    subscriptions.fetchData()
+    viewHistory.fetchData()
   }
 })
 
@@ -328,14 +358,40 @@ const handleViewHistoryPageChange = async (page: number) => {
   })
 }
 
+// Start editing bio
+const startEditingBio = () => {
+  editingBio.value = user.value?.bio || ''
+  isEditingBio.value = true
+  // Focus the textarea after it's rendered
+  nextTick(() => {
+    bioTextarea.value?.focus()
+  })
+}
+
+// Cancel bio edit
+const cancelBioEdit = () => {
+  isEditingBio.value = false
+  editingBio.value = ''
+}
+
 // Bio update handler
 const handleBioUpdate = async (event: FocusEvent) => {
   const target = event.target as HTMLTextAreaElement
   const bio = target.value
   try {
-    await updateBio(bio)
+    const res = await api.patch(`/users/${user.value?.id}`, { bio })
+    if (res && res.data) {
+      console.log('UserProfile - Bio update response:', res.data)
+      auth.setUser(res.data)
+    }
   } catch (error) {
     console.error('Error updating bio:', error)
+    // Revert the textarea value on error
+    if (user.value) {
+      editingBio.value = user.value.bio || ''
+    }
+  } finally {
+    isEditingBio.value = false
   }
 }
 
@@ -369,25 +425,24 @@ async function updateProfileImage(file: File) {
     console.error('Failed to update profile image:', error)
   }
 }
-
-// Update bio
-async function updateBio(bio: string) {
-  if (!user.value) return
-  
-  try {
-    const res = await api.patch('/users/profile/bio', { bio })
-    auth.setUser({
-      ...user.value,
-      bio: res.data.bio
-    })
-  } catch (error) {
-    console.error('Failed to update bio:', error)
-  }
-}
 </script>
 
 <style scoped>
 .group-upload:hover .upload-text {
   display: inline;
+}
+
+.bio-display {
+  min-height: 80px;
+  position: relative;
+}
+
+.bio-display:hover {
+  border-color: #d1d5db;
+}
+
+.bio-display:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 </style>

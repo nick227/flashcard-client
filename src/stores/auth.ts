@@ -4,6 +4,7 @@ import type { User } from '@/types'
 import { authApi } from '@/api'
 import { cacheService } from '@/plugins/cache'
 import { useRouter } from 'vue-router'
+import { api } from '@/api'
 
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined'
@@ -13,24 +14,47 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const jwt = ref<string | null>(localStorage.getItem('jwt'))
+  const jwt = ref<string | null>(isBrowser ? localStorage.getItem('jwt') : null)
   const message = ref<string | null>(null)
   const lastAuthCheck = ref<number>(0)
-  const AUTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
 
   const isAuthenticated = computed(() => !!user.value)
 
   const setJwt = (token: string | null) => {
     jwt.value = token
-    if (token) {
-      localStorage.setItem('jwt', token)
-    } else {
-      localStorage.removeItem('jwt')
+    if (isBrowser) {
+      if (token) {
+        localStorage.setItem('jwt', token)
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      } else {
+        localStorage.removeItem('jwt')
+        delete api.defaults.headers.common['Authorization']
+      }
+    }
+  }
+
+  // Initialize JWT from localStorage on store creation
+  if (isBrowser) {
+    const storedJwt = localStorage.getItem('jwt')
+    if (storedJwt) {
+      setJwt(storedJwt)
     }
   }
 
   const setUser = (userData: User | null) => {
-    user.value = userData
+    console.log('Setting user data:', userData)
+    if (userData) {
+      // Ensure bio is preserved exactly as received
+      user.value = {
+        ...userData,
+        bio: userData.bio // Don't modify the bio value at all
+      }
+      if (isBrowser) {
+        cacheService.set('user', user.value, 24 * 60 * 60 * 1000) // 24 hours
+      }
+    } else {
+      user.value = null
+    }
   }
 
   const setMessage = (msg: string | null) => {
@@ -90,55 +114,50 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function checkAuth() {
-    if (!isBrowser) return null
-    
-    // Check if we've recently checked auth
+  const checkAuth = async () => {
+    if (!isBrowser) return false
+
+    // Check if we've checked recently (within 5 minutes)
     const now = Date.now()
-    if (now - lastAuthCheck.value < AUTH_CHECK_INTERVAL) {
-      return user.value
+    if (lastAuthCheck.value && now - lastAuthCheck.value < 5 * 60 * 1000) {
+      return isAuthenticated.value
     }
-    
-    loading.value = true
-    error.value = null
+
     try {
       // Try to get user from cache first
       const cachedUser = await cacheService.get('user') as User | null
       if (cachedUser) {
-        user.value = cachedUser
+        console.log('Using cached user data:', cachedUser)
+        setUser(cachedUser)
         lastAuthCheck.value = now
-        return cachedUser
+        return true
       }
 
-      // Try to get JWT from localStorage
-      const storedJwt = localStorage.getItem('jwt')
-      if (!storedJwt) {
-        return null
+      // If no cached user, try to get fresh data
+      const token = localStorage.getItem('jwt')
+      if (!token) {
+        console.log('No JWT found in localStorage')
+        return false
       }
 
-      const response = await authApi.checkAuth()
-      if (response) {
-        user.value = response
-        setJwt(storedJwt)
-        // Cache user data
-        if (isBrowser) {
-          cacheService.set('user', response, 24 * 60 * 60 * 1000) // 24 hours
-        }
+      // Set the token in the auth store
+      setJwt(token)
+
+      // Get fresh user data
+      const response = await api.get('/users/me')
+      console.log('Fresh user data from /me:', response.data)
+      if (response.data) {
+        setUser(response.data)
         lastAuthCheck.value = now
-        return response
+        return true
       }
-      return null
-    } catch (err: any) {
-      error.value = err.response?.data?.message || 'Auth check failed'
-      user.value = null
+      return false
+    } catch (error) {
+      console.error('Auth check failed:', error)
+      // Clear JWT and user data on error
       setJwt(null)
-      if (isBrowser) {
-        localStorage.removeItem('jwt')
-        cacheService.delete('user')
-      }
-      return null
-    } finally {
-      loading.value = false
+      setUser(null)
+      return false
     }
   }
 
