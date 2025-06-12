@@ -121,12 +121,12 @@ const mediaTypes = computed(() => {
 const fontSizes = computed(() => 
   contentAreas.value.map(text => {
     // Use different font size ranges for front and back
-    const isBack = props.side === 'back'
+    const isMobile = window.innerWidth < 768
     return useDynamicFontSize(text, {
-      minChars: isBack ? 12 : 8, // Back can have smaller min chars
-      maxChars: isBack ? 300 : 250, // Back can have more chars
-      minSize: isBack ? 0.8 : 0.5, // Back can have smaller min size
-      maxSize: isBack ? 3.5 : 4, // Back can have smaller max size
+      minChars: isMobile ? 4 : 8,
+      maxChars: isMobile ? 200 : 300,
+      minSize: isMobile ? 0.5 : 0.8,
+      maxSize: isMobile ? 2 : 4, 
       unit: 'em'
     })
   })

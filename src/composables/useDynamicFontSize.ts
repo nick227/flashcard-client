@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 
 interface FontSizeOptions {
   minChars?: number
@@ -24,7 +24,22 @@ const DEFAULT_OPTIONS: Required<FontSizeOptions> = {
   unit: 'em'
 }
 
+// Maximum safe text length to prevent performance issues
+const MAX_SAFE_TEXT_LENGTH = 10000
+
 export function useDynamicFontSize(text: string, options: FontSizeOptions = {}): FontSizeResult {
+  // Input validation
+  if (text === null || text === undefined) {
+    console.warn('useDynamicFontSize: text is null or undefined')
+    text = ''
+  }
+
+  // Truncate text if it exceeds maximum safe length
+  if (text.length > MAX_SAFE_TEXT_LENGTH) {
+    console.warn(`useDynamicFontSize: text length (${text.length}) exceeds maximum safe length (${MAX_SAFE_TEXT_LENGTH})`)
+    text = text.slice(0, MAX_SAFE_TEXT_LENGTH)
+  }
+
   // Validate and merge options
   const {
     minChars = DEFAULT_OPTIONS.minChars,
@@ -45,8 +60,14 @@ export function useDynamicFontSize(text: string, options: FontSizeOptions = {}):
     console.warn('useDynamicFontSize: font sizes should be positive')
   }
 
+  // Create a reactive reference to the text
+  const textRef = ref(text)
+
   // Memoize the text length calculation
-  const charCount = computed(() => text?.length || 0)
+  const charCount = computed(() => {
+    const count = textRef.value?.length || 0
+    return Math.min(count, MAX_SAFE_TEXT_LENGTH)
+  })
 
   // Calculate if we're at min/max bounds
   const isMinSize = computed(() => charCount.value >= maxChars)
@@ -57,7 +78,7 @@ export function useDynamicFontSize(text: string, options: FontSizeOptions = {}):
     const count = charCount.value
 
     // Handle edge cases
-    if (!text || count === 0) {
+    if (!textRef.value || count === 0) {
       return `${maxSize}${unit}`
     }
 
@@ -86,6 +107,11 @@ export function useDynamicFontSize(text: string, options: FontSizeOptions = {}):
   const style = computed(() => ({
     fontSize: fontSize.value
   }))
+
+  // Cleanup on unmount
+  onUnmounted(() => {
+    textRef.value = ''
+  })
 
   return {
     fontSize: fontSize.value,
