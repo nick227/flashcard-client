@@ -1,264 +1,329 @@
 <template>
-  <div class="card-content">
-    <!-- Edit Mode -->
-    <template v-if="mode === 'edit'">
-      <div 
-        v-if="!isMediaContent"
-        class="media-text"
-        contenteditable="true"
-        v-html="text"
-        @input="onInput"
-        @focus="onFocus"
-        @keydown="onKeyDown"
-        :style="{ fontSize: getFontSize(text) }"
-      ></div>
-      <div v-if="isMediaContent" class="media-preview">
-        <YouTubeEmbed v-if="isYouTubeUrl(text)" :url="text" />
-        <img v-else-if="isImageUrl(text)" :src="text" :alt="text" />
-        <a v-else-if="isWebUrl(text)" :href="text" target="_blank" rel="noopener noreferrer">{{ text }}</a>
+  <Toaster :toasts="toasts" @remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" />
+  <!-- Edit Mode -->
+  <template v-if="mode === 'edit'">
+    <div class="card-content full-size">
+      <div class="content-flex full-size" :class="`layout-${layout}`">
+        <div class="content-container full-size">
+          <div v-for="idx in areaCount" :key="idx" class="content-area full-size">
+            <div v-if="mediaTypes[idx - 1] !== 'text' && contentAreas[idx - 1]" class="media-container">
+              <CardMedia :type="mediaTypes[idx - 1]" :url="contentAreas[idx - 1]" :alt="contentAreas[idx - 1]"
+                class="media-preview" />
+              <button class="media-trash" @click="removeMedia(idx - 1)" title="Remove media">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+            <div v-else class="media-text full-size" contenteditable="true"
+              :ref="el => editableDivs[idx - 1] = el as HTMLElement | null"
+              @input="e => onInput(idx - 1, e, val => emit('update', val))"></div>
+          </div>
+        </div>
       </div>
-    </template>
+    </div>
+    <div class="controls-bar">
+      <CardControlsBar :aiLoading="aiLoading" @ai-generate="aiGenerate" @add-media="addMedia"
+        @toggle-layout="() => toggleLayout(val => emit('update', val))" />
+    </div>
+  </template>
 
-    <!-- View Mode -->
-    <template v-else>
-      <div class="formatted-content">
-        <div v-if="text || imageUrl" v-html="transformContent(text, imageUrl)"></div>
+  <!-- View Mode -->
+  <template v-else>
+    <div class="card-content full-size">
+      <div class="content-flex full-size" :class="`layout-${layout}`">
+        <div class="content-container full-size">
+          <div v-for="idx in areaCount" :key="idx" class="content-area full-size">
+            <CardMedia v-if="mediaTypes[idx - 1] !== 'text' && contentAreas[idx - 1]" :type="mediaTypes[idx - 1]"
+              :url="contentAreas[idx - 1]" :alt="contentAreas[idx - 1]" class="media-preview" />
+            <div v-else class="media-text full-size view-mode" v-html="contentAreas[idx - 1]"></div>
+          </div>
+        </div>
       </div>
-    </template>
-  </div>
+    </div>
+  </template>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useMediaUtils } from '@/composables/useMediaUtils'
-import { useFontSize } from '@/composables/useFontSize'
-import YouTubeEmbed from './YouTubeEmbed.vue'
-import { useContentTransform } from '@/composables/useContentTransform'
-import type { CardViewMode } from '@/composables/useCardMediaStyles'
+import { ref, watch, computed, nextTick } from 'vue'
+import { useCardContent } from '@/composables/useCardContent'
+import CardControlsBar from './CardControlsBar.vue'
+import CardMedia from './CardMedia.vue'
+import { aiSocketService } from '@/services/AISocketService'
+import Toaster from '@/components/common/Toaster.vue'
+import { useToaster } from '@/composables/useToaster'
 
-const props = defineProps<{
-  text: string
-  imageUrl?: string | null
-  mode?: 'edit' | 'view'
-  hasText?: boolean
-  viewMode?: CardViewMode
-}>()
+const props = defineProps<{ text: string, mode?: 'edit' | 'view', side?: 'front' | 'back', title?: string, description?: string, category?: string }>()
+const emit = defineEmits(['update'])
 
-const emit = defineEmits(['update', 'tab'])
+const {
+  layout,
+  contentAreas,
+  areaCount,
+  onInput,
+  toggleLayout,
+  initialize
+} = useCardContent(props.text)
 
-const { isYouTubeUrl } = useMediaUtils()
-const { getFontSize } = useFontSize()
-const { transformContent } = useContentTransform(props.viewMode || 'full')
+const { toasts, toast } = useToaster()
 
-const isMediaContent = computed(() => {
-  return isYouTubeUrl(props.text) || isImageUrl(props.text) || isWebUrl(props.text) || props.imageUrl
-})
+// Local DOM refs for editable divs (plain array)
+const editableDivs: (HTMLElement | null)[] = []
 
-const isImageUrl = (url: string) => {
-  return url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
+// Media type detection utility
+function getMediaType(text: string) {
+  if (!text) return 'text'
+  if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(text)) return 'image'
+  if (/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(text)) return 'youtube'
+  if (/^https?:\/\//i.test(text)) return 'link'
+  return 'text'
 }
 
-const isWebUrl = (url: string) => {
-  return url?.match(/^https?:\/\//i)
+const mediaTypes = computed(() =>
+  contentAreas.value.map(area => getMediaType(area))
+)
+
+function removeMedia(idx: number) {
+  contentAreas.value[idx] = ''
+  emit('update', contentAreas.value.length === 1 ? contentAreas.value[0] : contentAreas.value.join('\n'))
 }
 
-const onInput = (e: Event) => {
-  const target = e.target as HTMLElement
-  const text = target.textContent || ''
-  emit('update', text)
-}
-
-const onFocus = (e: FocusEvent) => {
-  const target = e.target as HTMLElement
-  target.focus()
-}
-
-const onKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Tab') {
-    e.preventDefault()
-    emit('tab', e)
+function addMedia() {
+  const url = window.prompt('Enter image, YouTube, or link URL:')?.trim()
+  if (!url) return
+  const type = getMediaType(url)
+  if (type === 'text') {
+    window.alert('Invalid media URL.')
+    return
   }
+  // Always insert into the first empty area, or replace the first area
+  const idx = contentAreas.value.findIndex(area => !area)
+  contentAreas.value[idx !== -1 ? idx : 0] = url
+  emit('update', contentAreas.value.length === 1 ? contentAreas.value[0] : contentAreas.value.join('\n'))
 }
+
+// AI Generate for single card face
+const aiLoading = ref(false)
+function aiGenerate() {
+  if (aiLoading.value) return;
+  aiLoading.value = true;
+  // Determine which side and content to generate
+  let side: 'front' | 'back' = props.side || (contentAreas.value.length === 2 ? 'front' : 'front');
+  let idx = side === 'front' ? 0 : 1;
+  // If only one area, always use idx 0
+  if (contentAreas.value.length === 1) idx = 0;
+  const otherSideContent = contentAreas.value.length === 2 ? contentAreas.value[1 - idx] : '';
+  const title = props.title || '';
+  const description = props.description || '';
+  const category = props.category || '';
+  console.log('aiGenerate params', {
+    side,
+    title,
+    description,
+    category,
+    otherSideContent
+  });
+  toast('Generating card...', 'info')
+  aiSocketService.generateSingleCardFace(
+    side,
+    title,
+    description,
+    category,
+    otherSideContent,
+    {
+      onResult: (text: string) => {
+        contentAreas.value[idx] = text;
+        // Update the editable div content
+        if (editableDivs[idx]) {
+          editableDivs[idx]!.innerHTML = text;
+        }
+        console.log('CardContent emitting update', { idx, text, contentAreas: contentAreas.value });
+        emit('update', contentAreas.value.length === 1 ? text : contentAreas.value.join('\n'));
+        aiLoading.value = false;
+        toast('Card generated successfully', 'success')
+      },
+      onError: (err: string) => {
+        aiLoading.value = false;
+        toast('AI error: ' + err, 'error')
+      }
+    }
+  );
+}
+
+watch(() => props.text, (val) => {
+  console.log('CardContent - Initializing with text:', val);
+  initialize(val)
+  // After initializing contentAreas, update the editable divs
+  nextTick(() => {
+    contentAreas.value.forEach((content, idx) => {
+      if (editableDivs[idx]) {
+        editableDivs[idx]!.innerHTML = content;
+      }
+    });
+  });
+}, { immediate: true })
 </script>
 
 <style scoped>
-.card-content {
+.full-size {
+  width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  min-height: 0;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-/* Edit Mode Styles */
+.card-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--color-white);
+  border-radius: 8px;
+  min-height: 400px;
+  min-width: 300px;
+  box-sizing: border-box;
+}
+
+.back .card-content {
+  background: var(--color-primary);
+  color: var(--color-white);
+  overflow: hidden;
+}
+
+.content-flex {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 1rem;
+  transition: all 0.3s ease-in-out;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.content-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 1rem;
+  transition: all 0.3s ease-in-out;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.controls-bar {
+  width: 100%;
+  background: linear-gradient(to top, #fff 90%, #fff0 100%);
+  padding: 1rem 0 0.5rem 0;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+}
+
+.content-area {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+/* Layouts */
+.layout-default .content-container,
+.layout-single-column .content-container,
+.layout-two-row .content-container {
+  flex-direction: column;
+}
+
+.layout-two-column .content-container {
+  flex-direction: row;
+}
+
+.layout-default .content-area,
+.layout-single-column .content-area,
+.layout-two-row .content-area {
+  width: 100%;
+}
+
+.layout-two-column .content-area {
+  width: 50%;
+}
+
 .media-text {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 100px;
   padding: 0.5rem;
   border-radius: 4px;
   outline: none;
-  background: pink;
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  transition: all 0.3s ease-in-out;
+  border: 1px solid var(--color-border);
+  box-sizing: border-box;
 }
 
-.media-text:empty:not(:has(+ .media-preview))::before {
+.media-text:focus {
+  border-color: var(--color-primary);
+}
+
+.media-text:empty:not(:has(+ .card-media))::before {
   content: 'Enter text or paste a URL...';
   color: #999;
 }
 
 .media-preview {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.media-preview img {
-  max-width: 100%;
-  max-height: 200px;
-  object-fit: contain;
-}
-
-.media-preview a {
-  color: #0066cc;
-  text-decoration: none;
-  word-break: break-all;
-}
-
-.media-preview a:hover {
-  text-decoration: underline;
-}
-
-/* View Mode Styles */
-.formatted-content {
-  text-align: center;
-  padding: 1rem;
-  width: 100%;
-  max-width: 100%;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  hyphens: auto;
-  user-select: text;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  position: relative;
-}
-
-.media-with-text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
+  margin-bottom: 0.5rem;
   width: 100%;
   height: 100%;
-  position: relative;
-}
-
-.media-with-text .embedded-image {
-  max-width: 100%;
-  max-height: 33%;
-  object-fit: contain;
-  border-radius: 0.5rem;
-  transition: opacity 0.3s ease;
-}
-
-.media-with-text .embedded-image.error {
-  opacity: 0.5;
-  filter: grayscale(100%);
-}
-
-.media-with-text .card-text {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem;
-  font-size: 1.3rem;
-  font-weight: 600;
-  line-height: 1.5;
-  text-align: center;
 }
 
-.formatted-content .embedded-image {
-  max-width: 100%;
-  max-height: 200px;
-  object-fit: contain;
-  border-radius: 0.5rem;
-  transition: opacity 0.3s ease;
+.media-text.view-mode {
+  pointer-events: none;
+  background: none;
+  border: none;
+  color: inherit;
+  min-height: 2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
-.formatted-content .embedded-image.error {
-  opacity: 0.5;
-  filter: grayscale(100%);
-}
-
-.youtube-container {
+.media-container {
   position: relative;
   width: 100%;
-  height: 0;
-  padding-bottom: 56.25%;
-  background: #000;
-  border-radius: 0.5rem;
-  overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.formatted-content .youtube-iframe {
+.media-trash {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  border: none;
+  border-radius: 50%;
+  padding: 0.4em;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
 }
 
-.formatted-content .embedded-link {
-  color: #0066cc;
-  text-decoration: none;
-  word-break: break-all;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
-  transition: background-color 0.2s ease;
+.media-container:hover .media-trash {
+  opacity: 1;
 }
 
-.formatted-content .embedded-link:hover {
-  text-decoration: underline;
-  background-color: rgba(0, 102, 204, 0.1);
+.media-trash i {
+  color: #ef4444;
+  font-size: 1.2em;
 }
-
-/* Loading state */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.embedded-image:not([src]), 
-.youtube-iframe:not([src]) {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-.card-text {
-  font-size: 1.3rem;
-  font-weight: 600;
-  line-height: 1.5;
-  user-select: text;
-  -webkit-user-select: text;
-  cursor: text;
-}
-
-.media-with-text {
-  max-height: 33% !important;
-}
-</style> 
+</style>

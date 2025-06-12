@@ -324,6 +324,7 @@ class AISocketService {
 
         this.addListener('cardGenerated', (data: { generationId: string, card: any, progress: number, totalCards: number }) => {
             if (data.generationId === generationId) {
+                console.log('Received card data:', data.card)
                 const card: Card = {
                     id: Date.now(),
                     setId: 0,
@@ -337,6 +338,7 @@ class AISocketService {
                     },
                     hint: data.card.hint || null
                 }
+                console.log('Transformed card:', card)
                 
                 this.updateProgress({
                     status: 'generating',
@@ -418,6 +420,37 @@ class AISocketService {
     private cleanup() {
         this.disconnect()
         this.reconnectAttempts = 0
+    }
+
+    /**
+     * Generate a single card face (front or back) using AI
+     * @param side - 'front' or 'back'
+     * @param title - The set title
+     * @param description - The set description
+     * @param category - The set category
+     * @param otherSideContent - The content of the other side (for context)
+     * @param callbacks - { onResult, onError }
+     */
+    public generateSingleCardFace(
+        side: 'front' | 'back',
+        title: string,
+        description: string,
+        category: string,
+        otherSideContent: string,
+        callbacks: { onResult: (text: string) => void, onError: (err: string) => void }
+    ) {
+        if (!this.validateConnection()) {
+            callbacks.onError('No connection');
+            return;
+        }
+        this.socket?.emit(
+            'generateSingleCardFace',
+            { side, title, description, category, otherSideContent },
+            (response: { text?: string, error?: string }) => {
+                if (response.error) callbacks.onError(response.error);
+                else if (response.text) callbacks.onResult(response.text);
+            }
+        );
     }
 }
 

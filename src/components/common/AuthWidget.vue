@@ -1,6 +1,6 @@
 <template>
   <div v-if="isInitialized" class="auth-widget">
-    <div v-if="auth.isAuthenticated" class="user-info">
+    <div @click="router.push('/profile')" v-if="auth.isAuthenticated" class="user-info link">
       <div class="avatar-container">
         <img 
           v-if="!imageLoadError" 
@@ -11,12 +11,11 @@
           class="avatar"
         />
         <div v-else class="avatar-fallback">
-          {{ userInitials }}
+          {{ userInitials }}  
         </div>
       </div>
       <div v-if="isDesktop" class="user-details">
         <span class="user-name">{{ auth.user?.name || 'User' }}</span>
-        <span class="user-email">{{ auth.user?.email }}</span>
       </div>
     </div>
     <router-link v-else to="/login" class="login-link">
@@ -28,7 +27,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 
+
+const router = useRouter()
 const auth = useAuthStore()
 const isInitialized = ref(false)
 const imageLoadError = ref(false)

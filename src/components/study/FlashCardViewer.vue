@@ -136,9 +136,9 @@
       <div class="flex justify-center w-full mb-4 flex-wrap main-controls">
           <a @click="handleRestart" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-rotate-right"></i> Restart</a>
           <a @click="handleShuffle" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-shuffle"></i>
-            Shuffle Cards</a>
-          <a @click="toggleGridView" :class="['button-round', { active: showGridView }]" href="javascript:void(0)"><i class="fa-solid fa-table-cells"></i> Grid View</a>
-          <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)"><i class="fa-solid fa-mobile"></i> Mobile View</a>
+            Shuffle</a>
+          <a @click="toggleGridView" :class="['button-round', { active: showGridView }]" href="javascript:void(0)"><i class="fa-solid fa-table-cells"></i> Grid</a>
+          <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)"><i class="fa-solid fa-mobile"></i> Mobile</a>
           <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-expand"></i>
             Full-Screen</a>
         <CardHint v-if="cards[currentIndex]?.hint" :hint="cards[currentIndex].hint || ''" @show-hint="showHintToast" />

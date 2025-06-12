@@ -108,7 +108,7 @@ export function useContentTransform(viewMode: CardViewMode = 'full') {
   }
 
   const isImageUrl = (url: string) => {
-    return url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)
+    return url?.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) || url?.includes('cloudinary.com')
   }
 
   const isWebUrl = (url: string) => {

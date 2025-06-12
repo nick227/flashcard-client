@@ -17,52 +17,65 @@ const MAX_STORAGE_AGE = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 
 export class SetWizardStorageService {
   static saveProgress(state: Omit<SetWizardState, 'lastUpdated'>) {
+    console.log('SetWizardStorageService - Saving progress:', state);
     // Validate input before saving
     if (!this.isValidInputState(state)) {
-      console.error('Invalid state provided to saveProgress')
-      return
+      console.error('Invalid state provided to saveProgress');
+      return;
     }
 
     const data: SetWizardState = {
       ...state,
       lastUpdated: Date.now()
+    };
+    
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      console.log('SetWizardStorageService - Progress saved successfully');
+    } catch (error) {
+      console.error('SetWizardStorageService - Error saving progress:', error);
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
   }
 
   static loadProgress(): SetWizardState | null {
-    const data = localStorage.getItem(STORAGE_KEY)
-    if (!data) return null
+    console.log('SetWizardStorageService - Loading progress');
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) {
+      console.log('SetWizardStorageService - No saved progress found');
+      return null;
+    }
 
     try {
-      const parsed = JSON.parse(data) as SetWizardState
+      const parsed = JSON.parse(data) as SetWizardState;
+      console.log('SetWizardStorageService - Loaded progress:', parsed);
       
       // Check if the data is too old
       if (Date.now() - parsed.lastUpdated > MAX_STORAGE_AGE) {
-        console.log('Stored progress is too old, clearing...')
-        this.clearProgress()
-        return null
+        console.log('Stored progress is too old, clearing...');
+        this.clearProgress();
+        return null;
       }
 
       // Validate the data structure
       if (!this.isValidState(parsed)) {
-        console.error('Invalid state structure in localStorage')
-        this.clearProgress()
-        return null
+        console.error('Invalid state structure in localStorage');
+        this.clearProgress();
+        return null;
       }
 
       // Validate card structure
       if (!this.areCardsValid(parsed.cards)) {
-        console.error('Invalid card structure in stored data')
-        this.clearProgress()
-        return null
+        console.error('Invalid card structure in stored data');
+        this.clearProgress();
+        return null;
       }
 
-      return parsed
+      console.log('SetWizardStorageService - Progress loaded successfully');
+      return parsed;
     } catch (e) {
-      console.error('Error parsing set wizard progress:', e)
-      this.clearProgress()
-      return null
+      console.error('Error parsing set wizard progress:', e);
+      this.clearProgress();
+      return null;
     }
   }
 
@@ -107,20 +120,29 @@ export class SetWizardStorageService {
   }
 
   private static areCardsValid(cards: any[]): boolean {
-    return Array.isArray(cards) && cards.every(card => 
-      typeof card === 'object' &&
-      card !== null &&
-      typeof card.id === 'number' &&
-      typeof card.setId === 'number' &&
-      typeof card.front === 'object' &&
-      card.front !== null &&
-      typeof card.front.text === 'string' &&
-      (typeof card.front.imageUrl === 'string' || card.front.imageUrl === null) &&
-      typeof card.back === 'object' &&
-      card.back !== null &&
-      typeof card.back.text === 'string' &&
-      (typeof card.back.imageUrl === 'string' || card.back.imageUrl === null) &&
-      (typeof card.hint === 'string' || card.hint === null)
-    )
+    console.log('SetWizardStorageService - Validating cards:', cards);
+    const isValid = Array.isArray(cards) && cards.every(card => {
+      const valid = typeof card === 'object' &&
+        card !== null &&
+        typeof card.id === 'number' &&
+        typeof card.setId === 'number' &&
+        typeof card.front === 'object' &&
+        card.front !== null &&
+        typeof card.front.text === 'string' &&
+        (typeof card.front.imageUrl === 'string' || card.front.imageUrl === null) &&
+        typeof card.back === 'object' &&
+        card.back !== null &&
+        typeof card.back.text === 'string' &&
+        (typeof card.back.imageUrl === 'string' || card.back.imageUrl === null) &&
+        (typeof card.hint === 'string' || card.hint === null);
+      
+      if (!valid) {
+        console.error('Invalid card structure:', card);
+      }
+      return valid;
+    });
+    
+    console.log('SetWizardStorageService - Cards validation result:', isValid);
+    return isValid;
   }
 } 

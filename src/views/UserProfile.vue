@@ -49,14 +49,14 @@
       </div>
 
       <!-- Dashboard Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 gap-8">
         <!-- Favorites -->
         <DataGrid title="Favorites" icon="fas fa-heart" iconColor="#ef4444" :loading="favorites.loading.value"
           :items="favorites.items.value" :total-items="favorites.totalItems.value"
           :current-page="favorites.currentPage.value" :page-size="6"
           :empty-message="favorites.error.value || 'No favorites yet'" @page-change="handleFavoritesPageChange">
           <template #default="{ items }">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 gap-4">
               <FavoriteItem v-for="item in items as Favorite[]" :key="item.id" :item="item" />
             </div>
           </template>
@@ -68,7 +68,7 @@
           :current-page="purchases.currentPage.value" :page-size="6"
           :empty-message="purchases.error.value || 'No purchases yet'" @page-change="handlePurchasesPageChange">
           <template #default="{ items }">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 gap-4">
               <PurchaseItem v-for="item in items as Purchase[]" :key="item.id" :item="item" />
             </div>
           </template>
@@ -81,7 +81,7 @@
           :empty-message="subscriptions.error.value || 'No subscriptions yet'"
           @page-change="handleSubscriptionsPageChange">
           <template #default="{ items }">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 gap-4">
               <SubscriptionItem v-for="item in items as Subscription[]" :key="item.id" :subscription="item" />
             </div>
           </template>
@@ -93,7 +93,7 @@
           :current-page="viewHistory.currentPage.value" :page-size="6"
           :empty-message="viewHistory.error.value || 'No view history yet'" @page-change="handleViewHistoryPageChange">
           <template #default="{ items }">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 gap-4">
               <ViewHistoryItem v-for="item in items as ViewHistory[]" :key="item.id" :item="item" />
             </div>
           </template>
@@ -116,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, apiEndpoints } from '@/api'
 import DataGrid from '@/components/common/DataGrid.vue'
@@ -142,7 +142,27 @@ const imageError = ref(false)
 const uploading = ref(false)
 
 // Initialize paginated data
-const favorites = usePaginatedData<Favorite>(`${apiEndpoints.sets}/liked`, {
+const favoritesEndpoint = computed(() => {
+  if (!user.value?.id) return ''
+  return apiEndpoints.sets.getUserLikes(user.value.id)
+})
+
+const purchasesEndpoint = computed(() => {
+  if (!user.value?.id) return ''
+  return `${apiEndpoints.purchases}/user`
+})
+
+const subscriptionsEndpoint = computed(() => {
+  if (!user.value?.id) return ''
+  return `${apiEndpoints.subscriptions}/user`
+})
+
+const viewHistoryEndpoint = computed(() => {
+  if (!user.value?.id) return ''
+  return `${apiEndpoints.history.base}/user`
+})
+
+const favorites = usePaginatedData<Favorite>(favoritesEndpoint.value, {
   userId: user.value?.id,
   queryParams: {
     limit: 6
@@ -150,7 +170,7 @@ const favorites = usePaginatedData<Favorite>(`${apiEndpoints.sets}/liked`, {
   pageSize: 6
 })
 
-const purchases = usePaginatedData<Purchase>(`${apiEndpoints.purchases}/user`, {
+const purchases = usePaginatedData<Purchase>(purchasesEndpoint.value, {
   userId: user.value?.id,
   queryParams: {
     limit: 6
@@ -158,7 +178,7 @@ const purchases = usePaginatedData<Purchase>(`${apiEndpoints.purchases}/user`, {
   pageSize: 6
 })
 
-const subscriptions = usePaginatedData<Subscription>(`${apiEndpoints.subscriptions}/user`, {
+const subscriptions = usePaginatedData<Subscription>(subscriptionsEndpoint.value, {
   userId: user.value?.id,
   queryParams: {
     limit: 6
@@ -166,12 +186,22 @@ const subscriptions = usePaginatedData<Subscription>(`${apiEndpoints.subscriptio
   pageSize: 6
 })
 
-const viewHistory = usePaginatedData<ViewHistory>(`${apiEndpoints.history}/user`, {
+const viewHistory = usePaginatedData<ViewHistory>(viewHistoryEndpoint.value, {
   userId: user.value?.id,
   queryParams: {
     limit: 6
   },
   pageSize: 6
+})
+
+// Watch for user changes and update endpoints
+watch(() => user.value?.id, (newId) => {
+  if (newId) {
+    favorites.fetchData()
+    purchases.fetchData()
+    subscriptions.fetchData()
+    viewHistory.fetchData()
+  }
 })
 
 // Logout handler

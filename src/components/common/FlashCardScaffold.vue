@@ -18,20 +18,22 @@
       <div v-show="!isFlipped" class="card-face front">
         <CardContent 
           :text="card?.front?.text || ''"
-          :imageUrl="card?.front?.imageUrl"
           :mode="editable ? 'edit' : 'view'"
-          :has-text="!!card?.front?.text"
-          viewMode="full"
+          side="front"
+          :title="props.title || ''"
+          :description="props.description || ''"
+          :category="props.category || ''"
           @update="onFrontUpdate"
         />
       </div>
       <div v-show="isFlipped" class="card-face back">
         <CardContent 
           :text="card?.back?.text || ''"
-          :imageUrl="card?.back?.imageUrl"
           :mode="editable ? 'edit' : 'view'"
-          :has-text="!!card?.back?.text"
-          viewMode="full"
+          side="back"
+          :title="props.title || ''"
+          :description="props.description || ''"
+          :category="props.category || ''"
           @update="onBackUpdate"
         />
       </div>
@@ -56,6 +58,9 @@ const props = defineProps<{
   mode?: 'view' | 'edit' | 'preview'
   inlineEditable?: boolean
   size?: 'normal' | 'small'
+  title?: string
+  description?: string
+  category?: string
 }>()
 
 const emit = defineEmits<{

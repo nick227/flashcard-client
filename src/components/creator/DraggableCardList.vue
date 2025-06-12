@@ -1,70 +1,125 @@
 <template>
-  <Draggable
-    :list="cards"
-    item-key="id"
-    @end="onDragEnd"
-    :class="layoutClass"
-    :ghost-class="'dragging'"
-  >
-    <template #item="{ element: card }">
-      <div :class="itemWrapperClass">
-        <component
-          :is="cardComponent"
-          :card="card"
-          v-bind="cardProps"
-          @update-card="$emit('edit-card', $event)"
-          @delete-card="$emit('delete-card', card.id)"
-          @request-delete="$emit('request-delete', card.id)"
-        />
-      </div>
-    </template>
-  </Draggable>
+  <div class="draggable-card-list" :class="layout">
+    <draggable
+      v-model="localCards"
+      :animation="150"
+      item-key="id"
+      handle=".drag-handle"
+      @start="drag = true"
+      @end="drag = false"
+      @update:model-value="onUpdateOrder"
+    >
+      <template #item="{ element: card }">
+        <div class="card-wrapper">
+          <component
+            :is="cardComponent"
+            :card="card"
+            v-bind="cardProps"
+            @update="(updatedCard: FlashCard) => onEditCard(updatedCard)"
+            @delete="() => onDeleteCard(card.id)"
+            @request-delete="() => onRequestDelete(card.id)"
+          />
+        </div>
+      </template>
+    </draggable>
+  </div>
 </template>
 
 <script setup lang="ts">
-import Draggable from 'vuedraggable'
-import type { PropType } from 'vue'
-const props = defineProps({
-  cards: { type: Array as PropType<any[]>, required: true },
-  cardComponent: { type: [Object, Function], required: true },
-  layout: { type: String as PropType<'grid' | 'list'>, default: 'list' },
-  cardProps: { type: Object as PropType<Record<string, any>>, default: () => ({}) }
-})
+import { ref, watch, onMounted } from 'vue'
+import draggable from 'vuedraggable'
+import type { FlashCard } from '@/types/card'
+import type { CardViewMode } from '@/composables/useCardMediaStyles'
+
+const props = defineProps<{
+  cards: FlashCard[]
+  cardComponent: any
+  layout?: 'grid' | 'list'
+  viewMode?: CardViewMode
+  cardProps?: Record<string, any>
+}>()
+
 const emit = defineEmits(['update-order', 'delete-card', 'edit-card', 'request-delete'])
 
-const layoutClass = props.layout === 'grid'
-  ? 'grid grid-cols-4 gap-6'
-  : 'flex flex-col gap-4'
-const itemWrapperClass = props.layout === 'grid'
-  ? 'flex items-start mb-4'
-  : 'flex items-center'
+const localCards = ref<FlashCard[]>([])
+const drag = ref(false)
 
-function onDragEnd() {
-  emit('update-order', [...props.cards])
+// Log initial props
+console.log('DraggableCardList - Component created with props:', {
+  cards: props.cards,
+  layout: props.layout,
+  viewMode: props.viewMode,
+  cardComponent: props.cardComponent
+})
+
+// Watch for cards changes
+watch(() => props.cards, (newCards) => {
+  console.log('DraggableCardList - Cards updated:', newCards)
+  localCards.value = [...newCards]
+}, { deep: true, immediate: true })
+
+onMounted(() => {
+  console.log('DraggableCardList - Component mounted:', {
+    cards: props.cards,
+    layout: props.layout,
+    viewMode: props.viewMode,
+    cardComponent: props.cardComponent,
+    localCards: localCards.value
+  })
+})
+
+const onUpdateOrder = (newOrder: FlashCard[]) => {
+  console.log('DraggableCardList - Order updated:', newOrder)
+  emit('update-order', newOrder)
+}
+
+const onEditCard = (updatedCard: FlashCard) => {
+  console.log('DraggableCardList - Card edited:', updatedCard)
+  emit('edit-card', updatedCard)
+}
+
+const onDeleteCard = (id: number) => {
+  console.log('DraggableCardList - Card deleted:', id)
+  emit('delete-card', id)
+}
+
+const onRequestDelete = (id: number) => {
+  console.log('DraggableCardList - Card delete requested:', id)
+  emit('request-delete', id)
 }
 </script>
 
 <style scoped>
-.dragging {
-  opacity: 0.7;
-  box-shadow: 0 4px 24px 0 rgba(30,41,59,0.18);
+.draggable-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
 }
 
-:deep(.card-full-view),
-:deep(.card-tile) {
-  cursor: grab;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.draggable-card-list.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
 }
 
-:deep(.card-full-view:hover),
-:deep(.card-tile:hover) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+.card-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
 }
 
-:deep(.card-full-view:active),
-:deep(.card-tile:active) {
-  cursor: grabbing;
-  transform: scale(0.98);
+.drag-handle {
+  cursor: move;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.drag-handle:hover {
+  opacity: 1;
 }
 </style> 

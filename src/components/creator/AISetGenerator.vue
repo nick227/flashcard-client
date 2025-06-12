@@ -230,6 +230,7 @@ const generateSet = async () => {
 }
 
 const handleCardGenerated = (card: Card) => {
+    console.log('Handling generated card:', card)
     // Update progress first
     progress.value = {
         ...progress.value,

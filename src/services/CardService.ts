@@ -27,12 +27,14 @@ export class CardService {
       return { isValid: false, error: 'At least one card is required.' }
     }
 
-    const hasBlankCard = cards.some(card => 
-      (!card.front.text && !card.front.imageUrl) || 
-      (!card.back.text && !card.back.imageUrl)
-    )
+    const hasBlankCard = cards.some(card => {
+      const frontHasContent = card.front.text || card.front.imageUrl
+      const backHasContent = card.back.text || card.back.imageUrl
+      return !frontHasContent || !backHasContent
+    })
+
     if (hasBlankCard) {
-      return { isValid: false, error: 'All cards must have both front and back content.' }
+      return { isValid: false, error: 'All cards must have either text or an image on both front and back.' }
     }
 
     const hasLongContent = cards.some(card => 

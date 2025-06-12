@@ -1,155 +1,212 @@
 <template>
-  <div class="card-tile bg-white rounded-xl flex flex-col items-stretch h-full">
-    
-    <div class="flex justify-between mb-4 button-row">
-      <button class="button button-danger button-icon text-xs px-3 py-1 mr-2" @click="onRequestDelete"><i class="fa-solid fa-trash"></i></button>
-      <button class="button button-accent text-xs px-3 py-1" @click="onRequestPreview">
-        {{ previewMode ? 'Back to Edit' : 'Preview' }}
-      </button>
-    </div>
-
-    <div class="tile-content flex-1 flex flex-col min-h-0" v-if="!previewMode">
-      <label class="block text-gray-500 text-xs mb-1">Front</label>
-      <CardContent
-        :text="localCard.front.text"
-        :imageUrl="localCard.front.imageUrl"
-        mode="edit"
-        viewMode="tile"
-        @update="onFrontUpdate"
-      />
-      <label class="block text-gray-500 text-xs mb-1">Back</label>
-      <CardContent
-        :text="localCard.back.text"
-        :imageUrl="localCard.back.imageUrl"
-        mode="edit"
-        viewMode="tile"
-        @update="onBackUpdate"
-      />
-      <label class="block text-gray-500 text-xs mb-1">Hint</label>
-      <textarea class="input flex-shrink-0" v-model="localCard.hint" @input="emitUpdate" placeholder="Hint..."></textarea>
-    </div>
-    <template v-else>
-      <div class="tile-preview flex-1 flex items-stretch justify-stretch min-h-0">
-        <FlashCardScaffold 
-          :card="localCard" 
-          :flipped="flipped" 
-          :editable="false" 
-          :inlineEditable="true"
-          @update:card="onInlineEdit" 
-          @flip="handleFlip"
-          class="w-full h-full preview-scaffold"
+  <div class="card-tile" :class="{ 'is-editing': isEditing }">
+    <div class="card-content">
+      <div class="card-face front">
+        <CardContent
+          :text="card.front.text"
+          :mode="isEditing ? 'edit' : 'view'"
+          side="front"
+          :title="props.title || ''"
+          :description="props.description || ''"
+          :category="props.category || ''"
+          @update="updateFront"
         />
       </div>
-    </template>
+      <div class="card-face back">
+        <CardContent
+          :text="card.back.text"
+          :mode="isEditing ? 'edit' : 'view'"
+          side="back"
+          :title="props.title || ''"
+          :description="props.description || ''"
+          :category="props.category || ''"
+          @update="updateBack"
+        />
+      </div>
+    </div>
+    <div class="card-actions">
+      <button class="button button-danger button-icon" @click="onRequestDelete">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+      <button class="button button-accent" @click="toggleEdit">
+        {{ isEditing ? 'Preview' : 'Edit' }}
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
-import type { Card } from '@/types/card'
-import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
+import { ref, onMounted, watch } from 'vue'
+import type { FlashCard } from '@/types/card'
 import CardContent from '@/components/common/CardContent.vue'
+import type { CardViewMode } from '@/composables/useCardMediaStyles'
 
-const props = defineProps<{ card: Card }>()
-const emit = defineEmits(['update-card', 'delete-card', 'request-delete'])
-const localCard = ref({ ...props.card })
-const previewMode = ref(false)
-const flipped = ref(false)
-const isFlipping = ref(false)
+const props = defineProps<{
+  card: FlashCard
+  viewMode?: CardViewMode
+  title?: string
+  description?: string
+  category?: string
+}>()
 
-// Update watch to handle deep changes
-watch(() => props.card, (val) => { 
-  localCard.value = { ...val }
-}, { deep: true })
+const emit = defineEmits(['update', 'delete', 'request-delete'])
 
-function emitUpdate() {
-  emit('update-card', { ...localCard.value })
-}
+const isEditing = ref(false)
 
-// Add immediate update on mount
-onMounted(() => {
-  emitUpdate()
+// Log initial props
+console.log('CardTile - Component created with props:', {
+  card: props.card,
+  viewMode: props.viewMode,
+  front: {
+    text: props.card.front.text,
+    imageUrl: props.card.front.imageUrl
+  },
+  back: {
+    text: props.card.back.text,
+    imageUrl: props.card.back.imageUrl
+  }
 })
 
-function onRequestDelete() {
-  emit('request-delete', localCard.value.id)
+// Watch for card changes
+watch(() => props.card, (newCard) => {
+  console.log('CardTile - Card updated:', {
+    front: {
+      text: newCard.front.text,
+      imageUrl: newCard.front.imageUrl
+    },
+    back: {
+      text: newCard.back.text,
+      imageUrl: newCard.back.imageUrl
+    }
+  })
+}, { deep: true })
+
+onMounted(() => {
+  console.log('CardTile - Component mounted:', {
+    card: props.card,
+    viewMode: props.viewMode,
+    isEditing: isEditing.value,
+    front: {
+      text: props.card.front.text,
+      imageUrl: props.card.front.imageUrl
+    },
+    back: {
+      text: props.card.back.text,
+      imageUrl: props.card.back.imageUrl
+    }
+  })
+})
+
+const updateFront = (text: string) => {
+  console.log('CardTile - Updating front:', { 
+    oldText: props.card.front.text, 
+    newText: text,
+    imageUrl: props.card.front.imageUrl 
+  })
+  emit('update', {
+    ...props.card,
+    front: { ...props.card.front, text }
+  })
 }
 
-function onRequestPreview() {
-  previewMode.value = !previewMode.value
-  if (!previewMode.value) {
-    flipped.value = false
-  }
+const updateBack = (text: string) => {
+  console.log('CardTile - Updating back:', { 
+    oldText: props.card.back.text, 
+    newText: text,
+    imageUrl: props.card.back.imageUrl 
+  })
+  emit('update', {
+    ...props.card,
+    back: { ...props.card.back, text }
+  })
 }
 
-function onInlineEdit(updatedCard: Card) {
-  localCard.value = { ...updatedCard }
-  emitUpdate()
+const toggleEdit = () => {
+  isEditing.value = !isEditing.value
+  console.log('CardTile - Toggled edit mode:', isEditing.value)
 }
 
-function handleFlip(newFlippedState: boolean) {
-  if (isFlipping.value) return
-  isFlipping.value = true
-  flipped.value = newFlippedState
-  setTimeout(() => { isFlipping.value = false }, 300)
-}
-
-const onFrontUpdate = (text: string) => {
-  localCard.value.front.text = text
-  emitUpdate()
-}
-
-const onBackUpdate = (text: string) => {
-  localCard.value.back.text = text
-  emitUpdate()
+const onRequestDelete = () => {
+  console.log('CardTile - Delete requested for card:', props.card.id)
+  emit('request-delete', props.card.id)
 }
 </script>
 
 <style scoped>
 .card-tile {
-  background: #fff;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 1.25rem;
-  box-shadow: 0 4px 24px 0 rgba(30,41,59,0.08);
-  min-height: 460px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
+  position: relative;
   width: 100%;
   height: 100%;
-  transition: all 0.3s ease;
+  perspective: 1000px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   padding: 1rem;
-  box-sizing: border-box;
 }
 
-.tile-content, .tile-preview {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-.button-row {
-  margin-top: auto;
-}
-
-.tile-preview {
-  align-items: stretch;
-  justify-content: stretch;
-  padding: 0;
-}
-
-.preview-scaffold {
-  border-radius: 1.25rem;
-  box-shadow: none;
+.card-content {
+  position: relative;
+  width: 100%;
   height: 100%;
-  min-height: 200px;
-  box-sizing: border-box;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
 }
 
-.card-tile .card-content {
-  padding: 1rem;
-  width: calc(100% - 2rem);
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.back {
+  transform: rotateY(180deg);
+}
+
+.is-editing .card-content {
+  transform: rotateY(180deg);
+}
+
+.card-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button-icon {
+  padding: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.button-accent {
+  background: #3b82f6;
+  color: white;
+}
+
+.button:hover {
+  opacity: 0.9;
 }
 </style> 

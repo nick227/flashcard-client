@@ -72,7 +72,7 @@
             @update-order="onUpdateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
             @request-delete="onRequestDelete" />
           <DraggableCardList v-else :cards="cards" :cardComponent="CardFullView" layout="list"
-            :cardProps="{ mode: 'single', autoFocus: false, autoFocusId: cards.length ? cards[0].id : null }"
+            :cardProps="{ mode: 'single', autoFocus: false, autoFocusId: cards.length ? cards[0].id : null, title: setTitle, description: setDescription, category: selectedCategoryName }"
             @update-order="onUpdateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
             @request-delete="onRequestDelete" />
         </div>
@@ -271,6 +271,7 @@ function onAddSet(newCards: Card | Card[]) {
 
   // Handle each card individually
   cardsToAdd.forEach(card => {
+    console.log('Processing card:', card)
     // Validate and structure card
     const validatedCard = {
       id: CardService.generateId(),
@@ -286,6 +287,7 @@ function onAddSet(newCards: Card | Card[]) {
       hint: card.hint || null
     }
 
+    console.log('Validated card:', validatedCard)
     // Add card to the set immediately
     cards.value = [validatedCard, ...cards.value]
     cardsTouched.value = true
@@ -313,6 +315,7 @@ function onAddCard() {
 }
 
 function onEditCard(updatedCard: FlashCard) {
+  console.log('SetWizard onEditCard', updatedCard);
   takeSnapshot()
   // Transform the card to match the expected type
   const transformedCard: FlashCard = {
@@ -550,7 +553,10 @@ onMounted(async () => {
 
   if (setId.value) {
     try {
+      console.log('SetWizard - Loading set data for ID:', setId.value)
       const set = await SetService.fetchSet(Number(setId.value))
+      console.log('SetWizard - Fetched set data:', set)
+      
       setTitle.value = set.title
       setDescription.value = set.description
       setCategoryId.value = set.categoryId
@@ -563,12 +569,18 @@ onMounted(async () => {
           : { type: 'premium' as const, amount: Number(set.price) }
 
       if (set.cards && set.cards.length > 0) {
+        console.log('SetWizard - Loading cards from set data:', set.cards)
         cards.value = set.cards.map(normalizeCard)
+        console.log('SetWizard - Normalized cards:', cards.value)
       } else {
+        console.log('SetWizard - Fetching cards separately')
         const cardsData = await SetService.fetchSetCards(Number(setId.value))
+        console.log('SetWizard - Fetched cards data:', cardsData)
         cards.value = cardsData.map(normalizeCard)
+        console.log('SetWizard - Normalized cards:', cards.value)
       }
     } catch (e) {
+      console.error('SetWizard - Error loading set:', e)
       toast('Failed to load set for editing.', 'error')
       router.push('/creator')
     }
@@ -576,6 +588,7 @@ onMounted(async () => {
     // Try to restore saved progress for new sets
     const savedProgress = SetWizardStorageService.loadProgress()
     if (savedProgress) {
+      console.log('SetWizard - Restoring saved progress:', savedProgress)
       setTitle.value = savedProgress.title
       setDescription.value = savedProgress.description
       setCategoryId.value = savedProgress.categoryId
@@ -583,6 +596,7 @@ onMounted(async () => {
       setPrice.value = savedProgress.price
       setThumbnail.value = savedProgress.thumbnail
       cards.value = savedProgress.cards
+      console.log('SetWizard - Restored cards:', cards.value)
       
       // Show a toast to inform the user
       toast('Restored your previous progress', 'info')
@@ -592,6 +606,11 @@ onMounted(async () => {
   // Add keyboard event listener
   window.addEventListener('keydown', handleKeyDown)
 })
+
+// Add watch for cards changes
+watch(cards, (newCards) => {
+  console.log('SetWizard - Cards updated:', newCards)
+}, { deep: true })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
