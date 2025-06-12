@@ -37,6 +37,7 @@ defineEmits(['toggle-layout', 'add-media', 'ai-generate'])
   gap: 0.5rem;
   margin-bottom: 0.5rem;
   align-items: center;
+  justify-content: center;
 }
 .control-btn {
   background: #f3f4f6;

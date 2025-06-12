@@ -147,6 +147,7 @@ const onRequestDelete = () => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  align-items: center;
 }
 
 .flip-button {
