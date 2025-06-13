@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, onMounted, watch } from 'vue'
+import { computed, onUnmounted, ref, onMounted } from 'vue'
 
 interface FontSizeOptions {
   // Desktop settings

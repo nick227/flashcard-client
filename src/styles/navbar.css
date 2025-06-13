@@ -6,7 +6,6 @@
         top: 0;
         z-index: 100;
         height: 4.5rem;
-        padding: 0 1.5rem;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -16,6 +15,7 @@
     @media (max-width: 760px) {
         .navbar {
             background: var(--color-subtle);
+            position: relative;
         }
     }
     
@@ -76,7 +76,6 @@
         display: flex;
         align-items: center;
         gap: 1.5rem;
-        margin-right: 35px;
     }
     
     .navbar-link {
@@ -84,7 +83,6 @@
         font-weight: 500;
         font-size: 0.95rem;
         text-decoration: none !important;
-        padding: 0.5rem 0.75rem;
         border-radius: 0.5rem;
         transition: all 0.2s ease;
         position: relative;
@@ -104,7 +102,8 @@
     
     .navbar-link:hover::after,
     .navbar-link.active::after {
-        width: 80%;
+        width: 100%;
+        bottom: -2px;
     }
     
     .navbar-link:hover,
@@ -123,7 +122,6 @@
     @media (max-width: 900px) {
         .navbar {
             height: auto;
-            padding: 1rem;
         }
         .navbar-inner {
             flex-direction: column;

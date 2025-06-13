@@ -120,14 +120,20 @@ const mediaTypes = computed(() => {
 // Create dynamic font size handlers for each content area
 const fontSizes = computed(() => 
   contentAreas.value.map(text => {
-    // Use different font size ranges for front and back
-    const isMobile = window.innerWidth < 768
     return useDynamicFontSize(text, {
-      minChars: isMobile ? 4 : 8,
-      maxChars: isMobile ? 200 : 300,
-      minSize: isMobile ? 0.5 : 0.8,
-      maxSize: isMobile ? 2 : 4, 
-      unit: 'em'
+      // Desktop settings
+      desktopMaxSize: 4,
+      desktopMinSize: 1,
+      desktopBreakpoint1: 80,
+      desktopBreakpoint2: 300,
+      // Mobile settings
+      mobileMaxSize: 2,
+      mobileMinSize: 0.5,
+      mobileBreakpoint1: 50,
+      mobileBreakpoint2: 150,
+      unit: 'rem',
+      mode: props.mode || 'view',
+      containerRef: editableDivs[contentAreas.value.indexOf(text)]
     })
   })
 )
