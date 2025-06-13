@@ -314,7 +314,6 @@ watch([() => props.text, () => props.imageUrl], ([newText, newImageUrl]) => {
   border: 1px solid var(--color-border);
   box-sizing: border-box;
   line-height: 1.5;
-  /* Remove fixed font size to allow dynamic sizing */
   font-size: inherit;
 }
 
