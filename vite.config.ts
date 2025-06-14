@@ -112,7 +112,13 @@ export default defineConfig(({ mode }): UserConfig => {
         format: {
           comments: false
         }
-      }
+      },
+      assetsInlineLimit: 4096,
+      cssCodeSplit: true,
+      reportCompressedSize: false,
+      assetsDir: 'assets',
+      outDir: 'dist',
+      manifest: true
     },
     optimizeDeps: {
       include: [
