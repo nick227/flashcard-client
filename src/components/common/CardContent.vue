@@ -75,7 +75,7 @@ import CardControlsBar from './CardControlsBar.vue'
 import CardMedia from './CardMedia.vue'
 import Toaster from '@/components/common/Toaster.vue'
 import { useToaster } from '@/composables/useToaster'
-import { useMediaUtils, type MediaType } from '@/composables/useMediaUtils'
+import { useMediaUtils } from '@/composables/useMediaUtils'
 import { useContentTransform } from '@/composables/useContentTransform'
 import { useFontSizes } from '@/composables/useFontSizes'
 import { aiCardService } from '@/services/AICardService'
@@ -172,8 +172,7 @@ onUnmounted(() => {
 
 const { toasts, toast } = useToaster()
 const { 
-  detectAndRenderMedia,
-  parseContentBlocks 
+  detectAndRenderMedia
 } = useMediaUtils()
 const { transformContent } = useContentTransform('full')
 
