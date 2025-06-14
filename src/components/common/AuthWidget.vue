@@ -134,6 +134,6 @@ onUnmounted(() => {
 
 .login-link:hover,
 .login-link:active {
-  background: var(--color-primary-dark);
+  background: var(--color-primary);
 }
 </style> 
