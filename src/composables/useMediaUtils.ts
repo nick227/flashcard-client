@@ -97,31 +97,33 @@ export function useMediaUtils() {
   const detectAndRenderMedia = (text: string): string => {
     if (!text) return ''
     
-    // First, try to parse as HTML to handle mixed content
-    try {
-      const blocks = parseContentBlocks(text)
-      if (blocks.length > 0) {
-        return renderContentBlocks(blocks)
+    // Split text into words and process each word
+    const words = text.split(/\s+/)
+    const processedWords = words.map(word => {
+      // Clean the word of any surrounding punctuation while preserving URL structure
+      const cleanWord = word.replace(/^[.,!?;:()\[\]{}"'`]+|[.,!?;:()\[\]{}"'`]+$/g, '')
+      
+      // Check if the cleaned word is a URL
+      if (isYouTubeUrl(cleanWord)) {
+        const embedUrl = getYouTubeEmbedUrl(cleanWord)
+        return `<div class="youtube-embed"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
       }
-    } catch (e) {
-      // If parsing fails, fall back to simple URL detection
-    }
+      
+      if (isImageUrl(cleanWord)) {
+        return `<img src="${cleanWord}" alt="Card image" class="auto-image" />`
+      }
+      
+      if (isWebUrl(cleanWord)) {
+        // Preserve original word with punctuation for display
+        return `<a href="${cleanWord}" target="_blank" rel="noopener noreferrer">${word}</a>`
+      }
+      
+      // If not a URL, return the original word with its punctuation
+      return word
+    })
     
-    // Fallback to simple URL detection
-    if (isYouTubeUrl(text)) {
-      const embedUrl = getYouTubeEmbedUrl(text)
-      return `<div class="youtube-embed"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-    }
-    
-    if (isImageUrl(text)) {
-      return `<img src="${text}" alt="Card image" class="auto-image" />`
-    }
-    
-    if (isWebUrl(text)) {
-      return `<a href="${text}" target="_blank" rel="noopener noreferrer">${text}</a>`
-    }
-    
-    return text
+    // Join the processed words back together
+    return processedWords.join(' ')
   }
 
   return {

@@ -457,12 +457,12 @@ async function onImportCsv(file: File) {
       front: {
         text: card.front,
         imageUrl: card.frontImage,
-        layout: 'default' as CardLayout
+        layout: (card.frontLayout || 'default') as CardLayout
       },
       back: {
         text: card.back,
         imageUrl: card.backImage,
-        layout: 'default' as CardLayout
+        layout: (card.backLayout || 'default') as CardLayout
       },
       hint: card.hint || null
     }))

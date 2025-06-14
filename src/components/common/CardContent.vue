@@ -2,7 +2,7 @@
   <Toaster :toasts="toasts" @remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" />
   <!-- Edit Mode -->
   <template v-if="mode === 'edit'">
-    <div class="card-content full-size" :class="`layout-${currentView.layout || 'default'}`">
+    <div class="card-content full-size" :class="`layout-${validateLayout(currentView.layout)}`">
       <div class="content-flex full-size">
         <div class="content-container full-size">
           <div class="content-area full-size">
@@ -21,7 +21,8 @@
               contenteditable="true" 
               @input="onTextInput"
               @paste="onPaste"
-              v-html="detectAndRenderMedia(currentView.text)"
+              @keydown="onKeyDown"
+              v-html="detectAndRenderMedia(transformContent(currentView.text))"
               :style="fontSizes[0]?.style"
             ></div>
           </div>
@@ -29,13 +30,21 @@
       </div>
     </div>
     <div class="controls-bar">
-      <CardControlsBar :aiLoading="aiLoading" @ai-generate="aiGenerate" @add-media="onImageInput" @toggle-layout="onToggleLayout" />
+      <CardControlsBar 
+        :aiLoading="aiLoading" 
+        :hasMedia="!!currentView.imageUrl"
+        :hasLongText="currentView.text.length > 100"
+        :currentLayout="currentView.layout"
+        @ai-generate="aiGenerate" 
+        @add-media="onImageInput" 
+        @toggle-layout="onToggleLayout" 
+      />
     </div>
   </template>
 
   <!-- View Mode -->
   <template v-else>
-    <div class="card-content full-size" :class="`layout-${currentView.layout || 'default'}`">
+    <div class="card-content full-size" :class="`layout-${validateLayout(currentView.layout)}`">
       <div class="content-flex full-size">
         <div class="content-container full-size">
           <div class="content-area full-size">
@@ -60,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from 'vue'
+import { ref, watch, computed, nextTick, onUnmounted } from 'vue'
 import type { CardView, CardLayout } from '@/types/card'
 import CardControlsBar from './CardControlsBar.vue'
 import CardMedia from './CardMedia.vue'
@@ -107,6 +116,13 @@ function createDefaultCardView(text?: string, imageUrl?: string | null, layout?:
   }
 }
 
+// Add layout validation
+const validLayouts = ['default', 'two-row', 'two-column'] as const
+const validateLayout = (layout: string | undefined): CardLayout => {
+  const layoutValue = layout || 'default'
+  return validLayouts.includes(layoutValue as CardLayout) ? layoutValue as CardLayout : 'default'
+}
+
 // Initialize state based on props
 const initialState: CardView = (() => {
   // If we have a card prop, use it
@@ -117,11 +133,11 @@ const initialState: CardView = (() => {
   // Handle legacy text prop
   if (props.text) {
     if (typeof props.text === 'string') {
-      return createDefaultCardView(props.text, props.imageUrl)
+      return createDefaultCardView(props.text, props.imageUrl, validateLayout(props.layout))
     }
 
     // Handle text object with layout
-    const defaultLayout: CardLayout = props.text.layout || 'default'
+    const defaultLayout: CardLayout = validateLayout(props.text.layout)
     return {
       id: 0,
       setId: 0,
@@ -140,14 +156,19 @@ const initialState: CardView = (() => {
   }
 
   // Default empty state
-  return createDefaultCardView('', props.imageUrl)
+  return createDefaultCardView('', props.imageUrl, validateLayout(props.layout))
 })()
 
-// Local state
+// Update state management
 const state = ref<CardView>(initialState)
 
 // AI loading state
 const aiLoading = ref(false)
+let isComponentMounted = true
+
+onUnmounted(() => {
+  isComponentMounted = false
+})
 
 const { toasts, toast } = useToaster()
 const { 
@@ -180,52 +201,57 @@ const { fontSizes } = useFontSizes(
 function onTextInput(e: Event) {
   const target = e.target as HTMLElement
   const selection = window.getSelection()
-  const range = selection?.getRangeAt(0)
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null
   const cursorPosition = range?.startOffset || 0
   
-  // Get the current content and parse it into blocks
-  const blocks = parseContentBlocks(target.innerHTML)
+  // Safely get text content and strip any HTML
+  const textContent = target.innerText || ''
   
-  // Convert blocks back to a string representation
-  const content = blocks.map((block: { type: MediaType; content: string; url?: string }) => {
-    switch (block.type) {
-      case 'image':
-      case 'youtube':
-        return block.url || block.content
-      case 'link':
-        return block.url || block.content
-      default:
-        return block.content
-    }
-  }).join('\n')
-  
-  // Ensure we're setting a string for text
-  const newText = typeof content === 'string' ? content : ''
-  
-  state.value = {
-    ...state.value,
-    [currentSide.value]: {
-      ...currentView.value,
-      text: newText
-    }
-  }
-  
-  emit('update', state.value)
-
-  // Restore cursor position after Vue updates the DOM
+  // Batch state updates
   nextTick(() => {
+    state.value = {
+      ...state.value,
+      [currentSide.value]: {
+        ...currentView.value,
+        text: textContent
+      }
+    }
+    
+    emit('update', state.value)
+
+    // Restore cursor position
     if (selection && range) {
       const newRange = document.createRange()
       const textNode = target.firstChild || target
-      newRange.setStart(textNode, Math.min(cursorPosition, textNode.textContent?.length || 0))
-      newRange.collapse(true)
-      selection.removeAllRanges()
-      selection.addRange(newRange)
+      if (textNode.textContent) {
+        newRange.setStart(textNode, Math.min(cursorPosition, textNode.textContent.length))
+        newRange.collapse(true)
+        selection.removeAllRanges()
+        selection.addRange(newRange)
+      }
     }
   })
 }
 
+// Add media validation
+const isValidImageUrl = (url: string | null): boolean => {
+  if (!url) return true // null is valid (no image)
+  try {
+    const parsedUrl = new URL(url)
+    return (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && 
+           (url.startsWith('data:image') || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(parsedUrl.pathname))
+  } catch {
+    return false
+  }
+}
+
+// Update image input handler
 function onImageInput(url: string | null) {
+  if (url && !isValidImageUrl(url)) {
+    toast('Invalid image URL', 'error')
+    return
+  }
+  
   state.value = {
     ...state.value,
     [currentSide.value]: {
@@ -237,12 +263,21 @@ function onImageInput(url: string | null) {
   emit('update', state.value)
 }
 
+// Update layout toggle with media consideration
 function onToggleLayout() {
-  const layouts = ['default', 'two-row', 'two-column']
-  const currentIndex = layouts.indexOf(currentView.value.layout)
+  const layouts = ['default', 'two-row', 'two-column'] as const
+  const currentLayout = currentView.value.layout as typeof layouts[number]
+  const currentIndex = layouts.indexOf(currentLayout)
   const nextLayout = layouts[(currentIndex + 1) % layouts.length]
   
-  // Update only the current side's layout
+  // Check if current content is suitable for the new layout
+  const hasMedia = currentView.value.imageUrl !== null
+  const hasLongText = currentView.value.text.length > 100
+  
+  if (nextLayout === 'two-column' && hasMedia && hasLongText) {
+    toast('Warning: Two-column layout may not be optimal for cards with both media and long text', 'info')
+  }
+  
   state.value = {
     ...state.value,
     [currentSide.value]: {
@@ -269,6 +304,7 @@ async function aiGenerate() {
       category: props.category || '',
       otherSideContent: state.value[currentSide.value === 'front' ? 'back' : 'front'].text,
       onResult: (text: string) => {
+        if (!isComponentMounted) return
         state.value = {
           ...state.value,
           [currentSide.value]: {
@@ -281,11 +317,17 @@ async function aiGenerate() {
         toast('Card generated successfully', 'success')
       },
       onError: (err: string) => {
+        if (!isComponentMounted) return
         toast('AI error: ' + err, 'error')
       }
     })
+  } catch (error) {
+    if (!isComponentMounted) return
+    toast('Failed to generate card: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error')
   } finally {
-    aiLoading.value = false
+    if (isComponentMounted) {
+      aiLoading.value = false
+    }
   }
 }
 
@@ -296,12 +338,59 @@ function onPaste(e: ClipboardEvent) {
   document.execCommand('insertText', false, text)
 }
 
-// Watch for prop changes
-watch(() => props.card, (newCard) => {
-  if (newCard) {
-    state.value = { ...newCard }
+// Add keyboard handling
+function onKeyDown(e: KeyboardEvent) {
+  // Prevent editing of media content
+  if (e.target instanceof HTMLElement) {
+    const isMediaElement = e.target.closest('.youtube-embed, .auto-image')
+    if (isMediaElement) {
+      e.preventDefault()
+      return
+    }
   }
-}, { deep: true })
+  
+  // Handle tab key
+  if (e.key === 'Tab') {
+    e.preventDefault()
+    document.execCommand('insertText', false, '  ')
+  }
+}
+
+// Watch all relevant props
+watch(
+  [
+    () => props.card,
+    () => props.text,
+    () => props.imageUrl,
+    () => props.layout
+  ],
+  ([newCard, newText, newImageUrl, newLayout]) => {
+    if (newCard) {
+      state.value = { ...newCard }
+    } else if (newText) {
+      if (typeof newText === 'string') {
+        state.value = createDefaultCardView(newText, newImageUrl, validateLayout(newLayout))
+      } else {
+        state.value = {
+          id: 0,
+          setId: 0,
+          front: {
+            text: newText.text,
+            imageUrl: newText.imageUrl || null,
+            layout: validateLayout(newText.layout)
+          },
+          back: {
+            text: '',
+            imageUrl: null,
+            layout: validateLayout(newText.layout)
+          },
+          hint: null
+        }
+      }
+    }
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>

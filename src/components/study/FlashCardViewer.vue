@@ -367,7 +367,7 @@ const fetchSet = async () => {
 const downloadSet = async () => {
   try {
     // Create CSV content with headers
-    const headers = ['Front', 'Back', 'Hint', 'Front Image', 'Back Image']
+    const headers = ['Front', 'Back', 'Hint', 'Front Image', 'Back Image', 'Front Layout', 'Back Layout']
     const rows = cards.value.map(card => {
       // Helper to safely format CSV field
       const formatField = (value: string | null | undefined): string => {
@@ -381,7 +381,9 @@ const downloadSet = async () => {
         formatField(card.back.text),
         formatField(card.hint),
         formatField(card.front.imageUrl),
-        formatField(card.back.imageUrl)
+        formatField(card.back.imageUrl),
+        formatField(card.front.layout),
+        formatField(card.back.layout)
       ]
     })
 

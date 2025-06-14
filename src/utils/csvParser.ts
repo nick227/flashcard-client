@@ -32,6 +32,8 @@ export function parseCSV(csvContent: string): ParseResult {
     const hintIndex = header.indexOf('hint')
     const frontImageIndex = header.indexOf('front image')
     const backImageIndex = header.indexOf('back image')
+    const frontLayoutIndex = header.indexOf('front layout')
+    const backLayoutIndex = header.indexOf('back layout')
 
     // Process each line
     for (let i = 1; i < lines.length; i++) {
@@ -47,6 +49,8 @@ export function parseCSV(csvContent: string): ParseResult {
       const hint = hintIndex >= 0 ? parseCsvValue(values[hintIndex] || '') || null : null
       const frontImage = frontImageIndex >= 0 ? parseCsvValue(values[frontImageIndex] || '') || null : null
       const backImage = backImageIndex >= 0 ? parseCsvValue(values[backImageIndex] || '') || null : null
+      let frontLayout = frontLayoutIndex >= 0 ? parseCsvValue(values[frontLayoutIndex] || '') || 'default' : 'default'
+      let backLayout = backLayoutIndex >= 0 ? parseCsvValue(values[backLayoutIndex] || '') || 'default' : 'default'
 
       // Debug log the parsed values
       console.log(`Parsed line ${i + 1}:`, {
@@ -55,6 +59,8 @@ export function parseCSV(csvContent: string): ParseResult {
         hint,
         frontImage,
         backImage,
+        frontLayout,
+        backLayout,
         rawValues: values
       })
 
@@ -78,12 +84,25 @@ export function parseCSV(csvContent: string): ParseResult {
         continue
       }
 
+      // Validate layouts
+      const validLayouts = ['default', 'two-row', 'two-column']
+      if (!validLayouts.includes(frontLayout)) {
+        warnings.push(`Line ${i + 1}: Invalid front layout, using default`)
+        frontLayout = 'default'
+      }
+      if (!validLayouts.includes(backLayout)) {
+        warnings.push(`Line ${i + 1}: Invalid back layout, using default`)
+        backLayout = 'default'
+      }
+
       cards.push({
         front,
         back,
         hint,
         frontImage,
-        backImage
+        backImage,
+        frontLayout,
+        backLayout
       })
     }
 
