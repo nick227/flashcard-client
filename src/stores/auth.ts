@@ -152,25 +152,42 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     
-    // Clear everything first to prevent any retries
-    setJwt(null)
+    // Store the token before clearing it
+    const currentToken = jwt.value
+    
+    // Clear local state first
     setUser(null)
     setMessage(null)
     if (isBrowser) {
-      localStorage.removeItem('jwt')
       cacheService.delete('user')
     }
     
     // Navigate to login immediately
     router.push('/login')
     
-    // Then attempt to call the logout endpoint, but don't wait for it
-    try {
-      await authApi.logout()
-    } catch (err: any) {
-      console.error('Logout API call failed:', err)
-      // Ignore the error since we've already cleared everything
-    } finally {
+    // Only attempt logout if we have a token
+    if (currentToken) {
+      try {
+        // Set the token one last time for the logout request
+        api.defaults.headers.common['Authorization'] = `Bearer ${currentToken}`
+        await authApi.logout()
+      } catch (err: any) {
+        console.error('Logout API call failed:', err)
+        // Ignore the error since we've already cleared everything
+      } finally {
+        // Clear JWT last
+        setJwt(null)
+        if (isBrowser) {
+          localStorage.removeItem('jwt')
+        }
+        loading.value = false
+      }
+    } else {
+      // If no token, just clear JWT and finish
+      setJwt(null)
+      if (isBrowser) {
+        localStorage.removeItem('jwt')
+      }
       loading.value = false
     }
   }

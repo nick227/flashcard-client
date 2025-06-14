@@ -42,18 +42,34 @@ export function useSets() {
 
   // Helper function to make batch requests
   const makeBatchRequests = async (batchIds: number[], type: 'views' | 'likes' | 'cards') => {
-    const batchKey = batchIds.join(',')
+    const MAX_BATCH_SIZE = 50;
+    const chunks = [];
+    
+    // Split IDs into chunks of MAX_BATCH_SIZE
+    for (let i = 0; i < batchIds.length; i += MAX_BATCH_SIZE) {
+      chunks.push(batchIds.slice(i, i + MAX_BATCH_SIZE));
+    }
     
     try {
-      const response = await cachedApi.get<Record<string, number>>(
-        apiEndpoints.sets.batch(type), 
-        { ids: batchKey }, 
-        { ttl: CACHE_TTL }
-      )
-      return response
+      // Process chunks in parallel
+      const chunkResults = await Promise.all(
+        chunks.map(chunk => 
+          cachedApi.get<Record<string, number>>(
+            apiEndpoints.sets.batch(type), 
+            { ids: chunk.join(',') }, 
+            { ttl: CACHE_TTL }
+          )
+        )
+      );
+      
+      // Merge results from all chunks
+      return chunkResults.reduce((acc, result) => ({
+        ...acc,
+        ...result
+      }), {});
     } catch (error) {
-      console.error(`[Stats] Error fetching batch ${type}:`, error)
-      throw error
+      console.error(`[Stats] Error fetching batch ${type}:`, error);
+      throw error;
     }
   }
 
