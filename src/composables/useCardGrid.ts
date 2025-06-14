@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { Card } from '@/types/card'
 
@@ -6,6 +6,14 @@ interface CardViewState {
   id: number
   frontViewed: boolean
   backViewed: boolean
+}
+
+// Helper function to safely get card ID
+function getCardId(card: Card): number {
+  if (typeof card.id !== 'number') {
+    throw new Error('Card ID must be a number')
+  }
+  return card.id
 }
 
 export function useCardGrid(cards: Ref<Card[]>) {
@@ -47,7 +55,8 @@ export function useCardGrid(cards: Ref<Card[]>) {
   const syncGridStates = (newCards: Card[]) => {
     const newStates: Record<number, boolean> = {}
     newCards.forEach(card => {
-      newStates[card.id] = gridCardStates.value[card.id] || false
+      const cardId = getCardId(card)
+      newStates[cardId] = gridCardStates.value[cardId] || false
     })
     gridCardStates.value = newStates
   }
@@ -79,6 +88,16 @@ export function useCardGrid(cards: Ref<Card[]>) {
       })
     }
   }
+
+  // Initialize grid states when cards change
+  watch(cards, (newCards) => {
+    const newStates: Record<number, boolean> = {}
+    newCards.forEach(card => {
+      const cardId = getCardId(card)
+      newStates[cardId] = gridCardStates.value[cardId] || false
+    })
+    gridCardStates.value = newStates
+  }, { immediate: true })
 
   return {
     showGridView,

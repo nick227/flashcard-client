@@ -3,8 +3,7 @@
     <div class="card-content">
       <div class="card-face front">
         <CardContent
-          :text="card.front.text"
-          :imageUrl="card.front.imageUrl || undefined"
+          :card="card"
           :mode="isEditing ? 'edit' : 'view'"
           side="front"
           :title="props.title || ''"
@@ -15,8 +14,7 @@
       </div>
       <div class="card-face back">
         <CardContent
-          :text="card.back.text"
-          :imageUrl="card.back.imageUrl || undefined"
+          :card="card"
           :mode="isEditing ? 'edit' : 'view'"
           side="back"
           :title="props.title || ''"
@@ -99,27 +97,27 @@ onMounted(() => {
   })
 })
 
-const updateFront = (text: string) => {
+function updateFront(updatedCard: FlashCard) {
   console.log('CardTile - Updating front:', { 
     oldText: props.card.front.text, 
-    newText: text,
-    imageUrl: props.card.front.imageUrl 
+    newText: updatedCard.front.text,
+    imageUrl: updatedCard.front.imageUrl 
   })
   emit('update', {
     ...props.card,
-    front: { ...props.card.front, text }
+    front: updatedCard.front
   })
 }
 
-const updateBack = (text: string) => {
+function updateBack(updatedCard: FlashCard) {
   console.log('CardTile - Updating back:', { 
     oldText: props.card.back.text, 
-    newText: text,
-    imageUrl: props.card.back.imageUrl 
+    newText: updatedCard.back.text,
+    imageUrl: updatedCard.back.imageUrl 
   })
   emit('update', {
     ...props.card,
-    back: { ...props.card.back, text }
+    back: updatedCard.back
   })
 }
 

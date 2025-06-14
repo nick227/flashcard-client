@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import type { FlashCard } from '@/types/card'
 import type { CardViewMode } from '@/composables/useCardMediaStyles'
@@ -44,47 +44,24 @@ const emit = defineEmits(['update-order', 'delete-card', 'edit-card', 'request-d
 const localCards = ref<FlashCard[]>([])
 const drag = ref(false)
 
-// Log initial props
-console.log('DraggableCardList - Component created with props:', {
-  cards: props.cards,
-  layout: props.layout,
-  viewMode: props.viewMode,
-  cardComponent: props.cardComponent
-})
-
 // Watch for cards changes
 watch(() => props.cards, (newCards) => {
-  console.log('DraggableCardList - Cards updated:', newCards)
   localCards.value = [...newCards]
 }, { deep: true, immediate: true })
 
-onMounted(() => {
-  console.log('DraggableCardList - Component mounted:', {
-    cards: props.cards,
-    layout: props.layout,
-    viewMode: props.viewMode,
-    cardComponent: props.cardComponent,
-    localCards: localCards.value
-  })
-})
-
 const onUpdateOrder = (newOrder: FlashCard[]) => {
-  console.log('DraggableCardList - Order updated:', newOrder)
   emit('update-order', newOrder)
 }
 
 const onEditCard = (updatedCard: FlashCard) => {
-  console.log('DraggableCardList - Card edited:', updatedCard)
   emit('edit-card', updatedCard)
 }
 
 const onDeleteCard = (id: number) => {
-  console.log('DraggableCardList - Card deleted:', id)
   emit('delete-card', id)
 }
 
 const onRequestDelete = (id: number) => {
-  console.log('DraggableCardList - Card delete requested:', id)
   emit('request-delete', id)
 }
 </script>

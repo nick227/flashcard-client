@@ -1,185 +1,104 @@
-import type { Card } from '@/types/card'
-import { CardService } from '@/services/CardService'
+import type { ParsedCard, ParseResult } from '@/utils/csv'
 
-export interface CsvParseResult {
-  cards: Card[]
-  error?: string
-  warnings?: string[]
-}
+export function parseCSV(csvContent: string): ParseResult {
+  const warnings: string[] = []
+  const cards: ParsedCard[] = []
 
-/**
- * Parses CSV text into FlashCardDraft[].
- * Supports:
- * - Required columns: front, back
- * - Optional columns: hint, front_image, back_image
- * - Handles quoted fields with commas and newlines
- * - Validates image URLs
- * - Supports both CRLF and LF line endings
- * - Trims whitespace from fields
- * Returns { cards, error?, warnings? }
- */
-export function parseFlashCardCsv(csvContent: string): CsvParseResult {
   try {
-    // Normalize line endings and split
+    // Normalize line endings and split into lines
     const normalizedContent = csvContent.replace(/\r\n/g, '\n')
-    const lines = normalizedContent.split('\n')
-      .map(line => line.trim())
-      .filter(line => line)
-
-    if (lines.length < 2) {
-      return { cards: [], error: 'CSV must have at least a header row and one data row' }
+    const lines = normalizedContent.split('\n').filter(line => line.trim())
+    
+    // Check if we have a header
+    if (lines.length === 0) {
+      return { cards: [], error: 'Empty file' }
     }
 
-    // Parse headers with case-insensitive matching
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
-    const requiredHeaders = ['front', 'back']
-    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
-    if (missingHeaders.length > 0) {
-      return { cards: [], error: `Missing required headers: ${missingHeaders.join(', ')}` }
-    }
-
-    const warnings: string[] = []
-    const cards: Card[] = []
-
-    // Helper to parse CSV field with proper quote handling
-    const parseField = (value: string): string => {
-      // Remove surrounding quotes if present and handle empty quoted strings
-      const unquoted = value.replace(/^"|"$/g, '')
-      // Handle escaped quotes within quoted fields
-      return unquoted.replace(/""/g, '"')
-    }
-
-    // Helper to extract values from a CSV row
-    const extractValues = (line: string): string[] => {
-      const values: string[] = []
-      let currentValue = ''
-      let inQuotes = false
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i]
-        
-        if (char === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            // Handle escaped quotes
-            currentValue += '"'
-            i++
-          } else {
-            inQuotes = !inQuotes
-          }
-        } else if (char === ',' && !inQuotes) {
-          values.push(parseField(currentValue))
-          currentValue = ''
-        } else {
-          currentValue += char
-        }
+    // Parse header
+    const header = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase())
+    const requiredFields = ['front', 'back']
+    const missingFields = requiredFields.filter(field => !header.includes(field))
+    
+    if (missingFields.length > 0) {
+      return { 
+        cards: [], 
+        error: `Missing required fields: ${missingFields.join(', ')}` 
       }
-      
-      // Add the last value
-      values.push(parseField(currentValue))
-      return values
     }
 
-    // Get header indices
-    const frontIndex = headers.indexOf('front')
-    const backIndex = headers.indexOf('back')
-    const frontImageIndex = headers.indexOf('front image')
-    const backImageIndex = headers.indexOf('back image')
-    const hintIndex = headers.indexOf('hint')
+    // Get column indices
+    const frontIndex = header.indexOf('front')
+    const backIndex = header.indexOf('back')
+    const hintIndex = header.indexOf('hint')
+    const frontImageIndex = header.indexOf('front image')
+    const backImageIndex = header.indexOf('back image')
 
+    // Process each line
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i]
-      const values = extractValues(line)
-
-      if (values.length < headers.length) {
-        return { 
-          cards: [], 
-          error: `Row ${i + 1} has fewer values than headers. Expected ${headers.length}, got ${values.length}` 
-        }
-      }
-
-      // Get values for each field
-      const frontText = values[frontIndex]
-      const backText = values[backIndex]
-      const frontImage = frontImageIndex >= 0 ? values[frontImageIndex] : null
-      const backImage = backImageIndex >= 0 ? values[backImageIndex] : null
+      const values = parseCsvLine(line)
       
-      // Debug log the values
-      console.log(`Row ${i + 1} values:`, {
-        frontText,
-        backText,
+      // Skip empty lines
+      if (values.every(v => !v.trim())) continue
+
+      // Extract and parse values
+      const front = parseCsvValue(values[frontIndex] || '')
+      const back = parseCsvValue(values[backIndex] || '')
+      const hint = hintIndex >= 0 ? parseCsvValue(values[hintIndex] || '') || null : null
+      const frontImage = frontImageIndex >= 0 ? parseCsvValue(values[frontImageIndex] || '') || null : null
+      const backImage = backImageIndex >= 0 ? parseCsvValue(values[backImageIndex] || '') || null : null
+
+      // Debug log the parsed values
+      console.log(`Parsed line ${i + 1}:`, {
+        front,
+        back,
+        hint,
         frontImage,
         backImage,
-        headers,
-        values,
-        indices: {
-          front: frontIndex,
-          back: backIndex,
-          frontImage: frontImageIndex,
-          backImage: backImageIndex
-        }
+        rawValues: values
       })
 
+      // Validate required fields
+      if (!front && !frontImage) {
+        warnings.push(`Line ${i + 1}: Skipped - missing front content`)
+        continue
+      }
+      if (!back && !backImage) {
+        warnings.push(`Line ${i + 1}: Skipped - missing back content`)
+        continue
+      }
+
       // Validate image URLs if present
-      let validFrontImage = frontImage && frontImage.trim() ? frontImage.trim() : null
-      let validBackImage = backImage && backImage.trim() ? backImage.trim() : null
-
-      if (validFrontImage && !isValidUrl(validFrontImage)) {
-        warnings.push(`Row ${i + 1}: Invalid front image URL`)
-        validFrontImage = null
-      }
-      if (validBackImage && !isValidUrl(validBackImage)) {
-        warnings.push(`Row ${i + 1}: Invalid back image URL`)
-        validBackImage = null
-      }
-
-      // A card is valid if it has either text or a valid image for both front and back
-      const hasValidFront = (frontText && frontText.trim()) || validFrontImage
-      const hasValidBack = (backText && backText.trim()) || validBackImage
-
-      if (!hasValidFront) {
-        warnings.push(`Row ${i + 1}: Empty front text and no valid front image`)
+      if (frontImage && !isValidUrl(frontImage)) {
+        warnings.push(`Line ${i + 1}: Invalid front image URL`)
         continue
       }
-      if (!hasValidBack) {
-        warnings.push(`Row ${i + 1}: Empty back text and no valid back image`)
+      if (backImage && !isValidUrl(backImage)) {
+        warnings.push(`Line ${i + 1}: Invalid back image URL`)
         continue
       }
 
-      const card: Card = {
-        id: CardService.generateId(),
-        front: {
-          text: frontText ? frontText.trim() : '',
-          imageUrl: validFrontImage
-        },
-        back: {
-          text: backText ? backText.trim() : '',
-          imageUrl: validBackImage
-        },
-        hint: hintIndex >= 0 ? values[hintIndex] || null : null,
-        setId: 0
-      }
-
-      cards.push(card)
+      cards.push({
+        front,
+        back,
+        hint,
+        frontImage,
+        backImage
+      })
     }
 
-    // Validate total number of cards
     if (cards.length === 0) {
       return { cards: [], error: 'No valid cards found in CSV' }
     }
 
-    return { 
-      cards,
-      warnings: warnings.length > 0 ? warnings : undefined
-    }
-  } catch (error) {
-    console.error('CSV parsing error:', error)
-    return { 
-      cards: [], 
-      error: error instanceof Error ? error.message : 'Failed to parse CSV file'
-    }
+    return { cards, warnings: warnings.length ? warnings : undefined }
+  } catch (e) {
+    console.error('CSV parsing error:', e)
+    return { cards: [], error: 'Failed to parse CSV file' }
   }
 }
 
+// Helper function to validate URLs
 function isValidUrl(url: string): boolean {
   try {
     new URL(url)
@@ -187,4 +106,43 @@ function isValidUrl(url: string): boolean {
   } catch {
     return false
   }
+}
+
+// Helper function to properly parse CSV values
+function parseCsvValue(value: string): string {
+  if (!value) return ''
+  // Remove surrounding quotes if present
+  const unquoted = value.replace(/^"|"$/g, '')
+  // Handle escaped quotes within quoted fields
+  return unquoted.replace(/""/g, '"').trim()
+}
+
+// Helper function to parse a CSV line properly handling quoted values
+function parseCsvLine(line: string): string[] {
+  const values: string[] = []
+  let currentValue = ''
+  let inQuotes = false
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Handle escaped quotes
+        currentValue += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (char === ',' && !inQuotes) {
+      values.push(currentValue)
+      currentValue = ''
+    } else {
+      currentValue += char
+    }
+  }
+  
+  // Add the last value
+  values.push(currentValue)
+  return values
 } 

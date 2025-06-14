@@ -3,8 +3,7 @@
     <div class="card-editor">
       <div class="card-side front">
         <CardContent
-          :text="card.front.text"
-          :imageUrl="card.front.imageUrl || undefined"
+          :card="card"
           mode="edit"
           side="front"
           :title="props.title || ''"
@@ -15,8 +14,7 @@
       </div>
       <div class="card-side back">
         <CardContent
-          :text="card.back.text"
-          :imageUrl="card.back.imageUrl || undefined"
+          :card="card"
           mode="edit"
           side="back"
           :title="props.title || ''"
@@ -61,26 +59,20 @@ watch(() => props.card.hint, (val) => {
   localHint.value = val || ''
 })
 
-const onFrontUpdate = (text: string) => {
-  console.log('CardEditor onFrontUpdate', text);
+const onFrontUpdate = (updatedCard: FlashCard) => {
+  console.log('CardEditor onFrontUpdate', updatedCard);
   emit('update', {
     ...props.card,
-    front: {
-      ...props.card.front,
-      text
-    },
+    front: updatedCard.front,
     hint: localHint.value
   })
 }
 
-const onBackUpdate = (text: string) => {
-  console.log('CardEditor onBackUpdate', text);
+const onBackUpdate = (updatedCard: FlashCard) => {
+  console.log('CardEditor onBackUpdate', updatedCard);
   emit('update', {
     ...props.card,
-    back: {
-      ...props.card.back,
-      text
-    },
+    back: updatedCard.back,
     hint: localHint.value
   })
 }
@@ -107,7 +99,6 @@ const onHintUpdate = () => {
 
 .card-side {
   flex: 1;
-  min-height: 400px;
   border-radius: 8px;
   padding: 1rem;
   background: var(--color-white);

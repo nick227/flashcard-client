@@ -3,7 +3,6 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import viteCompression from 'vite-plugin-compression'
 import { visualizer } from 'rollup-plugin-visualizer'
-import type { PreRenderedAsset } from 'rollup'
 import { VitePWA } from 'vite-plugin-pwa'
 import type { UserConfig } from 'vite'
 

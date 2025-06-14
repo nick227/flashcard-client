@@ -9,7 +9,7 @@
     </button>
     <button
       class="control-btn"
-      @click="$emit('add-media')"
+      @click="promptForImageUrl"
       :title="'Add Media'"
     >
       <i class="fa fa-image"></i>
@@ -28,7 +28,14 @@
 
 <script setup lang="ts">
 defineProps<{ aiLoading: boolean }>()
-defineEmits(['toggle-layout', 'add-media', 'ai-generate'])
+const emit = defineEmits(['toggle-layout', 'add-media', 'ai-generate'])
+
+function promptForImageUrl() {
+  const url = prompt('Enter the URL of the image')
+  if (url) {
+    emit('add-media', url)
+  }
+}
 </script>
 
 <style scoped>

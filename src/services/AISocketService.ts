@@ -330,11 +330,13 @@ class AISocketService {
                     setId: 0,
                     front: {
                         text: data.card.front.text || '',
-                        imageUrl: data.card.front.imageUrl || null
+                        imageUrl: data.card.front.imageUrl || null,
+                        layout: data.card.front.layout || 'two-row'
                     },
                     back: {
                         text: data.card.back.text || '',
-                        imageUrl: data.card.back.imageUrl || null
+                        imageUrl: data.card.back.imageUrl || null,
+                        layout: data.card.back.layout || 'two-row'
                     },
                     hint: data.card.hint || null
                 }

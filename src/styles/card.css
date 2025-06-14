@@ -3,6 +3,8 @@
 :root {
     --transition-duration: 0.2s;
     --transition-timing: ease;
+    --card-height: 355px;
+    --card-aspect-ratio: 16/9;
 }
 
 
@@ -13,7 +15,7 @@
     border-radius: var(--radius);
     border: 1.5px solid var(--color-border);
     width: 100%;
-    aspect-ratio: 16/9;
+    aspect-ratio: var(--card-aspect-ratio);
     max-width: 800px;
     display: flex;
     flex-direction: column;
@@ -30,11 +32,12 @@
     height: 100%;
     padding: 0;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.5;
     text-align: center;
     color: inherit;
     outline: none;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow-wrap: break-word;
@@ -42,7 +45,17 @@
     hyphens: auto;
     position: relative;
     font-family: var(--font-main);
-    cursor: text;
+    box-sizing: border-box;
+    aspect-ratio: var(--card-aspect-ratio);
+}
+
+
+/* Back side styles */
+
+.back .card-content {
+    background: var(--color-primary);
+    color: var(--color-white);
+    overflow: hidden;
 }
 
 
@@ -186,6 +199,7 @@
 
 .card-preview.front .card-content {
     color: var(--color-text);
+    outline: 1px solid var(--color-subtle);
 }
 
 .card-preview.back .card-content {
@@ -328,6 +342,12 @@
         gap: var(--space-xs);
         padding: var(--space-xs) var(--space-xs);
         justify-content: center;
+    }
+    .card-content {
+        height: 120px;
+    }
+    .card-editor {
+        flex-direction: column;
     }
 }
 

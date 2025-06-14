@@ -132,7 +132,8 @@ onUnmounted(() => {
   transition: background-color 0.2s;
 }
 
-.login-link:hover {
+.login-link:hover,
+.login-link:active {
   background: var(--color-primary-dark);
 }
 </style> 

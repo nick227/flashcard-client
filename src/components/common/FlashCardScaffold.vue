@@ -17,8 +17,7 @@
     <div class="card-content" :class="{ 'is-flipped': isFlipped, 'is-flipping': isFlipping }">
       <div v-show="!isFlipped" class="card-face front">
         <CardContent 
-          :text="card?.front?.text || ''"
-          :imageUrl="card?.front?.imageUrl || undefined"
+          :card="card"
           :mode="editable ? 'edit' : 'view'"
           side="front"
           :title="props.title || ''"
@@ -29,8 +28,7 @@
       </div>
       <div v-show="isFlipped" class="card-face back">
         <CardContent 
-          :text="card?.back?.text || ''"
-          :imageUrl="card?.back?.imageUrl || undefined"
+          :card="card"
           :mode="editable ? 'edit' : 'view'"
           side="back"
           :title="props.title || ''"
@@ -93,15 +91,7 @@ const FLIP_ANIMATION_DURATION = 300
 const isFlipped = computed(() => props.flipped !== undefined ? props.flipped : localFlipped.value)
 
 // Add debug logging
-watch(() => props.card, (newCard) => {
-  console.log('FlashCardScaffold received card:', {
-    front: newCard?.front,
-    back: newCard?.back,
-    hasFrontImage: !!newCard?.front?.imageUrl,
-    hasBackImage: !!newCard?.back?.imageUrl,
-    frontText: newCard?.front?.text,
-    backText: newCard?.back?.text
-  })
+watch(() => props.card, () => {
 }, { immediate: true })
 
 // Reset flip state when card changes
@@ -300,30 +290,34 @@ onUnmounted(() => {
   document.removeEventListener('mousedown', handleDocumentClick)
 })
 
-const onFrontUpdate = (text: string) => {
-  console.log('FlashCardScaffold - Front update:', { text, imageUrl: props.card.front.imageUrl });
-  const updatedCard = {
+function onFrontUpdate(updatedCard: FlashCard) {
+  console.log('FlashCardScaffold - Front update:', {
+    original: props.card.front,
+    updated: updatedCard.front
+  })
+  emit('update:card', {
     ...props.card,
     front: {
-      ...props.card.front,
-      text,
-      imageUrl: props.card.front.imageUrl
+      text: typeof updatedCard.front.text === 'string' ? updatedCard.front.text : '',
+      imageUrl: updatedCard.front.imageUrl,
+      layout: updatedCard.front.layout
     }
-  }
-  emit('update:card', updatedCard)
+  })
 }
 
-const onBackUpdate = (text: string) => {
-  console.log('FlashCardScaffold - Back update:', { text, imageUrl: props.card.back.imageUrl });
-  const updatedCard = {
+function onBackUpdate(updatedCard: FlashCard) {
+  console.log('FlashCardScaffold - Back update:', {
+    original: props.card.back,
+    updated: updatedCard.back
+  })
+  emit('update:card', {
     ...props.card,
     back: {
-      ...props.card.back,
-      text,
-      imageUrl: props.card.back.imageUrl
+      text: typeof updatedCard.back.text === 'string' ? updatedCard.back.text : '',
+      imageUrl: updatedCard.back.imageUrl,
+      layout: updatedCard.back.layout
     }
-  }
-  emit('update:card', updatedCard)
+  })
 }
 </script>
 

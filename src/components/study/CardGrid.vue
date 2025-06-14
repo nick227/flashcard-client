@@ -1,12 +1,12 @@
 <template>
   <div class="grid-view" ref="gridViewRef">
-    <div v-for="card in cards" :key="card.id" class="card">
+    <div v-for="card in cards" :key="getCardId(card)" class="card">
       <FlashCardScaffold 
         :card="card" 
         :editable="false"
-        :flipped="gridCardStates[card.id]"
+        :flipped="gridCardStates[getCardId(card)]"
         size="small"
-        @flip="(isFlipped) => $emit('card-flip', card.id, isFlipped)"
+        @flip="(isFlipped) => $emit('card-flip', getCardId(card), isFlipped)"
       />
     </div>
   </div>
@@ -24,6 +24,14 @@ defineProps<{
 defineEmits<{
   (e: 'card-flip', cardId: number, isFlipped: boolean): void
 }>()
+
+// Helper function to safely get card ID
+function getCardId(card: Card): number {
+  if (typeof card.id !== 'number') {
+    throw new Error('Card ID must be a number')
+  }
+  return card.id
+}
 </script>
 
 <style scoped>

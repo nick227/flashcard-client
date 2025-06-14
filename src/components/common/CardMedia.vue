@@ -1,5 +1,6 @@
 <template>
   <div class="card-media" :class="{ 'is-loading': isLoading }">
+    <button v-if="editable" class="remove-media absolute top-0 right-0" @click="removeMedia"><i class="fa fa-trash"></i></button>
     <img
       v-if="type === 'image'"
       :src="url"
@@ -29,72 +30,54 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { MediaType } from '@/types/media'
 
 const props = defineProps<{
   type: MediaType
   url: string
   alt?: string
+  editable?: boolean
 }>()
 
-const emit = defineEmits(['error'])
+const emit = defineEmits(['error', 'remove'])
 
 const isLoading = ref(true)
 
-// Immediately remove loading for YouTube and links
+// Initialize loading state based on type
+if (props.type === 'youtube' || props.type === 'link') {
+  isLoading.value = false
+}
+
+// Watch for type changes
 watch(
   () => props.type,
   (type) => {
     if (type === 'youtube' || type === 'link') {
-      isLoading.value = false;
+      isLoading.value = false
     }
-  },
-  { immediate: true }
+  }
 )
 
-// Log initial props
-console.log('CardMedia - Component created with props:', {
-  type: props.type,
-  url: props.url,
-  alt: props.alt
-})
+// removeMedia
+const removeMedia = () => {
+  emit('remove')
+}
 
 // Compute YouTube embed URL (robust extraction)
 const embedUrl = computed(() => {
-  if (props.type !== 'youtube') return '';
+  if (props.type !== 'youtube') return ''
   // Extract the video ID from various YouTube URL formats
-  const match = props.url.match(/(?:v=|\/embed\/|youtu\.be\/)([\w-]{11})/);
-  const videoId = match ? match[1] : null;
-  const embed = videoId ? `https://www.youtube.com/embed/${videoId}` : '';
-  console.log('CardMedia - Computed embedUrl:', { url: props.url, videoId, embed });
-  return embed;
-});
-
-onMounted(() => {
-  console.log('CardMedia - Component mounted:', {
-    type: props.type,
-    url: props.url,
-    alt: props.alt,
-    isLoading: isLoading.value,
-    embedUrl: embedUrl.value
-  })
+  const match = props.url.match(/(?:v=|\/embed\/|youtu\.be\/)([\w-]{11})/)
+  const videoId = match ? match[1] : null
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : ''
 })
 
 const onLoad = () => {
-  console.log('CardMedia - Media loaded:', {
-    type: props.type,
-    url: props.url
-  })
   isLoading.value = false
 }
 
 const onError = (e: Event) => {
-  console.error('CardMedia - Media error:', {
-    type: props.type,
-    url: props.url,
-    error: e
-  })
   isLoading.value = false
   emit('error', e)
 }

@@ -74,35 +74,8 @@ const isBlank = computed(() => {
          (!localCard.value.back.text && !localCard.value.back.imageUrl)
 })
 
-// Log initial props
-console.log('CardFullView - Component created with props:', {
-  card: props.card,
-  viewMode: props.viewMode,
-  mode: props.mode,
-  autoFocus: props.autoFocus,
-  autoFocusId: props.autoFocusId,
-  front: {
-    text: props.card.front.text,
-    imageUrl: props.card.front.imageUrl
-  },
-  back: {
-    text: props.card.back.text,
-    imageUrl: props.card.back.imageUrl
-  }
-})
-
 // Watch for card changes
 watch(() => props.card, (newCard) => {
-  console.log('CardFullView - Card updated:', {
-    front: {
-      text: newCard.front.text,
-      imageUrl: newCard.front.imageUrl
-    },
-    back: {
-      text: newCard.back.text,
-      imageUrl: newCard.back.imageUrl
-    }
-  })
   localCard.value = { ...newCard }
 }, { deep: true })
 
@@ -120,7 +93,6 @@ const handleFlip = () => {
 }
 
 const onRequestDelete = () => {
-  console.log('CardFullView - Delete requested for card:', localCard.value.id)
   emit('request-delete', localCard.value.id)
 }
 </script>

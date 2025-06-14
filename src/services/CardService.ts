@@ -11,14 +11,16 @@ export class CardService {
       id: this.generateId(),
       front: {
         text: '',
-        imageUrl: null
+        imageUrl: null,
+        layout: 'default'
       },
       back: {
         text: '',
-        imageUrl: null
+        imageUrl: null,
+        layout: 'default'
       },
       hint: null,
-      setId: 0 // Temporary ID until saved
+      setId: 0, // Temporary ID until saved
     }
   }
 

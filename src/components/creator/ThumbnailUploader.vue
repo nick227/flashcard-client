@@ -21,6 +21,7 @@
           <!-- AI Generation Loading State -->
           <div v-if="isGeneratingThumbnail" class="flex items-center justify-center h-full w-full bg-gray-50">
             <div class="p-8 text-center">
+              <p class="text-gray-700 font-medium text-lg mb-4">Generating AI Thumbnail</p>
               <div class="relative">
                 <!-- Outer spinning ring -->
                 <div class="w-20 h-20 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
@@ -32,8 +33,6 @@
                 </div>
               </div>
               <div class="space-y-2">
-                <p class="text-gray-700 font-medium text-lg">Generating AI Thumbnail</p>
-                <p class="text-gray-500 text-sm mb-8">This may take a few moments...</p>
                 <!-- Loading dots animation -->
                 <div class="flex justify-center space-x-1 mt-4">
                   <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
@@ -152,7 +151,7 @@ const isGeneratingThumbnail = ref(false)
 const { toast } = useToaster()
 
 // Constants for file validation
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif']
 
 const canGenerate = computed(() => {

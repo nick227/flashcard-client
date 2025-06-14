@@ -1,7 +1,8 @@
 import axios, { AxiosError } from 'axios'
 import { api } from '@/api'
 import type { FlashCard, SetPrice } from '@/types'
-import type { Card } from '@/types/card'
+import type { Card, CardData } from '@/types/card'
+import { CardTransformService } from './CardTransformService'
 
 export interface SetFormData {
   title: string
@@ -12,18 +13,6 @@ export interface SetFormData {
   thumbnail: string | null
   cards: FlashCard[]
   educatorId: number
-}
-
-export interface CardData {
-  front: {
-    text: string
-    imageUrl: string | null
-  }
-  back: {
-    text: string
-    imageUrl: string | null
-  }
-  hint: string | null
 }
 
 interface ErrorResponse {
@@ -78,7 +67,8 @@ export class SetService {
   static async fetchSetCards(setId: number) {
     try {
       const response = await api.get(`/cards?setId=${setId}`)
-      return response.data
+      // Transform the response data to view model
+      return response.data.map((card: CardData) => CardTransformService.toView(card))
     } catch (error) {
       return SetService.handleError(error)
     }
@@ -110,17 +100,12 @@ export class SetService {
     if (data.thumbnail) {
       formData.append('thumbnailUrl', data.thumbnail)
     }
-    formData.append('cards', JSON.stringify(data.cards.map(card => ({
-      front: {
-        text: card.front.text?.trim() || '',
-        imageUrl: card.front.imageUrl || null
-      },
-      back: {
-        text: card.back.text?.trim() || '',
-        imageUrl: card.back.imageUrl || null
-      },
-      hint: card.hint || null
-    }))))
+
+    // Transform cards to data format
+    const outgoingCards = data.cards.map(card => CardTransformService.toData(card))
+
+    console.log('[SetService.prepareFormData] Outgoing cards:', outgoingCards)
+    formData.append('cards', JSON.stringify(outgoingCards))
     formData.append('educatorId', data.educatorId.toString())
     return formData
   }

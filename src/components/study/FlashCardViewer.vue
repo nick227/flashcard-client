@@ -179,6 +179,7 @@ import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/common/Toaster.vue'
 import { useViewHistory } from '@/composables/useViewHistory'
 import CardRiverMobile from './CardRiverMobile.vue'
+import { CardTransformService } from '@/services/CardTransformService'
 
 const props = defineProps<{
   setId: number | string
@@ -315,32 +316,15 @@ const fetchSet = async () => {
       const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
       console.log('Raw cards data:', cardsData)
       
-      cards.value = cardsData.map((card: any) => {
-        const transformedCard = {
-          id: card.id,
-          setId: card.setId,
-          front: {
-            text: card.front?.text || '',
-            imageUrl: card.front?.imageUrl || null
-          },
-          back: {
-            text: card.back?.text || '',
-            imageUrl: card.back?.imageUrl || null
-          },
-          hint: card.hint || null
-        }
-        console.log('Transformed card:', transformedCard)
-        return transformedCard
-      })
-
-      console.log('Final cards array:', cards.value)
+      // Use CardTransformService to transform cards
+      cards.value = cardsData.map((card: any) => CardTransformService.toView(card))
+      console.log('Transformed cards:', cards.value)
 
       // Initialize history tracking
       try {
         await initializeHistory()
       } catch (historyErr) {
         console.error('Error initializing history:', historyErr)
-        // Continue with card display even if history fails
         error.value = 'Note: Progress tracking is unavailable'
       }
 
@@ -352,7 +336,7 @@ const fetchSet = async () => {
 
       // Initialize viewed cards
       viewedCards.value = cards.value.map(card => ({
-        id: card.id,
+        id: getCardId(card),
         frontViewed: false,
         backViewed: false
       }))
@@ -545,33 +529,60 @@ const handleRestart = () => {
   currentFlip.value = 0
 }
 
+// Helper function to safely get card ID
+function getCardId(card: Card): number {
+  if (typeof card.id !== 'number') {
+    throw new Error('Card ID must be a number')
+  }
+  return card.id
+}
+
+// Update viewed cards initialization
+viewedCards.value = cards.value.map(card => ({
+  id: getCardId(card),
+  frontViewed: false,
+  backViewed: false
+}))
+
+// Update card initialization watch
+watch(() => cards.value, (newCards) => {
+  if (newCards && newCards.length > 0 && !initialized) {
+    currentIndex.value = 0
+    flipped.value = false
+    currentFlip.value = 0
+
+    viewedCards.value = newCards.map(card => ({
+      id: getCardId(card),
+      frontViewed: false,
+      backViewed: false
+    }))
+    initialized = true
+  }
+})
+
+// Update grid state handling
 const handleShuffle = () => {
-  // Store the current progress position
   const currentProgress = currentIndex.value
-
-  // Get new order from shuffle
   const { newOrder } = shuffleCardOrder()
-
-  // Update cards with new order
   cards.value = [...newOrder]
 
-  // Update viewed cards array to match new order while preserving state
+  // Update viewed cards array with safe IDs
   viewedCards.value = newOrder.map(card => {
-    const existingState = viewedCards.value.find(vc => vc.id === card.id)
+    const existingState = viewedCards.value.find(vc => vc.id === getCardId(card))
     return existingState || {
-      id: card.id,
+      id: getCardId(card),
       frontViewed: false,
       backViewed: false
     }
   })
 
-  // Restore the progress position
   currentIndex.value = currentProgress
 
-  // Ensure grid states are synced
+  // Ensure grid states are synced with safe IDs
   if (showGridView.value) {
     gridCardStates.value = newOrder.reduce((acc, card) => {
-      acc[card.id] = gridCardStates.value[card.id] || false
+      const cardId = getCardId(card)
+      acc[cardId] = gridCardStates.value[cardId] || false
       return acc
     }, {} as Record<number, boolean>)
   }
@@ -629,22 +640,23 @@ const handleNextCardWithHistory = async () => {
   }
 }
 
-// Reset state when cards change
+let initialized = false;
 watch(() => cards.value, (newCards) => {
-  if (newCards && newCards.length > 0) {
-    // Reset navigation state
+  if (newCards && newCards.length > 0 && !initialized) {
+    // Reset navigation state only once
     currentIndex.value = 0
     flipped.value = false
     currentFlip.value = 0
 
     // Reset viewed cards tracking
     viewedCards.value = newCards.map(card => ({
-      id: card.id,
+      id: getCardId(card),
       frontViewed: false,
       backViewed: false
     }))
+    initialized = true;
   }
-}, { immediate: true })
+})
 
 // Add debug logging to track card data
 watch(() => cards.value, (newCards) => {

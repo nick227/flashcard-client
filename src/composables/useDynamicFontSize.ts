@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, onMounted } from 'vue'
+// Pure function version: no refs, no computed, no lifecycle hooks, no DOM
 
 interface FontSizeOptions {
   // Desktop settings
@@ -12,7 +12,7 @@ interface FontSizeOptions {
   mobileBreakpoint1?: number   // Characters for first size reduction
   mobileBreakpoint2?: number   // Characters for minimum size
   unit?: 'em' | 'rem' | 'px'
-  containerRef?: HTMLElement | null
+  isMobile?: boolean // Pass this from the component
   mode?: 'edit' | 'view'
 }
 
@@ -24,50 +24,24 @@ interface FontSizeResult {
   isMaxSize: boolean
 }
 
-// Default settings optimized for flashcard use case
-const DEFAULT_OPTIONS: Required<Omit<FontSizeOptions, 'containerRef' | 'mode'>> = {
-  // Desktop defaults
+const DEFAULT_OPTIONS: Required<Omit<FontSizeOptions, 'isMobile' | 'mode'>> = {
   desktopMaxSize: 4,
   desktopMinSize: 1,
-  desktopBreakpoint1: 80,  // At 200 chars, size will be 1em
-  desktopBreakpoint2: 300,  // At 350 chars, size will be 0.5em
-  // Mobile defaults
+  desktopBreakpoint1: 80,
+  desktopBreakpoint2: 300,
   mobileMaxSize: 2,
-  mobileMinSize: 0.5,
-  mobileBreakpoint1: 50,   // At 150 chars, size will be 1em
-  mobileBreakpoint2: 150,   // At 250 chars, size will be 0.5em
-  unit: 'em'
+  mobileMinSize: 1,
+  mobileBreakpoint1: 50,
+  mobileBreakpoint2: 150,
+  unit: 'rem'
 }
 
-// Maximum safe text length to prevent performance issues
 const MAX_SAFE_TEXT_LENGTH = 10000
 
-// Debounce function to limit resize calculations
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: number
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
-  }
-}
+export function calculateFontSize(text: string, options: FontSizeOptions = {}): FontSizeResult {
+  if (text === null || text === undefined) text = ''
+  if (text.length > MAX_SAFE_TEXT_LENGTH) text = text.slice(0, MAX_SAFE_TEXT_LENGTH)
 
-export function useDynamicFontSize(text: string, options: FontSizeOptions = {}): FontSizeResult {
-  // Input validation
-  if (text === null || text === undefined) {
-    console.warn('useDynamicFontSize: text is null or undefined')
-    text = ''
-  }
-
-  // Truncate text if it exceeds maximum safe length
-  if (text.length > MAX_SAFE_TEXT_LENGTH) {
-    console.warn(`useDynamicFontSize: text length (${text.length}) exceeds maximum safe length (${MAX_SAFE_TEXT_LENGTH})`)
-    text = text.slice(0, MAX_SAFE_TEXT_LENGTH)
-  }
-
-  // Validate and merge options
   const {
     desktopMaxSize = DEFAULT_OPTIONS.desktopMaxSize,
     desktopMinSize = DEFAULT_OPTIONS.desktopMinSize,
@@ -78,115 +52,41 @@ export function useDynamicFontSize(text: string, options: FontSizeOptions = {}):
     mobileBreakpoint1 = DEFAULT_OPTIONS.mobileBreakpoint1,
     mobileBreakpoint2 = DEFAULT_OPTIONS.mobileBreakpoint2,
     unit = DEFAULT_OPTIONS.unit,
-    containerRef = null,
+    isMobile = false,
     mode = 'view'
   } = options
 
-  // Create reactive references
-  const textRef = ref(text)
-  const containerWidth = ref(0)
-  const containerHeight = ref(0)
-  const isMobile = ref(window.innerWidth < 768)
+  const charCount = Math.min(text.length, MAX_SAFE_TEXT_LENGTH)
+  const maxSize = isMobile ? mobileMaxSize : desktopMaxSize
+  const minSize = isMobile ? mobileMinSize : desktopMinSize
+  const breakpoint1 = isMobile ? mobileBreakpoint1 : desktopBreakpoint1
+  const breakpoint2 = isMobile ? mobileBreakpoint2 : desktopBreakpoint2
 
-  // Memoize the text length calculation
-  const charCount = computed(() => {
-    const count = textRef.value?.length || 0
-    return Math.min(count, MAX_SAFE_TEXT_LENGTH)
-  })
-
-  // Calculate if we're at min/max bounds
-  const isMinSize = computed(() => charCount.value >= (isMobile.value ? mobileBreakpoint2 : desktopBreakpoint2))
-  const isMaxSize = computed(() => charCount.value <= (isMobile.value ? mobileBreakpoint1 : desktopBreakpoint1))
-
-  // Function to calculate optimal font size based on character count
-  const calculateOptimalFontSize = () => {
-    const count = charCount.value
-    if (!textRef.value || count === 0) {
-      return isMobile.value ? mobileMaxSize : desktopMaxSize
-    }
-
-    // Get current breakpoints and sizes based on device
-    const maxSize = isMobile.value ? mobileMaxSize : desktopMaxSize
-    const minSize = isMobile.value ? mobileMinSize : desktopMinSize
-    const breakpoint1 = isMobile.value ? mobileBreakpoint1 : desktopBreakpoint1
-    const breakpoint2 = isMobile.value ? mobileBreakpoint2 : desktopBreakpoint2
-
-    // Calculate size based on character count
-    if (count <= breakpoint1) {
-      // For text under breakpoint1, scale from maxSize to 1em
-      const ratio = count / breakpoint1
-      return maxSize - (ratio * (maxSize - 1))
-    } else if (count >= breakpoint2) {
-      return minSize
-    } else {
-      // For text between breakpoint1 and breakpoint2, scale from 1em to minSize
-      const range = breakpoint2 - breakpoint1
-      const sizeRange = 1 - minSize
-      const ratio = (count - breakpoint1) / range
-      return 1 - (ratio * sizeRange)
-    }
+  let size: number
+  if (charCount <= breakpoint1) {
+    // For text under breakpoint1, scale from maxSize to 1em
+    const ratio = charCount / breakpoint1
+    size = maxSize - (ratio * (maxSize - 1))
+  } else if (charCount >= breakpoint2) {
+    size = minSize
+  } else {
+    // For text between breakpoint1 and breakpoint2, scale from 1em to minSize
+    const range = breakpoint2 - breakpoint1
+    const sizeRange = 1 - minSize
+    const ratio = (charCount - breakpoint1) / range
+    size = 1 - (ratio * sizeRange)
   }
 
-  // Calculate font size with device awareness
-  const fontSize = computed(() => {
-    const size = calculateOptimalFontSize()
-    // Apply mode-specific adjustments
-    const modeFactor = mode === 'edit' ? 0.9 : 1
-    const adjustedSize = size * modeFactor
-    return `${Math.round(adjustedSize * 100) / 100}${unit}`
-  })
-
-  // Memoize the style object
-  const style = computed(() => ({
-    fontSize: fontSize.value,
-    overflowWrap: 'break-word',
-    wordBreak: 'break-word'
-  }))
-
-  // Update container dimensions and mobile status
-  const updateContainerDimensions = debounce(() => {
-    if (containerRef) {
-      try {
-        const rect = containerRef.getBoundingClientRect()
-        if (rect.width > 0 && rect.height > 0) {
-          containerWidth.value = rect.width
-          containerHeight.value = rect.height
-        }
-      } catch (error) {
-        console.warn('useDynamicFontSize: Error updating container dimensions:', error)
-      }
-    }
-    isMobile.value = window.innerWidth < 768 || 
-                    (containerRef !== null && containerWidth.value < 400)
-  }, 100)
-
-  // Set up resize observer and event listeners
-  let resizeObserver: ResizeObserver | null = null
-
-  onMounted(() => {
-    if (containerRef) {
-      updateContainerDimensions()
-      resizeObserver = new ResizeObserver(updateContainerDimensions)
-      resizeObserver.observe(containerRef)
-    }
-    window.addEventListener('resize', updateContainerDimensions)
-  })
-
-  // Cleanup
-  onUnmounted(() => {
-    if (resizeObserver && containerRef) {
-      resizeObserver.unobserve(containerRef)
-      resizeObserver.disconnect()
-    }
-    window.removeEventListener('resize', updateContainerDimensions)
-    textRef.value = ''
-  })
+  // Apply mode-specific adjustments
+  const modeFactor = mode === 'edit' ? 0.9 : 1
+  const adjustedSize = size * modeFactor
+  const fontSize = `${Math.round(adjustedSize * 100) / 100}${unit}`
 
   return {
-    fontSize: fontSize.value,
-    style: style.value,
-    charCount: charCount.value,
-    isMinSize: isMinSize.value,
-    isMaxSize: isMaxSize.value
+    fontSize,
+    style: { fontSize },
+    charCount,
+    isMinSize: charCount >= breakpoint2,
+    isMaxSize: charCount <= breakpoint1
   }
 } 
