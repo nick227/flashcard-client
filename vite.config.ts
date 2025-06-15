@@ -143,6 +143,17 @@ export default defineConfig(({ mode }): UserConfig => {
       hmr: {
         overlay: false
       }
+    },
+    // Add proper MIME type handling for production
+    experimental: {
+      renderBuiltUrl(filename, { hostType, type, hostId }) {
+        if (type === 'asset' && filename.endsWith('.ts')) {
+          return {
+            runtime: `window.__ASSET_URL__('${filename}')`,
+            replace: (url) => url.replace(/\.ts$/, '.js')
+          }
+        }
+      }
     }
   }
 })
