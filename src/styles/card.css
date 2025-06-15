@@ -328,9 +328,6 @@
         padding: var(--space-xs) var(--space-xs);
         justify-content: center;
     }
-    .card-content {
-        height: 120px;
-    }
     .card-editor {
         flex-direction: column;
     }
