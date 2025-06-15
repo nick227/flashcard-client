@@ -25,7 +25,7 @@
     </div>
     
     <!-- Content Container -->
-    <div class="p-5 flex flex-col h-[calc(360px-12rem)]">
+    <div class="p-5 flex flex-col">
       <!-- Title -->
       <h3 
         @click="handleView" 

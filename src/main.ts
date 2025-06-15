@@ -173,11 +173,16 @@ axios.interceptors.response.use(
       }
     }
 
-    // Handle auth errors
+    // Handle auth errors - only redirect for auth-related endpoints
     if (err.response?.status === 401) {
-      auth?.logout()
-      auth?.setMessage('Session expired. Please log in again.')
-      window.location.href = '/login'
+      const isAuthEndpoint = config.url?.includes('/auth/') || 
+                           config.url?.includes('/users/me') ||
+                           config.url?.includes('/sets/liked')
+      if (isAuthEndpoint) {
+        auth?.logout()
+        auth?.setMessage('Session expired. Please log in again.')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }

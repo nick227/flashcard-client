@@ -31,3 +31,9 @@
     .cursive {
         font-family: 'Playwrite HU', cursive;
     }
+    
+    @media (max-width: 768px) {
+        .site-title {
+            font-size: 2rem;
+        }
+    }

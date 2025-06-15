@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar mb-2">
+  <nav class="navbar mb-2 pb-2">
     <div class="navbar-inner container">
       <div class="navbar-masthead">
         <router-link to="/" class="navbar-logo">

@@ -166,11 +166,25 @@ const routes: RouteRecordRaw[] = [
 export const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(_to, _from, savedPosition) {
+  scrollBehavior(to, _from, savedPosition) {
+    // If there's a saved position (browser back/forward), use it
     if (savedPosition) {
       return savedPosition
     }
-    return { top: 0 }
+    
+    // If there's a hash in the URL, scroll to it
+    if (to.hash) {
+      return {
+        el: to.hash,
+        behavior: 'smooth'
+      }
+    }
+    
+    // For all other cases, scroll to top
+    return {
+      top: 0,
+      behavior: 'smooth'
+    }
   }
 })
 

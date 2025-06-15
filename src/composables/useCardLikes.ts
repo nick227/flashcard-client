@@ -1,21 +1,32 @@
 import { ref } from 'vue'
 import { api, apiEndpoints } from '@/api'
+import { useAuthStore } from '@/stores/auth'
 
 export function useCardLikes(setId: number) {
+  const auth = useAuthStore()
   const likes = ref(0)
   const userLiked = ref(false)
   const loading = ref(false)
 
   const fetchSetLikes = async () => {
     try {
-      const response = await api.get(apiEndpoints.sets.likes(setId))
-      likes.value = response.data.count || 0
+      const response = await api.get(apiEndpoints.sets.batch('likes'), {
+        params: { ids: setId }
+      })
+      likes.value = response.data[setId] || 0
     } catch (error) {
       console.error('Error fetching set likes:', error)
+      likes.value = 0
     }
   }
 
   const fetchUserLikeForSet = async () => {
+    // Skip if user is not authenticated
+    if (!auth.user) {
+      userLiked.value = false
+      return
+    }
+
     try {
       const response = await api.get(apiEndpoints.sets.userLikes(setId))
       userLiked.value = response.data.liked || false
@@ -26,6 +37,11 @@ export function useCardLikes(setId: number) {
   }
 
   const toggleLike = async () => {
+    // Skip if user is not authenticated
+    if (!auth.user) {
+      return
+    }
+
     if (loading.value) return
     loading.value = true
 

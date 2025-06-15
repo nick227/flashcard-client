@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-start bg-gray-50">
+  <div class="flex flex-col items-center justify-start bg-gray-50">
     <div class="container flex flex-col items-center w-full flex-1 justify-start">
-      <div class="flex flex-colpt-44 pb-64 max-w-[460px]">
+      <div class="flex flex-colpt-44 pb-4 max-w-[460px]">
         <div class="flex flex-col items-center w-full">
           <h1 class="font-bold mb-2 site-title">Flashcard Academy</h1>
           <p class="mb-6 text-gray-600">{{ mode === 'login' ? 'Existing Members' : 'New Users' }}</p>
