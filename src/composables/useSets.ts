@@ -30,7 +30,7 @@ export function useSets() {
   const categories = ref<Category[]>([])
   const hasMore = ref(true)
   const selectedCategory = ref('')
-  const sortOrder = ref('featured')
+  const sortOrder = ref('newest')
   const searchQuery = ref('')
   const selectedSetType = ref('')
   const isTransitioning = ref(false)

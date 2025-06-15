@@ -506,6 +506,7 @@ watch(
   text-align: center;
   word-break: break-word;
   overflow-wrap: break-word;
+  min-height: 50%;
 }
 
 .media-preview {
@@ -542,6 +543,11 @@ watch(
 }
 
 .layout-two-column .content-area > * {
+  width: 50%;
+  height: 100%;
+  min-width: 0;
+}
+.layout-two-column .content-area > *:first-child {
   width: 50%;
   height: 100%;
   min-width: 0;

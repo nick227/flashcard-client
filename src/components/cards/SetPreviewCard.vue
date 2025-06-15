@@ -1,66 +1,51 @@
 <template>
-  <div v-if="set" class="card group">
+  <div v-if="set" class="card">
     <!-- Image Container -->
-    <div class="relative img-container">
-      <img 
-        @click="handleView"
-        :src="imageLoadError ? '/images/default-set.png' : (set.image || set.thumbnail || '/images/default-set.png')" 
-        :alt="set.title"
-        class="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
-        @error="handleImageError"
-        v-if="!imageLoadError"
-      />
-      <div v-if="imageLoadError" class="w-full h-full">
-        <img src="https://picsum.photos/200/300" :alt="set.title" class="w-full h-full object-cover">
-      </div>
+    <div @click="handleView" class="relative img-container link"
+      :style="{ backgroundImage: `url(${set.image || set.thumbnail || '/images/default-set.png'})` }">
       <!-- Price Badge -->
       <div class="absolute top-3 right-3">
-        <span 
-          v-if="typeof set.price === 'number' ? set.price > 0 : set.price.type !== 'free'" 
-          class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-full shadow-sm"
-        >
+        <span v-if="typeof set.price === 'number' ? set.price > 0 : set.price.type !== 'free'"
+          class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-full shadow-sm">
           ${{ typeof set.price === 'number' ? set.price : set.price.amount || 0 }}
         </span>
       </div>
+
+
+      <!-- Category Badge -->
+      <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })"
+        class="text-xs px-2 py-0.5 rounded-full mb-2 cursor-pointer bg-gray-100 category-badge">
+        {{ set.category }}
+      </div>
     </div>
-    
+
     <!-- Content Container -->
-    <div class="p-5 flex flex-col">
+    <div class="flex flex-col content-container">
       <!-- Title -->
-      <h3 
-        @click="handleView" 
-        class="text-lg font-semibold mb-2 cursor-pointer line-clamp-1 hover:text-blue-600 transition-colors"
-      >
+      <h3 @click="handleView"
+        class="text-xl font-semibold mb-2 cursor-pointer hover:text-blue-600 transition-colors p-2"
+        :style="{ backgroundColor: categoryColor }">
         {{ set.title }}
       </h3>
 
       <!-- Description -->
-      <p class="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">{{ set.description }}</p>
-      
-      <!-- Tags -->
-        <template v-if="set.tags">
-          <div class="flex flex-wrap gap-1.5 mb-4 min-h-[1.5rem]">
-          <span 
-            v-for="tag in set.tags" 
-            :key="tag"
-            class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full"
-          >
-            {{ tag }}
-          </span>
-        </div>
-        </template>
+      <p class="text-gray-600 text-sm mb-4 flex-grow p-2">{{ set.description }}
+        <!-- Tags -->
+        <span v-for="tag in set.tags" :key="tag" class="tag text-xs rounded-full">
+          {{ tag }}
+        </span>
+      </p>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-        <a 
-          @click="handleUserView" 
-          class="text-sm text-gray-500 cursor-pointer hover:text-blue-600 transition-colors truncate max-w-[40%]"
-        >
+      <div class="flex items-center justify-between mt-auto pt-3 border-t bg-gray-100 p-2">
+        <a @click="handleUserView"
+          class="text-sm text-gray-500 cursor-pointer hover:text-blue-600 transition-colors truncate max-w-[40%]">
           {{ set.educatorName }}
         </a>
 
+
         <!-- Stats -->
-        <div class="flex items-center space-x-4 text-sm text-gray-500">
+        <div class="flex items-center space-x-4 text-sm text-gray-500 p-2">
           <span class="flex items-center" title="Views">
             <EyeIcon class="w-4 h-4 mr-1" />
             {{ formatNumber(views) }}
@@ -84,6 +69,7 @@ import { ref, computed, onMounted } from 'vue'
 import { EyeIcon, HeartIcon, DocumentIcon } from '@heroicons/vue/24/outline'
 import { useRouter } from 'vue-router'
 import { cachedApiEndpoints } from '@/services/CachedApiService'
+import { useCategoryColor } from '@/composables/useCategoryColor'
 
 const router = useRouter()
 
@@ -102,6 +88,7 @@ const props = defineProps<{
     cards?: { id: number; setId: number; front: string; back: string; hint?: string }[]
     cardsCount?: number
     category?: string
+    categoryId?: number
     createdAt?: string
     updatedAt?: string
     type?: string
@@ -114,11 +101,12 @@ const props = defineProps<{
   }
 }>()
 
+const { color: categoryColor } = useCategoryColor(props.set?.categoryId)
+
 const emit = defineEmits<{
   (e: 'view', setId: number): void
 }>()
 
-const imageLoadError = ref(false)
 const isLoadingStats = ref(false)
 const localViews = ref(0)
 const localLikes = ref(0)
@@ -127,10 +115,6 @@ const localCards = ref(0)
 const handleView = () => {
   if (!props.set) return
   emit('view', props.set.id)
-}
-
-const handleImageError = () => {
-  imageLoadError.value = true
 }
 
 const handleUserView = () => {
@@ -155,22 +139,18 @@ const fetchStats = async () => {
 
   try {
     isLoadingStats.value = true
-    
+
     const [viewsRes, likesRes, cardsRes] = await Promise.all([
       cachedApiEndpoints.getBatchSetViews([props.set.id]),
       cachedApiEndpoints.getBatchSetLikes([props.set.id]),
       cachedApiEndpoints.getBatchSetCards([props.set.id])
     ])
 
-    // Extract data from the message property
-    const viewsData = (viewsRes as { message?: Record<string, number> })?.message || {}
-    const likesData = (likesRes as { message?: Record<string, number> })?.message || {}
-    const cardsData = (cardsRes as { message?: Record<string, number> })?.message || {}
-    
-    localViews.value = viewsData[props.set.id] || 0
-    localLikes.value = likesData[props.set.id] || 0
-    localCards.value = cardsData[props.set.id] || 0
-    
+    // Extract data directly from the response
+    localViews.value = (viewsRes as Record<string, number>)[props.set.id] || 0
+    localLikes.value = (likesRes as Record<string, number>)[props.set.id] || 0
+    localCards.value = (cardsRes as Record<string, number>)[props.set.id] || 0
+
   } catch (error) {
     console.error('[Stats] Error fetching stats for set', props.set?.id, ':', error)
   } finally {
@@ -199,40 +179,21 @@ const likes = computed(() => {
 
 const cards = computed(() => {
   if (!props.set) return 0
-  let value = localCards.value
-  if (!value) {
-    if (Array.isArray(props.set.cards)) {
-      value = props.set.cards.length
-    } else if (typeof props.set.cardsCount === 'number') {
-      value = props.set.cardsCount
-    }
-  }
-  return value
+  // First try to use the local cards count from the API
+  if (localCards.value) return localCards.value
+  // Then try to use the cards array length
+  if (Array.isArray(props.set.cards)) return props.set.cards.length
+  // Finally try to use the cardsCount property
+  if (typeof props.set.cardsCount === 'number') return props.set.cardsCount
+  return 0
 })
 </script>
 
 <style scoped>
 .card {
-  @apply bg-white rounded-xl transition-all duration-300;
-  min-height: 455px;
+  min-height: 420px;
   display: flex;
   flex-direction: column;
-  border-top-left-radius: 1rem;
-  border-top-right-radius: 1rem;
-  overflow: hidden;
-}
-
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
@@ -240,15 +201,27 @@ const cards = computed(() => {
 h3 {
   margin: 0;
 }
+
 .img-container {
-  height: 385px;
   width: 100%;
-  border-top-left-radius: 1rem;
-  border-top-right-radius: 1rem;
-  overflow: hidden;
+  height: 260px;
+  content: "";
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
-.img-container img {
-  border-top-left-radius: 1rem;
-  border-top-right-radius: 1rem;
+
+.content-container {
+  width: 100%;
+  height: 180px;
+}
+
+.tag {
+  text-decoration: underline;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  display: inline-block;
+  margin-left: 0.5rem;
+  float: right;
 }
 </style>

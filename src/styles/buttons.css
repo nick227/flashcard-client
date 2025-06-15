@@ -92,7 +92,6 @@
             
             .link {
                 cursor: pointer;
-                border-radius: 0.6em;
                 transition: background 0.15s, color 0.15s;
                 line-height: 1.2;
                 display: flex;
