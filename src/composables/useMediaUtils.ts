@@ -1,139 +1,242 @@
 export type MediaType = 'text' | 'image' | 'youtube' | 'link'
 
-interface ContentBlock {
-  type: MediaType
-  content: string
-  url?: string
+interface MediaConfig {
+    youtube: {
+        embedParams: string
+        allowedDomains: string[]
+    }
+    image: {
+        allowedExtensions: string[]
+    }
 }
 
+interface MediaResult {
+    type: MediaType
+    url: string
+    embedUrl?: string
+    isValid: boolean
+    error?: string
+}
+
+// Configuration
+const MEDIA_CONFIG: MediaConfig = {
+    youtube: {
+        embedParams: 'rel=0&modestbranding=1&autoplay=0',
+        allowedDomains: ['youtube.com', 'youtu.be', 'www.youtube.com']
+    },
+    image: {
+        allowedExtensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+    }
+}
+
+// Pure utility functions
+const parseUrl = (url: string): URL | null => {
+    if (!url?.trim()) return null
+    try {
+        return new URL(url.trim())
+    } catch {
+        return null
+    }
+}
+
+const isValidYouTubeId = (id: string): boolean => 
+    /^[\w-]{11}$/.test(id?.trim() || '')
+
+const extractYouTubeId = (url: string): string | null => {
+    if (!url?.trim()) return null
+    const match = url.trim().match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([\w-]{11})(?:\S*)?/)
+    return match && isValidYouTubeId(match[1]) ? match[1] : null
+}
+
+const isDomainAllowed = (hostname: string, allowedDomains: string[]): boolean =>
+    Boolean(hostname) && allowedDomains.some(domain => hostname.toLowerCase().includes(domain.toLowerCase()))
+
+const hasAllowedExtension = (pathname: string, allowedExtensions: string[]): boolean => {
+    if (!pathname) return false
+    // Remove query parameters and hash before checking extension
+    const cleanPath = pathname.split('?')[0].split('#')[0].toLowerCase()
+    return allowedExtensions.some(ext => cleanPath.endsWith(ext.toLowerCase()))
+}
+
+// Improved URL regex that better handles complete URLs and edge cases
+const URL_REGEX = /(?:^|\s)(https?:\/\/[^\s<>"']+)(?:\s|$)/g
+
 export function useMediaUtils() {
-  const isYouTubeUrl = (url: string | null | undefined): boolean => {
-    if (!url || typeof url !== 'string') return false
-    // Remove @ prefix if present and trim
-    const cleanUrl = url.replace(/^@/, '').trim()
-    return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//.test(cleanUrl)
-  }
+    // URL Type Detection
+    const detectUrlType = (url: string): MediaType => {
+        if (!url?.trim()) return 'text'
+        
+        const parsedUrl = parseUrl(url)
+        if (!parsedUrl) return 'text'
 
-  const getYouTubeEmbedUrl = (url: string): string => {
-    // Remove @ prefix if present and trim
-    const cleanUrl = url.replace(/^@/, '').trim()
-    const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/)
-    return match ? `https://www.youtube.com/embed/${match[1]}` : cleanUrl
-  }
-
-  const isImageUrl = (url: string | null | undefined): boolean => {
-    if (!url) return false
-    return url.includes('cloudinary.com') || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(url)
-  }
-
-  const isWebUrl = (url: string | null | undefined): boolean => {
-    if (!url) return false
-    return /^https?:\/\//i.test(url)
-  }
-
-  const getMediaType = (text: string | null | undefined): MediaType => {
-    if (!text) return 'text'
-    if (isImageUrl(text)) return 'image'
-    if (isYouTubeUrl(text)) return 'youtube'
-    if (isWebUrl(text)) return 'link'
-    return 'text'
-  }
-
-  const parseContentBlocks = (html: string): ContentBlock[] => {
-    const blocks: ContentBlock[] = []
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = html
-
-    // Process each node
-    const processNode = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent?.trim()
-        if (text) {
-          blocks.push({ type: 'text', content: text })
+        const hostname = parsedUrl.hostname.toLowerCase()
+        
+        if (isDomainAllowed(hostname, MEDIA_CONFIG.youtube.allowedDomains)) {
+            return 'youtube'
         }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement
-        if (element.tagName === 'IMG') {
-          const src = element.getAttribute('src')
-          if (src) {
-            blocks.push({ type: 'image', content: src, url: src })
-          }
-        } else if (element.tagName === 'IFRAME') {
-          const src = element.getAttribute('src')
-          if (src) {
-            blocks.push({ type: 'youtube', content: src, url: src })
-          }
-        } else if (element.tagName === 'A') {
-          const href = element.getAttribute('href')
-          if (href) {
-            blocks.push({ type: 'link', content: element.textContent || '', url: href })
-          }
-        } else {
-          // Process child nodes
-          Array.from(element.childNodes).forEach(processNode)
+        
+        if (hasAllowedExtension(parsedUrl.pathname, MEDIA_CONFIG.image.allowedExtensions)) {
+            return 'image'
         }
-      }
+        
+        return 'link'
     }
 
-    Array.from(tempDiv.childNodes).forEach(processNode)
-    return blocks
-  }
+    // Media Detection
+    const detectMediaType = (url: string): MediaResult => {
+        if (!url?.trim()) {
+            return { type: 'text', url: '', isValid: false, error: 'Empty URL' }
+        }
 
-  const renderContentBlocks = (blocks: ContentBlock[]): string => {
-    return blocks.map(block => {
-      switch (block.type) {
-        case 'image':
-          return `<img src="${block.content}" alt="Card image" class="auto-image" />`
-        case 'youtube':
-          return `<div class="youtube-embed"><iframe src="${getYouTubeEmbedUrl(block.content)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-        case 'link':
-          return `<a href="${block.url}" target="_blank" rel="noopener noreferrer">${block.content}</a>`
-        default:
-          return block.content
-      }
-    }).join('')
-  }
+        const type = detectUrlType(url)
+        
+        if (type === 'youtube') {
+            const videoId = extractYouTubeId(url)
+            if (videoId) {
+                return {
+                    type: 'youtube',
+                    url,
+                    embedUrl: `https://www.youtube.com/embed/${videoId}?${MEDIA_CONFIG.youtube.embedParams}`,
+                    isValid: true
+                }
+            }
+        }
 
-  const detectAndRenderMedia = (text: string): string => {
-    if (!text) return ''
-    
-    // Split text into words and process each word
-    const words = text.split(/\s+/)
-    const processedWords = words.map(word => {
-      // Clean the word of any surrounding punctuation while preserving URL structure
-      const cleanWord = word.replace(/^[.,!?;:()\[\]{}"'`]+|[.,!?;:()\[\]{}"'`]+$/g, '')
-      
-      // Check if the cleaned word is a URL
-      if (isYouTubeUrl(cleanWord)) {
-        const embedUrl = getYouTubeEmbedUrl(cleanWord)
-        return `<div class="youtube-embed"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-      }
-      
-      if (isImageUrl(cleanWord)) {
-        return `<img src="${cleanWord}" alt="Card image" class="auto-image" />`
-      }
-      
-      if (isWebUrl(cleanWord)) {
-        // Preserve original word with punctuation for display
-        return `<a href="${cleanWord}" target="_blank" rel="noopener noreferrer">${word}</a>`
-      }
-      
-      // If not a URL, return the original word with its punctuation
-      return word
-    })
-    
-    // Join the processed words back together
-    return processedWords.join(' ')
-  }
+        return { type, url: url.trim(), isValid: true }
+    }
 
-  return {
-    isYouTubeUrl,
-    getYouTubeEmbedUrl,
-    isImageUrl,
-    isWebUrl,
-    getMediaType,
-    detectAndRenderMedia,
-    parseContentBlocks,
-    renderContentBlocks
-  }
+    // HTML Generation
+    const generateMediaHtml = (media: MediaResult, onClose?: (event: Event) => void): string => {
+        if (!media.isValid) return media.url || ''
+
+        const htmlGenerators = {
+            youtube: () => `<div class="youtube-embed"><iframe src="${media.embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`,
+            image: () => `<div class="media-container">
+                <img src="${media.url}" alt="Card image" class="auto-image" loading="lazy" onerror="this.onerror=null; this.src='/images/placeholder.png'; this.classList.add('error')" />
+                ${onClose ? `<button class="media-close" onclick="this.dispatchEvent(new CustomEvent('media-close', {bubbles:true}))">×</button>` : ''}
+            </div>`,
+            link: () => `<a href="${media.url}" target="_blank" rel="noopener noreferrer" class="embedded-link" onclick="event.stopPropagation()">${media.url}</a>`,
+            text: () => media.url || ''
+        }
+
+        return htmlGenerators[media.type]()
+    }
+
+    // Main Processing
+    const detectAndRenderMedia = (text: string, onClose?: (event: Event) => void): string => {
+        if (!text?.trim()) return ''
+
+        let lastIndex = 0
+        let result = ''
+        let match
+
+        while ((match = URL_REGEX.exec(text)) !== null) {
+            // Add text before the URL
+            result += text.slice(lastIndex, match.index)
+            
+            // Process the complete URL
+            const url = match[1].trim()
+            const media = detectMediaType(url)
+            result += generateMediaHtml(media, onClose)
+            
+            lastIndex = match.index + match[0].length
+        }
+        
+        // Add remaining text
+        result += text.slice(lastIndex)
+        
+        return result
+    }
+
+    // Content Transformation
+    const transformContent = (text: string, imageUrl?: string | null, onClose?: (event: Event) => void): string => {
+        // If both text and image are empty, return empty string
+        if (!text?.trim() && !imageUrl?.trim()) return ''
+
+        // If we have an image but no text, just return the image container
+        if (imageUrl?.trim() && !text?.trim()) {
+            return `<div class="media-container">
+                <img 
+                    src="${imageUrl.trim()}" 
+                    alt="Card image" 
+                    class="embedded-image" 
+                    onerror="this.onerror=null; this.src='/images/placeholder.png'; this.classList.add('error')"
+                    loading="lazy"
+                />
+                ${onClose ? `<button class="media-close" onclick="this.dispatchEvent(new CustomEvent('media-close', {bubbles:true}))">×</button>` : ''}
+            </div>`
+        }
+
+        // If we have text but no image, just return the text
+        if (text?.trim() && !imageUrl?.trim()) {
+            return text.trim()
+        }
+
+        // If we have both text and image, create a combined layout
+        if (text?.trim() && imageUrl?.trim()) {
+            return `
+                <div class="media-with-text">
+                    <div class="media-container">
+                        <img 
+                            src="${imageUrl.trim()}" 
+                            alt="${text.trim()}" 
+                            class="embedded-image" 
+                            onerror="this.onerror=null; this.src='/images/placeholder.png'; this.classList.add('error')"
+                            loading="lazy"
+                        />
+                        ${onClose ? `<button class="media-close" onclick="this.dispatchEvent(new CustomEvent('media-close', {bubbles:true}))">×</button>` : ''}
+                    </div>
+                    <div class="card-text">${text.trim()}</div>
+                </div>
+            `
+        }
+
+        // Process text content for media URLs if no image is present
+        if (text?.trim()) {
+            // Check for media URLs in the text
+            const media = detectMediaType(text)
+            if (media.type !== 'text') {
+                return generateMediaHtml(media, onClose)
+            }
+
+            // If it's a web URL, return an anchor tag
+            if (isWebUrl(text)) {
+                return `
+                    <a 
+                        href="${text.trim()}" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        class="embedded-link"
+                        onclick="event.stopPropagation()"
+                    >${text.trim()}</a>
+                `
+            }
+
+            // Otherwise return the content as is
+            return text.trim()
+        }
+
+        return ''
+    }
+
+    // Improved URL validation
+    const isWebUrl = (url: string): boolean => {
+        if (!url?.trim()) return false
+        try {
+            const parsedUrl = new URL(url.trim())
+            return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:'
+        } catch {
+            return false
+        }
+    }
+
+    return {
+        isValidYouTubeId,
+        transformContent,
+        detectAndRenderMedia,
+        detectMediaType,
+        isYouTubeUrl: (url: string | null | undefined) => url?.trim() ? detectUrlType(url) === 'youtube' : false,
+        isImageUrl: (url: string | null | undefined) => url?.trim() ? detectUrlType(url) === 'image' : false,
+        isWebUrl
+    }
 } 

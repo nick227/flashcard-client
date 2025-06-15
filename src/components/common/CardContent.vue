@@ -16,14 +16,17 @@
               @remove="onImageInput(null)"
             />
             <div 
+              v-if="currentView.text"
               ref="contentRef"
               class="media-text full-size" 
               contenteditable="true" 
               @input="onTextInput"
               @paste="onPaste"
               @keydown="onKeyDown"
-              v-html="detectAndRenderMedia(transformContent(currentView.text))"
+              @media-close="handleMediaClose"
+              v-html="detectAndRenderMedia(transformContent(currentView.text), handleMediaClose)"
               :style="fontSizes[0]?.style"
+              data-placeholder="Enter card content..."
             ></div>
           </div>
         </div>
@@ -56,6 +59,7 @@
               class="media-preview" 
             />
             <div 
+              v-if="currentView.text"
               ref="contentRef"
               class="media-text full-size view-mode" 
               v-html="detectAndRenderMedia(transformContent(currentView.text))"
@@ -76,7 +80,6 @@ import CardMedia from './CardMedia.vue'
 import Toaster from '@/components/common/Toaster.vue'
 import { useToaster } from '@/composables/useToaster'
 import { useMediaUtils } from '@/composables/useMediaUtils'
-import { useContentTransform } from '@/composables/useContentTransform'
 import { useFontSizes } from '@/composables/useFontSizes'
 import { aiCardService } from '@/services/AICardService'
 
@@ -172,9 +175,9 @@ onUnmounted(() => {
 
 const { toasts, toast } = useToaster()
 const { 
-  detectAndRenderMedia
+  detectAndRenderMedia,
+  transformContent
 } = useMediaUtils()
-const { transformContent } = useContentTransform('full')
 
 // Get current side view
 const currentSide = computed(() => props.side || 'front')
@@ -355,6 +358,34 @@ function onKeyDown(e: KeyboardEvent) {
   }
 }
 
+// Add media close handler
+function handleMediaClose(event: Event) {
+  const target = event.target as HTMLElement
+  const mediaContainer = target.closest('.media-container')
+  if (!mediaContainer) return
+
+  // Find the image element
+  const img = mediaContainer.querySelector('img')
+  if (!img) return
+
+  // Get the image URL
+  const imageUrl = img.src
+
+  // Remove the image URL from the text content
+  const textContent = currentView.value.text.replace(imageUrl, '').trim()
+  
+  // Update the state
+  state.value = {
+    ...state.value,
+    [currentSide.value]: {
+      ...currentView.value,
+      text: textContent
+    }
+  }
+  
+  emit('update', state.value)
+}
+
 // Watch all relevant props
 watch(
   [
@@ -401,10 +432,24 @@ watch(
   box-sizing: border-box;
 }
 
+.card-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
 .back .card-content {
   background: var(--color-primary);
   color: var(--color-white);
-  overflow: hidden;
+}
+
+.front .card-content {
+  background: white;
 }
 
 .content-flex {
@@ -415,6 +460,8 @@ watch(
   transition: all var(--transition-duration) var(--transition-timing);
   align-items: stretch;
   justify-content: stretch;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .content-container {
@@ -425,6 +472,8 @@ watch(
   transition: all var(--transition-duration) var(--transition-timing);
   align-items: stretch;
   justify-content: stretch;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .controls-bar {
@@ -444,11 +493,31 @@ watch(
   align-items: center;
   justify-content: center;
   transition: all var(--transition-duration) var(--transition-timing);
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.media-text {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.media-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* Layouts */
 .layout-default .content-area {
   flex-direction: column;
+  padding: 1rem;
 }
 
 .layout-default .content-area > * {
@@ -458,6 +527,7 @@ watch(
 
 .layout-two-row .content-area {
   flex-direction: column;
+  padding: 1rem;
 }
 
 .layout-two-row .content-area > * {
@@ -468,75 +538,12 @@ watch(
 
 .layout-two-column .content-area {
   flex-direction: row;
+  padding: 1rem;
 }
 
 .layout-two-column .content-area > * {
   width: 50%;
   height: 100%;
   min-width: 0;
-}
-
-.media-text {
-  flex: 1 1 0;
-  min-height: 50%;
-  padding: 1rem 2rem;
-  outline: none;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.3s ease-in-out;
-  border: none;
-  box-sizing: border-box;
-  line-height: 1.5;
-  font-size: inherit;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  word-break: break-word;
-  hyphens: auto;
-}
-
-.media-preview {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  object-fit: contain;
-  min-height: 0;
-  min-width: 0;
-}
-
-.youtube-embed {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.youtube-embed iframe {
-  width: 100%;
-  height: 100%;
-  max-width: 560px;
-  max-height: 315px;
-}
-
-.auto-image {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.media-text :deep(a) {
-  color: var(--color-primary);
-  text-decoration: none;
-  word-break: break-all;
-}
-
-.media-text :deep(a:hover) {
-  text-decoration: underline;
 }
 </style>

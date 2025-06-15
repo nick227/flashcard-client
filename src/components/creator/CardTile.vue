@@ -1,6 +1,9 @@
 <template>
-  <div class="card-tile" :class="{ 'is-editing': isEditing }">
-    <div class="card-content">
+  <div class="card-tile" :class="{ 'is-flipped': isFlipped }">
+    <div class="drag-handle">
+      <i class="fa-solid fa-grip-vertical"></i>
+    </div>
+    <div class="card-content" :class="{ 'is-flipped': isFlipped }" @click="toggleFlip">
       <div class="card-face front">
         <CardContent
           :card="card"
@@ -24,14 +27,6 @@
         />
       </div>
     </div>
-    <div class="card-actions">
-      <button class="button button-danger button-icon" @click="onRequestDelete">
-        <i class="fa-solid fa-trash"></i>
-      </button>
-      <button class="button button-accent" @click="toggleEdit">
-        {{ isEditing ? 'Preview' : 'Edit' }}
-      </button>
-    </div>
   </div>
 </template>
 
@@ -52,6 +47,7 @@ const props = defineProps<{
 const emit = defineEmits(['update', 'delete', 'request-delete'])
 
 const isEditing = ref(false)
+const isFlipped = ref(false)
 
 // Log initial props
 console.log('CardTile - Component created with props:', {
@@ -86,6 +82,7 @@ onMounted(() => {
     card: props.card,
     viewMode: props.viewMode,
     isEditing: isEditing.value,
+    isFlipped: isFlipped.value,
     front: {
       text: props.card.front.text,
       imageUrl: props.card.front.imageUrl
@@ -121,14 +118,9 @@ function updateBack(updatedCard: FlashCard) {
   })
 }
 
-const toggleEdit = () => {
-  isEditing.value = !isEditing.value
-  console.log('CardTile - Toggled edit mode:', isEditing.value)
-}
-
-const onRequestDelete = () => {
-  console.log('CardTile - Delete requested for card:', props.card.id)
-  emit('request-delete', props.card.id)
+const toggleFlip = () => {
+  isFlipped.value = !isFlipped.value
+  console.log('CardTile - Toggled flip:', isFlipped.value)
 }
 </script>
 
@@ -140,16 +132,48 @@ const onRequestDelete = () => {
   perspective: 1000px;
   background: white;
   border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.card-tile :deep(.media-text) {
+  font-size: 1.2rem !important;
+}
+
+.drag-handle {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem;
+  border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 1rem;
+  cursor: move;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drag-handle:hover {
+  opacity: 1;
 }
 
 .card-content {
   position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.6s;
   transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+  will-change: transform;
+}
+
+.card-content.is-flipped {
+  transform: rotateY(180deg);
 }
 
 .card-face {
@@ -157,17 +181,24 @@ const onRequestDelete = () => {
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px;
+  padding: 0;
   overflow: hidden;
+}
+
+.card-face.front {
   background: white;
+  transform: rotateY(0deg);
 }
 
-.back {
+.card-face.back {
+  background: var(--color-primary);
   transform: rotateY(180deg);
-}
-
-.is-editing .card-content {
-  transform: rotateY(180deg);
+  color: white;
 }
 
 .card-actions {

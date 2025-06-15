@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-50">
+  <div class="min-h-screen flex flex-col">
     <Toaster :toasts="toasts" @remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" />
 
     <main class="container flex-1">
@@ -8,7 +8,7 @@
       </div>
 
       <!-- Set Info Form -->
-      <div class="bg-white rounded-xl shadow p-8 mb-8">
+      <div class="bg-white p-8 mb-8">
         <SetInfoForm :title="title" :description="description" :category="category" :tags="setTags" :price="setPrice"
           :categories="categories" :availableTags="availableTags" :thumbnail="setThumbnail" :setId="setId || 0"
           :isSubmitting="submitting" :formSubmitted="formSubmitted" @update:title="title = $event"
@@ -27,8 +27,7 @@
             <CardCountIndicator :count="cards.length" />
             <!-- Import Bar -->
             <ImportBar :importFileName="importFileName" @import-csv="onImportCsv" />
-            <button class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600 button-danger" @click="onReset"
-              :disabled="!hasCards">Reset</button>
+            <button class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600 button-danger" @click="onReset">Reset</button>
           </div>
           <div class="flex items-center justify-end gap-2 flex-nowrap button-row">
             <AISetGenerator :disabled="isAIGeneratorDisabled" :title="title" :description="description"
@@ -55,7 +54,7 @@
       <!-- submit row -->
       <div class="flex flex-wrap items-center gap-6 mb-8 justify-between align-middle">
       </div>
-      <ConfirmDialog v-model="confirmVisible" title="Delete Everything?" :text="confirmMessage" @confirm="onConfirm" />
+      <ConfirmDialog v-model="confirmVisible" :title="confirmTitle" :text="confirmMessage" @confirm="onConfirm" />
     </main>
   </div>
 </template>
@@ -89,6 +88,7 @@ const { toasts, toast } = useToaster()
 const viewMode = ref<'grid' | 'single'>('single')
 const importFileName = ref<string | null>(null)
 const confirmMessage = ref('')
+const confirmTitle = ref('')
 const confirmVisible = ref(false)
 const categories = ref<{ id: number, name: string }[]>([])
 const availableTags = ref<string[]>([])
@@ -418,6 +418,7 @@ function resetAllState() {
 }
 
 function onReset() {
+  confirmTitle.value = 'Delete Everything?'
   confirmMessage.value = 'Are you sure you want to reset everything? This will clear all cards, form data, and cannot be undone.'
   confirmVisible.value = true
   cardToDelete.value = -1 // Special value to indicate reset

@@ -174,7 +174,7 @@ const formatTimeAgo = (date: string) => {
 
 .footer-content {
     @apply w-full px-4 py-8;
-    max-width: 1600px;
+    max-width: var(--container-max-width);
     margin: 0 auto;
 }
 

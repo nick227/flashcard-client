@@ -46,7 +46,10 @@ watch(() => props.modelValue, (val) => { tags.value = [...val] })
 const filteredSuggestions = computed(() => {
   const lowerInput = input.value.toLowerCase()
   return props.availableTags
-    .filter(tag => tag.toLowerCase().includes(lowerInput) && !tags.value.includes(tag))
+    .filter(tag => {
+      const tagStr = String(tag).toLowerCase()
+      return tagStr.includes(lowerInput) && !tags.value.includes(tagStr)
+    })
     .slice(0, 5)
 })
 const showSuggestions = computed(() => input.value.length > 0 && filteredSuggestions.value.length > 0)
@@ -72,8 +75,9 @@ async function removeTag(tag: string) {
   emit('update:modelValue', [...tags.value])
 }
 function selectSuggestion(suggestion: string) {
-  if (!tags.value.includes(suggestion)) {
-    tags.value.push(suggestion)
+  const tagStr = String(suggestion)
+  if (!tags.value.includes(tagStr)) {
+    tags.value.push(tagStr)
     emit('update:modelValue', [...tags.value])
   }
   input.value = ''

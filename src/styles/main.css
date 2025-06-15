@@ -4,7 +4,7 @@ body {
     width: 100%;
     overflow-x: hidden;
     font-family: var(--font-main);
-    background: var(--color-bg);
+    background: var(--color-white);
     color: var(--color-text);
     font-size: var(--font-size-base);
     margin: 0;

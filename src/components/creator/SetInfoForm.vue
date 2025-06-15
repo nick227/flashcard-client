@@ -38,13 +38,14 @@
     <!-- Category selection -->
     <FormInput
       type="select"
-      :modelValue="props.category"
-      @update:modelValue="$emit('update:category', Number($event))"
+      :modelValue="props.category || ''"
+      @update:modelValue="$emit('update:category', $event ? Number($event) : null)"
       :error="props.formSubmitted && !props.category ? 'Category is required.' : undefined"
       :required="true"
       :disabled="props.isSubmitting"
       ariaLabel="Set category"
       id="set-category"
+      placeholder="Select Category"
     >
       <option value="" disabled>Select Category</option>
       <option v-for="cat in props.categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>

@@ -46,7 +46,8 @@ export async function parseFlashCardCsv(text: string): Promise<ParsedCard[]> {
     const frontLayout = frontLayoutIndex >= 0 ? parseCsvValue(values[frontLayoutIndex] || '') || 'default' : 'default'
     const backLayout = backLayoutIndex >= 0 ? parseCsvValue(values[backLayoutIndex] || '') || 'default' : 'default'
     
-    if (!front || !back) continue // Skip if missing required fields
+    // Allow cards with either front text/image or back text/image
+    if (!front && !frontImage && !back && !backImage) continue // Skip if both front and back are empty
     
     cards.push({
       front,

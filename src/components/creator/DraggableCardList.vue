@@ -74,16 +74,26 @@ const onRequestDelete = (id: number) => {
   width: 100%;
 }
 
-.draggable-card-list.grid {
+.draggable-card-list.grid,
+.draggable-card-list.grid > div {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+  width: 100%;
 }
 
 .card-wrapper {
   position: relative;
   width: 100%;
-  min-height: 200px;
+  min-height: 300px;
+  aspect-ratio: 16/9;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.card-wrapper:hover {
+  transform: scale(1.02);
 }
 
 .drag-handle {
@@ -94,9 +104,24 @@ const onRequestDelete = (id: number) => {
   z-index: 10;
   opacity: 0.5;
   transition: opacity 0.2s;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .drag-handle:hover {
   opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .draggable-card-list.grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+  
+  .card-wrapper {
+    min-height: 250px;
+  }
 }
 </style> 

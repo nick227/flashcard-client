@@ -27,6 +27,3 @@ lerna-debug.log*
 .env
 .env.local
 .env.*.local
-
-# Unwanted files
-vite.config.js

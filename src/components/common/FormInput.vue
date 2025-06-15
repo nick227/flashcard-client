@@ -19,7 +19,12 @@
       :aria-invalid="!!error"
       :aria-describedby="error ? `${id}-error` : undefined"
     >
-      <slot></slot>
+      <template v-if="type === 'select' && !modelValue">
+        <slot></slot>
+      </template>
+      <template v-else>
+        <slot></slot>
+      </template>
     </component>
   </div>
 </template>
