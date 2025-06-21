@@ -5,13 +5,15 @@
         <a :href="`/sets/${set.id}`">
           <div class="w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
             <img 
-              v-if="set.thumbnail && !thumbnailError" 
+              v-if="set.thumbnail"
+              v-show="!thumbnailError && thumbnailLoaded" 
               :src="set.thumbnail" 
               :alt="set.title + ' Thumbnail'" 
               class="w-full h-full object-cover"
               @error="handleThumbnailError"
+              @load="handleThumbnailLoad"
             />
-            <div v-else class="w-full h-full flex items-center justify-center">
+            <div v-if="!set.thumbnail || thumbnailError || !thumbnailLoaded" class="w-full h-full flex items-center justify-center">
               <span class="text-8xl font-bold text-gray-400">{{ getFirstLetter }}</span>
             </div>
           </div>
@@ -51,15 +53,20 @@
         </div>
 
         <div class="educator-info mt-4 flex items-center gap-3">
-          <a :href="`/u/${set.educatorName}`"><img 
-            v-if="educatorImage" 
-            :src="educatorImage" 
-            :alt="set.educatorName + ' avatar'"
-            class="w-10 h-10 rounded-full object-cover"
-          />
-          <div v-else class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-            <i class="fas fa-user text-gray-500"></i>
-          </div></a>
+          <a :href="`/u/${set.educatorName}`">
+            <img 
+              v-if="educatorImage"
+              v-show="!educatorImageError && educatorImageLoaded"
+              :src="educatorImage" 
+              :alt="set.educatorName + ' avatar'"
+              class="w-10 h-10 rounded-full object-cover"
+              @error="handleEducatorImageError"
+              @load="handleEducatorImageLoad"
+            />
+            <div v-if="!educatorImage || educatorImageError || !educatorImageLoaded" class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+              <i class="fas fa-user text-gray-500"></i>
+            </div>
+          </a>
           <div>
             <div class="font-medium text-gray-900"><a :href="`/u/${set.educatorName}`">{{ set.educatorName }}</a></div>
           </div>
@@ -89,7 +96,12 @@ const isLoadingLikes = ref(false)
 const isLoadingViews = ref(false)
 const isLoadingCards = ref(false)
 const isLoadingStats = ref(false)
+
+// Image loading states
 const thumbnailError = ref(false)
+const thumbnailLoaded = ref(false)
+const educatorImageError = ref(false)
+const educatorImageLoaded = ref(false)
 
 const props = defineProps<{
   set: Set
@@ -150,6 +162,22 @@ function formatDate(date: string) {
 
 const handleThumbnailError = () => {
   thumbnailError.value = true
+  thumbnailLoaded.value = false
+}
+
+const handleThumbnailLoad = () => {
+  thumbnailLoaded.value = true
+  thumbnailError.value = false
+}
+
+const handleEducatorImageError = () => {
+  educatorImageError.value = true
+  educatorImageLoaded.value = false
+}
+
+const handleEducatorImageLoad = () => {
+  educatorImageLoaded.value = true
+  educatorImageError.value = false
 }
 
 defineEmits<{

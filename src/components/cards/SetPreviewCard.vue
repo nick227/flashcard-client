@@ -5,13 +5,15 @@
       <div class="aspect-video w-full">
         <img 
           v-if="set.image || set.thumbnail"
+          v-show="!thumbnailError && thumbnailLoaded"
           :src="set.image || set.thumbnail || '/images/default-set.png'" 
           :alt="set.title" 
           @error="handleThumbnailImageError"
+          @load="handleThumbnailImageLoad"
           class="h-full w-full object-cover"
           loading="lazy"
         />
-        <div v-if="!set.image && !set.thumbnail || thumbnailError" class="h-full w-full bg-gray-200 flex items-center justify-center">
+        <div v-if="!set.image && !set.thumbnail || thumbnailError || !thumbnailLoaded" class="h-full w-full bg-gray-200 flex items-center justify-center">
           <i class="fas fa-image text-gray-400 text-2xl"></i>
         </div>
       </div>
@@ -31,13 +33,15 @@
         <div @click="handleUserView" class="flex-shrink-0 cursor-pointer">
           <img 
             v-if="set.educatorImage"
+            v-show="!educatorImageError && educatorImageLoaded"
             :src="set.educatorImage || '/images/default-avatar.png'" 
             :alt="set.educatorName" 
             class="h-10 w-10 rounded-full object-cover"
             loading="lazy"
             @error="handleEducatorImageError"
+            @load="handleEducatorImageLoad"
           />
-          <div v-if="!set.educatorImage || educatorImageError" class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+          <div v-if="!set.educatorImage || educatorImageError || !educatorImageLoaded" class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
             <i class="fas fa-user text-gray-400 text-2xl"></i>
           </div>
         </div>
@@ -133,6 +137,8 @@ const emit = defineEmits<{
 // Error handling for images
 const thumbnailError = ref(false)
 const educatorImageError = ref(false)
+const thumbnailLoaded = ref(false)
+const educatorImageLoaded = ref(false)
 
 const isLoadingStats = ref(false)
 const localViews = ref(0)
@@ -151,10 +157,22 @@ const handleUserView = () => {
 
 const handleThumbnailImageError = () => {
   thumbnailError.value = true
+  thumbnailLoaded.value = false
+}
+
+const handleThumbnailImageLoad = () => {
+  thumbnailLoaded.value = true
+  thumbnailError.value = false
 }
 
 const handleEducatorImageError = () => {
   educatorImageError.value = true
+  educatorImageLoaded.value = false
+}
+
+const handleEducatorImageLoad = () => {
+  educatorImageLoaded.value = true
+  educatorImageError.value = false
 }
 
 // Format number with K/M suffix for large numbers
