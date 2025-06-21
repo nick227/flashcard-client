@@ -4,11 +4,16 @@
     <div @click="handleView" class="relative cursor-pointer">
       <div class="aspect-video w-full">
         <img 
+          v-if="set.image || set.thumbnail"
           :src="set.image || set.thumbnail || '/images/default-set.png'" 
           :alt="set.title" 
+          @error="handleThumbnailImageError"
           class="h-full w-full object-cover"
           loading="lazy"
         />
+        <div v-if="!set.image && !set.thumbnail || thumbnailError" class="h-full w-full bg-gray-200 flex items-center justify-center">
+          <i class="fas fa-image text-gray-400 text-2xl"></i>
+        </div>
       </div>
       <!-- Price Badge -->
       <div class="absolute top-2 right-2">
@@ -25,11 +30,16 @@
         <!-- Educator Avatar -->
         <div @click="handleUserView" class="flex-shrink-0 cursor-pointer">
           <img 
+            v-if="set.educatorImage"
             :src="set.educatorImage || '/images/default-avatar.png'" 
             :alt="set.educatorName" 
             class="h-10 w-10 rounded-full object-cover"
             loading="lazy"
+            @error="handleEducatorImageError"
           />
+          <div v-if="!set.educatorImage || educatorImageError" class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+            <i class="fas fa-user text-gray-400 text-2xl"></i>
+          </div>
         </div>
         
         <div class="min-w-0 flex-grow">
@@ -120,6 +130,10 @@ const emit = defineEmits<{
   (e: 'view', setId: number): void
 }>()
 
+// Error handling for images
+const thumbnailError = ref(false)
+const educatorImageError = ref(false)
+
 const isLoadingStats = ref(false)
 const localViews = ref(0)
 const localLikes = ref(0)
@@ -135,6 +149,13 @@ const handleUserView = () => {
   router.push(`/u/${props.set.educatorName}`)
 }
 
+const handleThumbnailImageError = () => {
+  thumbnailError.value = true
+}
+
+const handleEducatorImageError = () => {
+  educatorImageError.value = true
+}
 
 // Format number with K/M suffix for large numbers
 const formatNumber = (num: number): string => {

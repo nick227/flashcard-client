@@ -1,5 +1,6 @@
 <template>
   <div class="container flex flex-col items-center justify-start w-full px-4 py-2 mb-8 sm:mb-2">
+    <div style="height: 88vh; width: 100%;">
     <div v-if="loading" class="text-gray-500 text-lg">Loading cards...</div>
     <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
     <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>
@@ -171,10 +172,9 @@
     <!-- Mobile View -->
     <div v-if="showMobileView" class="mt-4 w-full">
       <CardRiverMobile :cards="cards" />
-    </div>
-
+    </div></div>
     <!-- Related Sets-->
-     <div v-if="set" class="mt-4 w-full">
+     <div v-if="set" class="w-full">
       <RelatedSets :set-id="set.id" />
      </div>
 

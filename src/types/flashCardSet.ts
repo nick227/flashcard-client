@@ -6,6 +6,11 @@ interface Educator {
   image: string | null
 }
 
+interface Category {
+  id: number
+  name: string
+}
+
 export interface FlashCardSet {
   id: number
   title: string
@@ -25,4 +30,22 @@ export interface FlashCardSet {
   createdAt: string
   updatedAt: string
   cards?: FlashCard[]
+}
+
+export interface RelatedSet {
+  id: number
+  title: string
+  description: string
+  educator_id: number
+  price: string
+  is_subscriber_only: boolean
+  thumbnail: string
+  category_id: number
+  featured: boolean
+  hidden: boolean
+  download_url: string | null
+  created_at: string
+  category: Category
+  educator: Educator
+  cardCount: number
 } 
