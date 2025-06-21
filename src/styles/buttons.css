@@ -1,8 +1,7 @@
             .button {
                 background: var(--color-primary);
                 color: #fff;
-                border: 1.5px solid var(--color-primary);
-                border-radius: 0.5rem;
+                border: none;
                 padding: 0.75em 2em;
                 font-weight: 600;
                 font-family: var(--font-main);
@@ -13,7 +12,7 @@
                 cursor: pointer;
                 display: inline-block;
                 line-height: 1.2;
-                border-radius: 5px;
+                border-radius: var(--radius-sm);
             }
             
             .button:hover,

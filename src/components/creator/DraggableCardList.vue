@@ -1,8 +1,8 @@
 <template>
-  <div class="draggable-card-list" :class="layout">
+  <div class="card-list" :class="layout">
     <draggable
       v-model="localCards"
-      :animation="150"
+      :disabled="isEditing"
       item-key="id"
       handle=".drag-handle"
       @start="drag = true"
@@ -10,16 +10,17 @@
       @update:model-value="onUpdateOrder"
     >
       <template #item="{ element: card }">
-        <div class="card-wrapper">
-          <component
-            :is="cardComponent"
-            :card="card"
-            v-bind="cardProps"
-            @update="(updatedCard: FlashCard) => onEditCard(updatedCard)"
-            @delete="() => onDeleteCard(card.id)"
-            @request-delete="() => onRequestDelete(card.id)"
-          />
-        </div>
+        <component
+          :is="cardComponent"
+          :card="card"
+          :is-editing="true"
+          v-bind="cardProps"
+          @update="onCardUpdate"
+          @delete="onCardDelete"
+          @request-delete="onRequestDelete"
+          @edit-start="$emit('edit-start')"
+          @edit-end="$emit('edit-end')"
+        />
       </template>
     </draggable>
   </div>
@@ -27,101 +28,71 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import type { Card } from '@/types/card'
 import draggable from 'vuedraggable'
-import type { FlashCard } from '@/types/card'
-import type { CardViewMode } from '@/composables/useCardMediaStyles'
 
 const props = defineProps<{
-  cards: FlashCard[]
+  cards: Card[]
   cardComponent: any
   layout?: 'grid' | 'list'
-  viewMode?: CardViewMode
   cardProps?: Record<string, any>
 }>()
 
-const emit = defineEmits(['update-order', 'delete-card', 'edit-card', 'request-delete'])
+const emit = defineEmits<{
+  (e: 'update-order', cards: Card[]): void
+  (e: 'delete-card', index: number): void
+  (e: 'edit-card', card: Card): void
+  (e: 'request-delete', cardId: number): void
+  (e: 'edit-start'): void
+  (e: 'edit-end'): void
+}>()
 
-const localCards = ref<FlashCard[]>([])
+const localCards = ref<Card[]>(props.cards)
 const drag = ref(false)
+const isEditing = ref(false)
 
-// Watch for cards changes
 watch(() => props.cards, (newCards) => {
-  localCards.value = [...newCards]
-}, { deep: true, immediate: true })
+  localCards.value = newCards
+}, { deep: true })
 
-const onUpdateOrder = (newOrder: FlashCard[]) => {
+function onUpdateOrder(newOrder: Card[]) {
   emit('update-order', newOrder)
 }
 
-const onEditCard = (updatedCard: FlashCard) => {
-  emit('edit-card', updatedCard)
+function onCardUpdate(updatedCard: Card) {
+  const index = localCards.value.findIndex(c => c.id === updatedCard.id)
+  if (index !== -1) {
+    localCards.value[index] = updatedCard
+    emit('edit-card', updatedCard)
+  }
 }
 
-const onDeleteCard = (id: number) => {
-  emit('delete-card', id)
+function onCardDelete(index: number) {
+  emit('delete-card', index)
 }
 
-const onRequestDelete = (id: number) => {
-  emit('request-delete', id)
+function onRequestDelete(cardId: number) {
+  emit('request-delete', cardId)
 }
 </script>
 
 <style scoped>
-.draggable-card-list {
+.card-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-md);
   width: 100%;
 }
 
-.draggable-card-list.grid,
-.draggable-card-list.grid > div {
+.card-list.grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  padding: 1rem;
-  width: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-md);
 }
 
-.card-wrapper {
-  position: relative;
-  width: 100%;
-  min-height: 300px;
-  aspect-ratio: 16/9;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.card-wrapper:hover {
-  transform: scale(1.02);
-}
-
-.drag-handle {
-  cursor: move;
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 10;
-  opacity: 0.5;
-  transition: opacity 0.2s;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0.5rem;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.drag-handle:hover {
-  opacity: 1;
-}
-
-@media (max-width: 768px) {
-  .draggable-card-list.grid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-  }
-  
-  .card-wrapper {
-    min-height: 250px;
+@media (max-width: 600px) {
+  .card-list.grid {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

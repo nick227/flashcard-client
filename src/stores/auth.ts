@@ -42,7 +42,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const setUser = (userData: User | null) => {
-    console.log('Setting user data:', userData)
     if (userData) {
       // Ensure bio is preserved exactly as received
       user.value = {
@@ -77,7 +76,6 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Attempt login
       const response = await authApi.login(credentials)
-      console.log('Login response:', response)
 
       if (!response?.token || !response?.user) {
         throw new Error('Invalid login response')
@@ -92,7 +90,6 @@ export const useAuthStore = defineStore('auth', () => {
       // Verify the token works by making a test request
       try {
         const verifyResponse = await api.get('/users/me')
-        console.log('Token verification response:', verifyResponse.data)
         
         if (!verifyResponse.data) {
           throw new Error('Token verification failed')
@@ -205,7 +202,6 @@ export const useAuthStore = defineStore('auth', () => {
       // Try to get user from cache first
       const cachedUser = await cacheService.get('user') as User | null
       if (cachedUser) {
-        console.log('Using cached user data:', cachedUser)
         setUser(cachedUser)
         lastAuthCheck.value = now
         return true
@@ -214,7 +210,6 @@ export const useAuthStore = defineStore('auth', () => {
       // If no cached user, try to get fresh data
       const token = localStorage.getItem('jwt')
       if (!token) {
-        console.log('No JWT found in localStorage')
         return false
       }
 
@@ -224,7 +219,6 @@ export const useAuthStore = defineStore('auth', () => {
       // Get fresh user data
       try {
         const response = await api.get('/users/me')
-        console.log('Fresh user data from /me:', response.data)
         if (response.data) {
           setUser(response.data)
           lastAuthCheck.value = now

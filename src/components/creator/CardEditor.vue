@@ -4,22 +4,24 @@
       <div class="card-side front">
         <CardContent
           :card="card"
-          mode="edit"
           side="front"
+          :is-editing="true"
           :title="props.title || ''"
           :description="props.description || ''"
           :category="props.category || ''"
+          :onImageFile="props.onImageFile"
           @update="onFrontUpdate"
         />
       </div>
       <div class="card-side back">
         <CardContent
           :card="card"
-          mode="edit"
           side="back"
+          :is-editing="true"
           :title="props.title || ''"
           :description="props.description || ''"
           :category="props.category || ''"
+          :onImageFile="props.onImageFile"
           @update="onBackUpdate"
         />
       </div>
@@ -38,20 +40,20 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { FlashCard } from '@/types/card'
+import type { Card } from '@/types/card'
 import CardContent from '@/components/common/CardContent.vue'
-import type { CardViewMode } from '@/composables/useCardMediaStyles'
 
-const props = defineProps<{ 
-  card: FlashCard,
-  viewMode?: CardViewMode,
-  autoFocus?: boolean,
-  title?: string,
-  description?: string,
+const props = defineProps<{
+  card: Card
+  title?: string
+  description?: string
   category?: string
+  onImageFile?: (data: { file: File, side: 'front' | 'back', cellIndex: number }) => void
 }>()
 
-const emit = defineEmits(['update'])
+const emit = defineEmits<{
+  (e: 'update', card: Card): void
+}>()
 
 const localHint = ref(props.card.hint || '')
 
@@ -59,22 +61,12 @@ watch(() => props.card.hint, (val) => {
   localHint.value = val || ''
 })
 
-const onFrontUpdate = (updatedCard: FlashCard) => {
-  console.log('CardEditor onFrontUpdate', updatedCard);
-  emit('update', {
-    ...props.card,
-    front: updatedCard.front,
-    hint: localHint.value
-  })
+function onFrontUpdate(updatedCard: Card) {
+  emit('update', updatedCard)
 }
 
-const onBackUpdate = (updatedCard: FlashCard) => {
-  console.log('CardEditor onBackUpdate', updatedCard);
-  emit('update', {
-    ...props.card,
-    back: updatedCard.back,
-    hint: localHint.value
-  })
+function onBackUpdate(updatedCard: Card) {
+  emit('update', updatedCard)
 }
 
 const onHintUpdate = () => {
@@ -99,9 +91,7 @@ const onHintUpdate = () => {
 
 .card-side {
   flex: 1;
-  border-radius: 8px;
-  padding: 1rem;
-  background: var(--color-white);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
 }
@@ -111,7 +101,5 @@ const onHintUpdate = () => {
   width: 100%;
   padding: 0.5rem 0;
   margin-top: 0.5rem;
-  background: var(--color-white);
-  border-radius: 8px;
 }
 </style> 

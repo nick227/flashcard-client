@@ -1,55 +1,129 @@
-// Data model - matches database schema
-export interface CardData {
-  id?: number;
-  setId?: number;
-  front: string | { text: string; imageUrl: string | null };
-  back: string | { text: string; imageUrl: string | null };
-  frontImage?: string | null;
-  backImage?: string | null;
-  hint: string | null;
-  layout_front: CardLayout;
-  layout_back: CardLayout;
+// Layout types for rendering
+export type CardLayout = 'default' | 'two-col' | 'two-row'
+export type CardSide = 'front' | 'back'
+
+// Content cell types
+export type ContentCellType = 'text' | 'media'
+
+export interface ContentCell {
+  type: ContentCellType
+  content: string
+  mediaUrl?: string | null
 }
 
-// View model - used for rendering
-export interface CardView {
-  id?: number;
-  setId?: number;
-  front: CardSideView;
-  back: CardSideView;
-  hint: string | null;
+// Base card content interface
+export interface CardSideContent {
+  text?: string
+  imageUrl?: string | null
+  layout: CardLayout
+  cells?: ContentCell[]
 }
 
-export interface CardSideView {
-  text: string;
-  imageUrl: string | null;
-  layout: CardLayout;
+// Core card model - keep it simple
+export interface Card {
+  id: string | number
+  title: string
+  description?: string
+  front: CardSideContent
+  back: CardSideContent
+  hint: string | null | undefined
+  createdAt: string | Date
+  updatedAt: string | Date
+  reviewCount: number
+  difficulty: number
+  userId: string
+  deckId: string
+  isArchived?: boolean
+  isPublic?: boolean
 }
 
-// Type for creating/updating cards
-export interface CardInput {
-  front: string;
-  back: string;
-  frontImage: string | null;
-  backImage: string | null;
-  hint: string | null;
-  layout_front: CardLayout;
-  layout_back: CardLayout;
+// API response model
+export interface CardResponse extends Card {
+  description?: string
+  category?: string
+  tags?: string[]
+  lastReviewedAt?: string
+  nextReviewDate?: string
+  isArchived: boolean
+  isPublic: boolean
 }
 
-// Legacy type for backward compatibility
-export type FlashCard = CardView;
-export type Card = CardView;
-export type CardSide = 'front' | 'back';
-
-export interface CardSet {
-  id: number;
-  title: string;
-  description: string;
-  cards: Card[];
-  userId: number;
-  createdAt: Date;
-  updatedAt: Date;
+// Card creation model
+export interface CardCreate {
+  title: string
+  front: {
+    text?: string
+    imageUrl?: string | null
+    layout?: CardLayout
+    cells?: ContentCell[]
+  }
+  back: {
+    text?: string
+    imageUrl?: string | null
+    layout?: CardLayout
+    cells?: ContentCell[]
+  }
+  hint?: string | null
+  isPublic?: boolean
+  deckId: string
 }
 
-export type CardLayout = 'default' | 'two-row' | 'two-column'; 
+// Card update model
+export interface CardUpdate {
+  title?: string
+  front?: {
+    text?: string
+    imageUrl?: string | null
+    layout?: CardLayout
+    cells?: ContentCell[]
+  }
+  back?: {
+    text?: string
+    imageUrl?: string | null
+    layout?: CardLayout
+    cells?: ContentCell[]
+  }
+  hint?: string | null
+  isPublic?: boolean
+  isArchived?: boolean
+}
+
+// Review models
+export interface CardReview {
+  cardId: string
+  rating: number
+  reviewDate: Date
+  nextReviewDate: Date
+  reviewCount: number
+  difficulty: number
+}
+
+export interface CardReviewCreate {
+  cardId: string
+  rating: number
+  reviewDate: Date
+  nextReviewDate: Date
+  reviewCount: number
+  difficulty: number
+}
+
+export interface CardReviewUpdate {
+  rating?: number
+  reviewDate?: Date
+  nextReviewDate?: Date
+  reviewCount?: number
+  difficulty?: number
+}
+
+export interface CardReviewResponse {
+  id: string
+  cardId: string
+  rating: number
+  reviewDate: Date
+  nextReviewDate: Date
+  reviewCount: number
+  difficulty: number
+  createdAt: Date
+  updatedAt: Date
+  userId: string
+} 

@@ -1,25 +1,26 @@
 import { ref, computed } from 'vue'
+import type { Card } from '@/types/card'
 import type { SetPrice } from '@/types'
-import type { CardView } from '@/types/card'
 import { CardService } from '@/services/CardService'
 
 export function useSetForm() {
   const title = ref('')
   const description = ref('')
-  const category = ref<number>(0)
-  const cards = ref<CardView[]>([])
+  const category = ref(0)
   const setTags = ref<string[]>([])
-  const setPrice = ref<SetPrice>({ type: 'free', amount: 0 })
+  const setPrice = ref<SetPrice>({ type: 'free' })
   const thumbnailFile = ref<File | null>(null)
   const setThumbnail = ref<string | null>(null)
+  const cards = ref<Card[]>([])
   const formSubmitted = ref(false)
   const cardsTouched = ref(false)
   const setGenerating = ref(false)
 
   const hasBlankCard = computed(() => {
     return cards.value.some(card => {
-      const frontHasContent = card.front.text.trim() !== '' || card.front.imageUrl !== null
-      const backHasContent = card.back.text.trim() !== '' || card.back.imageUrl !== null
+      // Check if any cell in front or back is empty
+      const frontHasContent = card.front.cells?.some(cell => cell.content?.trim()) || false
+      const backHasContent = card.back.cells?.some(cell => cell.content?.trim()) || false
       return !frontHasContent || !backHasContent
     })
   })
@@ -27,37 +28,18 @@ export function useSetForm() {
   const hasLongContent = computed(() => {
     return cards.value.some(card => {
       // Check text length in front and back
-      const frontHasLongContent = card.front.text.length > 500
-      const backHasLongContent = card.back.text.length > 500
+      const frontHasLongContent = card.front?.text?.length && card.front.text.length > 500 || false
+      const backHasLongContent = card.back?.text?.length && card.back.text.length > 500 || false
       return frontHasLongContent || backHasLongContent
     })
   })
 
   const validateForm = () => {
-    if (!title.value.trim()) {
-      return { isValid: false, error: 'Please enter a title' }
+    formSubmitted.value = true
+    const { isValid, error } = CardService.validateCards(cards.value)
+    if (!isValid) {
+      return { isValid, error }
     }
-
-    if (!description.value.trim()) {
-      return { isValid: false, error: 'Please enter a description' }
-    }
-
-    if (!category.value) {
-      return { isValid: false, error: 'Please select a category' }
-    }
-
-    if (cards.value.length === 0) {
-      return { isValid: false, error: 'Please add at least one card' }
-    }
-
-    if (hasBlankCard.value) {
-      return { isValid: false, error: 'Please fill in all card content' }
-    }
-
-    if (hasLongContent.value) {
-      return { isValid: false, error: 'Some cards have content that is too long (max 500 characters)' }
-    }
-
     return { isValid: true }
   }
 
@@ -69,22 +51,29 @@ export function useSetForm() {
   }
 
   const addCard = () => {
-    if (hasBlankCard.value) return
-    const newCard = CardService.createNewCard()
-    cards.value = [newCard, ...cards.value]
+    const tempDeckId = `temp-${Date.now()}` // Create a temporary deckId
+    const newCard = CardService.createEmptyCard(tempDeckId)
+    console.log('Creating new card:', newCard)
+    cards.value.unshift(newCard)
+    cardsTouched.value = true
   }
 
-  const updateCard = (updatedCard: CardView) => {
-    console.log('Updating card:', updatedCard)
-    cards.value = CardService.updateCard(cards.value, updatedCard)
+  const deleteCard = (index: number) => {
+    cards.value.splice(index, 1)
+    cardsTouched.value = true
   }
 
-  const deleteCard = (id: number) => {
-    cards.value = CardService.deleteCard(cards.value, id)
+  const updateCard = (updatedCard: Card) => {
+    const index = cards.value.findIndex(c => c.id === updatedCard.id)
+    if (index !== -1) {
+      cards.value[index] = updatedCard
+      cardsTouched.value = true
+    }
   }
 
-  const updateOrder = (newOrder: CardView[]) => {
-    cards.value = CardService.reorderCards(cards.value, newOrder)
+  const updateOrder = (newOrder: Card[]) => {
+    cards.value = newOrder
+    cardsTouched.value = true
   }
 
   return {
@@ -100,12 +89,12 @@ export function useSetForm() {
     cardsTouched,
     hasBlankCard,
     hasLongContent,
+    setGenerating,
     validateForm,
     resetForm,
     addCard,
-    updateCard,
     deleteCard,
-    updateOrder,
-    setGenerating
+    updateCard,
+    updateOrder
   }
 }

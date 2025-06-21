@@ -1,555 +1,363 @@
 <template>
-  <Toaster :toasts="toasts" @remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" />
-  <!-- Edit Mode -->
-  <template v-if="mode === 'edit'">
-    <div class="card-content full-size" :class="`layout-${validateLayout(currentView.layout)}`">
-      <div class="content-flex full-size">
-        <div class="content-container full-size">
-          <div class="content-area full-size">
-            <CardMedia 
-              v-if="currentView.imageUrl" 
-              type="image" 
-              :url="currentView.imageUrl" 
-              :alt="currentView.imageUrl" 
-              :editable="true"
-              class="media-preview" 
-              @remove="onImageInput(null)"
-            />
-            <div 
-              v-if="currentView.text"
-              ref="contentRef"
-              class="media-text full-size" 
-              contenteditable="true" 
-              @input="onTextInput"
-              @paste="onPaste"
-              @keydown="onKeyDown"
-              @media-close="handleMediaClose"
-              v-html="detectAndRenderMedia(transformContent(currentView.text), handleMediaClose)"
-              :style="fontSizes[0]?.style"
-              data-placeholder="Enter card content..."
-            ></div>
-          </div>
+  <div class="card-content" :class="{ 'is-editing': isEditing }">
+    <CardContentLayout
+      :layout="cardState[side].layout"
+      :side="side"
+      :cells="cardState[side].cells"
+      :is-mobile="isMobile"
+      :is-editing="isEditing"
+      @update="handleCellUpdate"
+      @remove="handleCellRemove"
+    />
+    <div v-if="isEditing" class="card-controls">
+      <button class="control-button" @click="onToggleLayout" title="Toggle Layout">
+        <i class="fas fa-th-large"></i>
+      </button>
+      <button class="control-button" @click="handleAddImage" title="Add Image">
+        <i class="fas fa-image"></i>
+      </button>
+      <button class="control-button" @click="handleAIGenerate" :disabled="aiLoading" title="Generate with AI">
+        <i class="fas fa-magic"></i>
+      </button>
+    </div>
+    
+    <!-- Image Upload Modal -->
+    <div v-if="showImageUpload" class="image-upload-modal">
+      <div class="modal-overlay" @click="closeImageUpload"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Upload Image for {{ side === 'front' ? 'Front' : 'Back' }}</h3>
+          <button @click="closeImageUpload" class="close-button">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <ImageUploader
+            ref="imageUploaderRef"
+            :title="`Upload ${side === 'front' ? 'Front' : 'Back'} Image`"
+            :label="`Upload ${side === 'front' ? 'Front' : 'Back'} Image`"
+            :show-label="true"
+            :smart-compression="true"
+            :target-size="500 * 1024"
+            @file-selected="handleFileSelected"
+            @remove="handleImageRemove"
+          />
         </div>
       </div>
     </div>
-    <div class="controls-bar">
-      <CardControlsBar 
-        :aiLoading="aiLoading" 
-        :hasMedia="!!currentView.imageUrl"
-        :hasLongText="currentView.text.length > 100"
-        :currentLayout="currentView.layout"
-        @ai-generate="aiGenerate" 
-        @add-media="onImageInput" 
-        @toggle-layout="onToggleLayout" 
-      />
-    </div>
-  </template>
-
-  <!-- View Mode -->
-  <template v-else>
-    <div class="card-content full-size" :class="`layout-${validateLayout(currentView.layout)}`">
-      <div class="content-flex full-size">
-        <div class="content-container full-size">
-          <div class="content-area full-size">
-            <CardMedia 
-              v-if="currentView.imageUrl" 
-              type="image" 
-              :url="currentView.imageUrl" 
-              :alt="currentView.imageUrl" 
-              class="media-preview" 
-            />
-            <div 
-              v-if="currentView.text"
-              ref="contentRef"
-              class="media-text full-size view-mode" 
-              v-html="detectAndRenderMedia(transformContent(currentView.text))"
-              :style="fontSizes[0]?.style"
-            ></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </template>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick, onUnmounted } from 'vue'
-import type { CardView, CardLayout } from '@/types/card'
-import CardControlsBar from './CardControlsBar.vue'
-import CardMedia from './CardMedia.vue'
-import Toaster from '@/components/common/Toaster.vue'
+import type { Card, CardSide, CardLayout, ContentCell } from '@/types/card'
+import CardContentLayout from './CardContent/CardContentLayout.vue'
+import ImageUploader from './ImageUploader.vue'
+import { useCardContentState } from './CardContent/CardContentState'
+import { useCardContentAI } from './CardContent/CardContentAI'
 import { useToaster } from '@/composables/useToaster'
-import { useMediaUtils } from '@/composables/useMediaUtils'
-import { useFontSizes } from '@/composables/useFontSizes'
-import { aiCardService } from '@/services/AICardService'
+import { ref, nextTick, onUnmounted } from 'vue'
 
-const props = defineProps<{ 
-  card?: CardView,
-  text?: string | { text: string, imageUrl: string | null, layout: CardLayout },
-  imageUrl?: string | null,
-  mode?: 'edit' | 'view',
-  side?: 'front' | 'back',
-  title?: string,
-  description?: string,
-  category?: string,
-  layout?: CardLayout
+const props = defineProps<{
+  card: Card
+  side: CardSide
+  isEditing?: boolean
+  isMobile?: boolean
+  title?: string
+  description?: string
+  category?: string
+  onImageFile?: (data: { file: File, side: CardSide, cellIndex: number }) => void
 }>()
 
 const emit = defineEmits<{
-  (e: 'update', value: CardView): void
+  (e: 'update', card: Card): void
+  (e: 'edit-start'): void
+  (e: 'edit-end'): void
+  (e: 'image-file', data: { file: File, side: CardSide, cellIndex: number }): void
 }>()
 
-// Helper function to create a default card view
-function createDefaultCardView(text?: string, imageUrl?: string | null, layout?: CardLayout): CardView {
-  const defaultLayout: CardLayout = layout || 'default'
-  return {
-    id: 0,
-    setId: 0,
-    front: {
-      text: typeof text === 'string' ? text : '',
-      imageUrl: imageUrl || null,
-      layout: defaultLayout
-    },
-    back: {
-      text: '',
-      imageUrl: null,
-      layout: defaultLayout
-    },
-    hint: null
-  }
+const { toast } = useToaster()
+const { cardState, currentSide, updateLayout, addCell, updateCell, removeCell } = useCardContentState(props)
+
+// Image upload state
+const showImageUpload = ref(false)
+const imageUploaderRef = ref<InstanceType<typeof ImageUploader> | null>(null)
+const blobUrls = ref<Set<string>>(new Set()) // Track all blob URLs for cleanup
+
+const handleCellUpdate = (index: number, updates: Partial<ContentCell>) => {
+  updateCell(currentSide.value, index, updates)
+  emit('update', cardState.value)
 }
 
-// Add layout validation
-const validLayouts = ['default', 'two-row', 'two-column'] as const
-const validateLayout = (layout: string | undefined): CardLayout => {
-  const layoutValue = layout || 'default'
-  return validLayouts.includes(layoutValue as CardLayout) ? layoutValue as CardLayout : 'default'
+const handleCellRemove = (index: number) => {
+  removeCell(currentSide.value, index)
+  emit('update', cardState.value)
 }
 
-// Initialize state based on props
-const initialState: CardView = (() => {
-  // If we have a card prop, use it
-  if (props.card) {
-    return { ...props.card }
+const handleAddImage = () => {
+  showImageUpload.value = true
+}
+
+const closeImageUpload = () => {
+  showImageUpload.value = false
+  // Do NOT reset the uploader's state here. The modal is just closing.
+  // The uploader's state will be reset when the parent component (e.g., SetWizard)
+  // is destroyed or decides to clear the card content.
+}
+
+const handleFileSelected = (file: File) => {
+  // The file received from the uploader is already compressed.
+  const blobUrl = URL.createObjectURL(file)
+  blobUrls.value.add(blobUrl) // Track for cleanup
+
+  const cells = cardState.value[currentSide.value].cells || []
+  
+  // Find the first empty text cell to replace
+  const emptyCellIndex = cells.findIndex(cell => cell.type === 'text' && !cell.content?.trim())
+
+  let targetCellIndex = -1
+
+  if (emptyCellIndex !== -1) {
+    // If an empty cell is found, update it
+    targetCellIndex = emptyCellIndex
+    updateCell(currentSide.value, targetCellIndex, { type: 'media', mediaUrl: blobUrl, content: '' })
+  } else {
+    // If no empty cells, add a new one and get its index
+    addCell(currentSide.value, 'media', true)
+    // Get the updated cells array to find the new cell index
+    const updatedCells = cardState.value[currentSide.value].cells || []
+    targetCellIndex = updatedCells.length - 1
+    updateCell(currentSide.value, targetCellIndex, { mediaUrl: blobUrl })
   }
 
-  // Handle legacy text prop
-  if (props.text) {
-    if (typeof props.text === 'string') {
-      return createDefaultCardView(props.text, props.imageUrl, validateLayout(props.layout))
-    }
-
-    // Handle text object with layout
-    const defaultLayout: CardLayout = validateLayout(props.text.layout)
-    return {
-      id: 0,
-      setId: 0,
-      front: {
-        text: typeof props.text.text === 'string' ? props.text.text : '',
-        imageUrl: props.text.imageUrl || null,
-        layout: defaultLayout
-      },
-      back: {
-        text: '',
-        imageUrl: null,
-        layout: defaultLayout
-      },
-      hint: null
-    }
-  }
-
-  // Default empty state
-  return createDefaultCardView('', props.imageUrl, validateLayout(props.layout))
-})()
-
-// Update state management
-const state = ref<CardView>(initialState)
-
-// AI loading state
-const aiLoading = ref(false)
-let isComponentMounted = true
-
-onUnmounted(() => {
-  isComponentMounted = false
-})
-
-const { toasts, toast } = useToaster()
-const { 
-  detectAndRenderMedia,
-  transformContent
-} = useMediaUtils()
-
-// Get current side view
-const currentSide = computed(() => props.side || 'front')
-const currentView = computed(() => state.value[currentSide.value])
-
-console.log('CardContent: ', {
-  currentSide: currentSide.value,
-  currentView: currentView.value
-})
-
-// Font size handling
-const contentRef = ref<HTMLElement | null>(null)
-const textContent = computed(() => [currentView.value.text])
-const areaCount = computed(() => 1)
-
-const { fontSizes } = useFontSizes(
-  textContent,
-  areaCount,
-  props.mode || 'view'
-)
-
-// Editing handlers
-function onTextInput(e: Event) {
-  const target = e.target as HTMLElement
-  const selection = window.getSelection()
-  const range = selection?.rangeCount ? selection.getRangeAt(0) : null
-  const cursorPosition = range?.startOffset || 0
-  
-  // Safely get text content and strip any HTML
-  const textContent = target.innerText || ''
-  
-  // Batch state updates
-  nextTick(() => {
-    state.value = {
-      ...state.value,
-      [currentSide.value]: {
-        ...currentView.value,
-        text: textContent
-      }
-    }
+  if (targetCellIndex !== -1) {
+    // Emit file data to parent for later upload
+    emit('image-file', {
+      file: file,
+      side: props.side,
+      cellIndex: targetCellIndex
+    })
     
-    emit('update', state.value)
-
-    // Restore cursor position
-    if (selection && range) {
-      const newRange = document.createRange()
-      const textNode = target.firstChild || target
-      if (textNode.textContent) {
-        newRange.setStart(textNode, Math.min(cursorPosition, textNode.textContent.length))
-        newRange.collapse(true)
-        selection.removeAllRanges()
-        selection.addRange(newRange)
-      }
-    }
-  })
-}
-
-// Add media validation
-const isValidImageUrl = (url: string | null): boolean => {
-  if (!url) return true // null is valid (no image)
-  try {
-    const parsedUrl = new URL(url)
-    return (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') && 
-           (url.startsWith('data:image') || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(parsedUrl.pathname))
-  } catch {
-    return false
-  }
-}
-
-// Update image input handler
-function onImageInput(url: string | null) {
-  if (url && !isValidImageUrl(url)) {
-    toast('Invalid image URL', 'error')
-    return
-  }
-  
-  state.value = {
-    ...state.value,
-    [currentSide.value]: {
-      ...currentView.value,
-      imageUrl: url
+    if (props.onImageFile) {
+      props.onImageFile({
+        file: file,
+        side: props.side,
+        cellIndex: targetCellIndex
+      })
     }
   }
   
-  emit('update', state.value)
+  emit('update', cardState.value)
+  closeImageUpload()
 }
 
-// Update layout toggle with media consideration
-function onToggleLayout() {
-  const layouts = ['default', 'two-row', 'two-column'] as const
-  const currentLayout = currentView.value.layout as typeof layouts[number]
+const handleImageRemove = () => {
+  // This is now handled by the remove event from the uploader
+  // We may need to find the cell with the image and remove it.
+  // For now, this is sufficient to reset the uploader's state.
+}
+
+const onToggleLayout = () => {
+  const side = currentSide.value
+  const currentLayout = cardState.value[side].layout
+  const layouts: CardLayout[] = ['default', 'two-col', 'two-row']
   const currentIndex = layouts.indexOf(currentLayout)
   const nextLayout = layouts[(currentIndex + 1) % layouts.length]
   
-  // Check if current content is suitable for the new layout
-  const hasMedia = currentView.value.imageUrl !== null
-  const hasLongText = currentView.value.text.length > 100
+  updateLayout(side, nextLayout)
+  emit('update', cardState.value)
   
-  if (nextLayout === 'two-column' && hasMedia && hasLongText) {
-    toast('Warning: Two-column layout may not be optimal for cards with both media and long text', 'info')
-  }
-  
-  state.value = {
-    ...state.value,
-    [currentSide.value]: {
-      ...currentView.value,
-      layout: nextLayout
-    }
-  }
-  
-  emit('update', state.value)
+  // Wait for next tick to ensure layout has updated
+  nextTick(() => {
+    // Trigger resize event to force container size recalculation
+    window.dispatchEvent(new Event('resize'))
+  })
 }
 
-// AI Generate for single card face
-async function aiGenerate() {
-  if (aiLoading.value) return
-  
-  aiLoading.value = true
-  toast('Generating card...', 'info')
-
-  try {
-    await aiCardService.generateCardFace({
-      side: currentSide.value,
-      title: props.title || '',
-      description: props.description || '',
-      category: props.category || '',
-      otherSideContent: state.value[currentSide.value === 'front' ? 'back' : 'front'].text,
-      onResult: (text: string) => {
-        if (!isComponentMounted) return
-        state.value = {
-          ...state.value,
-          [currentSide.value]: {
-            ...currentView.value,
-            text
-          }
-        }
-        
-        emit('update', state.value)
-        toast('Card generated successfully', 'success')
-      },
-      onError: (err: string) => {
-        if (!isComponentMounted) return
-        toast('AI error: ' + err, 'error')
-      }
-    })
-  } catch (error) {
-    if (!isComponentMounted) return
-    toast('Failed to generate card: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error')
-  } finally {
-    if (isComponentMounted) {
-      aiLoading.value = false
+// Initialize AI with proper callbacks
+const { aiLoading, aiGenerate } = useCardContentAI(
+  (message: string) => toast(message, 'info'),
+  (text: string) => {
+    // Handle AI generation result - add as new text cell (force to bypass layout limits)
+    addCell(currentSide.value, 'text', true)
+    // Update the last cell with the generated content
+    const cells = cardState.value[currentSide.value].cells || []
+    if (cells.length > 0) {
+      updateCell(currentSide.value, cells.length - 1, { content: text })
     }
-  }
-}
-
-// Add paste handler
-function onPaste(e: ClipboardEvent) {
-  e.preventDefault()
-  const text = e.clipboardData?.getData('text/plain') || ''
-  document.execCommand('insertText', false, text)
-}
-
-// Add keyboard handling
-function onKeyDown(e: KeyboardEvent) {
-  // Prevent editing of media content
-  if (e.target instanceof HTMLElement) {
-    const isMediaElement = e.target.closest('.youtube-embed, .auto-image')
-    if (isMediaElement) {
-      e.preventDefault()
-      return
-    }
-  }
-  
-  // Handle tab key
-  if (e.key === 'Tab') {
-    e.preventDefault()
-    document.execCommand('insertText', false, '  ')
-  }
-}
-
-// Add media close handler
-function handleMediaClose(event: Event) {
-  const target = event.target as HTMLElement
-  const mediaContainer = target.closest('.media-container')
-  if (!mediaContainer) return
-
-  // Find the image element
-  const img = mediaContainer.querySelector('img')
-  if (!img) return
-
-  // Get the image URL
-  const imageUrl = img.src
-
-  // Remove the image URL from the text content
-  const textContent = currentView.value.text.replace(imageUrl, '').trim()
-  
-  // Update the state
-  state.value = {
-    ...state.value,
-    [currentSide.value]: {
-      ...currentView.value,
-      text: textContent
-    }
-  }
-  
-  emit('update', state.value)
-}
-
-// Watch all relevant props
-watch(
-  [
-    () => props.card,
-    () => props.text,
-    () => props.imageUrl,
-    () => props.layout
-  ],
-  ([newCard, newText, newImageUrl, newLayout]) => {
-    if (newCard) {
-      state.value = { ...newCard }
-    } else if (newText) {
-      if (typeof newText === 'string') {
-        state.value = createDefaultCardView(newText, newImageUrl, validateLayout(newLayout))
-      } else {
-        state.value = {
-          id: 0,
-          setId: 0,
-          front: {
-            text: newText.text,
-            imageUrl: newText.imageUrl || null,
-            layout: validateLayout(newText.layout)
-          },
-          back: {
-            text: '',
-            imageUrl: null,
-            layout: validateLayout(newText.layout)
-          },
-          hint: null
-        }
-      }
-    }
+    emit('update', cardState.value)
   },
-  { deep: true }
+  (error: string) => toast(error, 'error')
 )
+
+// Update the AI generate button click handler
+const handleAIGenerate = () => {
+  // Validate required form data
+  if (!props.title?.trim()) {
+    toast('Please fill in the set title first', 'info')
+    return
+  }
+  
+  if (!props.description?.trim()) {
+    toast('Please fill in the set description first', 'info')
+    return
+  }
+  
+  if (!props.category?.trim()) {
+    toast('Please select a category first', 'info')
+    return
+  }
+
+  // Get content from the other side for context
+  const otherSide = props.side === 'front' ? 'back' : 'front'
+  const otherSideContent = cardState.value[otherSide].cells
+    ?.map(cell => cell.content)
+    .filter(Boolean)
+    .join('\n') || ''
+
+  aiGenerate(
+    props.side,
+    props.title.trim(),
+    props.description.trim(),
+    props.category.trim(),
+    otherSideContent
+  )
+}
+
+// Cleanup blob URLs when component is unmounted
+onUnmounted(() => {
+  // Revoke all tracked blob URLs to prevent memory leaks
+  blobUrls.value.forEach(url => {
+    URL.revokeObjectURL(url)
+  })
+  blobUrls.value.clear()
+  
+  if (imageUploaderRef.value) {
+    imageUploaderRef.value.removeImage()
+  }
+})
 </script>
 
 <style scoped>
-.full-size {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
 .card-content {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.card-controls {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--color-background-alt);
+  border-radius: var(--radius-md);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.control-button {
+  padding: var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-duration) var(--transition-timing);
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-button:hover {
+  border-color: var(--color-primary);
+}
+
+.control-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Image Upload Modal */
+.image-upload-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  position: relative;
   background: white;
   border-radius: var(--radius-lg);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
   overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-.back .card-content {
-  background: var(--color-primary);
-  color: var(--color-white);
-}
-
-.front .card-content {
-  background: white;
-}
-
-.content-flex {
+.modal-header {
   display: flex;
-  width: 100%;
-  height: 100%;
-  gap: var(--space-lg);
-  transition: all var(--transition-duration) var(--transition-timing);
-  align-items: stretch;
-  justify-content: stretch;
-  padding: 1rem;
-  box-sizing: border-box;
-}
-
-.content-container {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  gap: var(--space-lg);
-  transition: all var(--transition-duration) var(--transition-timing);
-  align-items: stretch;
-  justify-content: stretch;
-  padding: 1rem;
-  box-sizing: border-box;
-}
-
-.controls-bar {
-  width: 100%;
-  background: linear-gradient(to top, #fff 90%, #fff0 100%);
-  padding: var(--space-lg) 0 var(--space-sm) 0;
-  box-sizing: border-box;
-  margin-top: var(--space-sm);
-}
-
-.content-area {
-  flex: 1 1 0;
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  transition: all var(--transition-duration) var(--transition-timing);
-  padding: 1rem;
-  box-sizing: border-box;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.media-text {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  min-height: 50%;
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
-.media-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
 }
 
-/* Layouts */
-.layout-default .content-area {
-  flex-direction: column;
-  padding: 1rem;
+.close-button:hover {
+  background: var(--color-background-alt);
+  color: var(--color-text);
 }
 
-.layout-default .content-area > * {
-  width: 100%;
-  height: 100%;
+.modal-body {
+  padding: 1.5rem;
 }
 
-.layout-two-row .content-area {
-  flex-direction: column;
-  padding: 1rem;
+/* Mobile styles */
+@media (max-width: 600px) {
+  .card-controls {
+    flex-wrap: wrap;
+  }
+  
+  .control-button {
+    flex: 1 1 calc(50% - var(--space-sm));
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+  }
 }
-
-.layout-two-row .content-area > * {
-  width: 100%;
-  height: 50%;
-  min-height: 0;
-}
-
-.layout-two-column .content-area {
-  flex-direction: row;
-  padding: 1rem;
-}
-
-.layout-two-column .content-area > * {
-  width: 50%;
-  height: 100%;
-  min-width: 0;
-}
-.layout-two-column .content-area > *:first-child {
-  width: 50%;
-  height: 100%;
-  min-width: 0;
-}
-</style>
+</style> 

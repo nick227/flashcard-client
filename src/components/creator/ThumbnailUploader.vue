@@ -18,6 +18,11 @@
             :class="{ 'opacity-50': isUploading }"
             @error="handleImageError"
           />
+          <!-- Stock Images Choices -->
+          <StockImagePicker 
+            v-if="thumbnailPreview && !isGeneratingThumbnail"
+            @select="handleStockImageSelect"
+          />
           <!-- AI Generation Loading State -->
           <div v-if="isGeneratingThumbnail" class="flex items-center justify-center h-full w-full bg-gray-50">
             <div class="p-8 text-center">
@@ -78,6 +83,11 @@
               </div>
             </div>
           </div>
+          <!-- Stock Images Choices -->
+          <StockImagePicker 
+            v-if="!thumbnailPreview && !isGeneratingThumbnail && !imageLoadError"
+            @select="handleStockImageSelect"
+          />
           <!-- Upload loading indicator -->
           <div v-if="isUploading" class="flex items-center justify-center bg-black bg-opacity-50">
             <div class="flex flex-col items-center">
@@ -128,6 +138,7 @@ import { ref, watch, computed } from 'vue'
 import { api } from '@/api'
 import { useToaster } from '@/composables/useToaster'
 import { AxiosError } from 'axios'
+import StockImagePicker from '@/components/creator/StockImagePicker.vue'
 
 const props = defineProps<{
   title: string,
@@ -295,9 +306,22 @@ function handleRemoveClick() {
 // Update the click handler for the upload area
 function handleUploadAreaClick(event: Event) {
   if (props.disabled || isGeneratingThumbnail.value) return
+  
+  // Don't trigger file upload if clicking on StockImagePicker
+  const target = event.target as HTMLElement
+  if (target.closest('.stock-image-picker')) return
+  
   event.preventDefault()
   event.stopPropagation()
   fileInputRef.value?.click()
+}
+
+// Add stock image handler
+function handleStockImageSelect(url: string) {
+  console.log('Stock image selected:', url)
+  thumbnailPreview.value = url
+  thumbnailFile.value = null // Clear any uploaded file
+  emit('update:thumbnail', url)
 }
 </script>
 

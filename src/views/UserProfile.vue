@@ -153,7 +153,6 @@ const router = useRouter()
 const auth = useAuthStore()
 const user = computed(() => {
   const userData = auth.user
-  console.log('UserProfile - Current user data:', userData)
   return userData
 })
 const isAuthenticated = computed(() => auth.isAuthenticated)
@@ -164,20 +163,6 @@ const uploading = ref(false)
 const isEditingBio = ref(false)
 const editingBio = ref('')
 const bioTextarea = ref<HTMLTextAreaElement | null>(null)
-
-// Watch for user changes to ensure bio is loaded
-watch(() => user.value, (newUser) => {
-  if (newUser) {
-    console.log('UserProfile - User data updated:', {
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      bio: newUser.bio,
-      role: newUser.role,
-      image: newUser.image
-    })
-  }
-}, { immediate: true })
 
 // Initialize paginated data
 const favoritesEndpoint = computed(() => {
@@ -274,11 +259,9 @@ const triggerFileInput = () => {
 // Fetch initial data
 onMounted(async () => {
   if (isAuthenticated.value) {
-    console.log('UserProfile - Fetching initial data for user:', user.value?.id)
     try {
       // Force refresh user data
       const response = await api.get('/users/me')
-      console.log('UserProfile - Fresh user data from /me:', response.data)
       if (response.data) {
         auth.setUser(response.data)
       }
@@ -295,67 +278,19 @@ onMounted(async () => {
 
 // Page change handlers
 const handleFavoritesPageChange = async (page: number) => {
-  console.log('UserProfile - Favorites Page Change:', {
-    page,
-    currentItems: favorites.items.value.length,
-    currentTotal: favorites.totalItems.value,
-    currentPage: favorites.currentPage.value
-  })
   await favorites.fetchData(page)
-  console.log('UserProfile - Favorites Data Updated:', {
-    newItems: favorites.items.value.length,
-    newTotal: favorites.totalItems.value,
-    newPage: favorites.currentPage.value,
-    firstItem: favorites.items.value[0]
-  })
 }
 
 const handlePurchasesPageChange = async (page: number) => {
-  console.log('UserProfile - Purchases Page Change:', {
-    page,
-    currentItems: purchases.items.value.length,
-    currentTotal: purchases.totalItems.value,
-    currentPage: purchases.currentPage.value
-  })
   await purchases.fetchData(page)
-  console.log('UserProfile - Purchases Data Updated:', {
-    newItems: purchases.items.value.length,
-    newTotal: purchases.totalItems.value,
-    newPage: purchases.currentPage.value,
-    firstItem: purchases.items.value[0]
-  })
 }
 
 const handleSubscriptionsPageChange = async (page: number) => {
-  console.log('UserProfile - Subscriptions Page Change:', {
-    page,
-    currentItems: subscriptions.items.value.length,
-    currentTotal: subscriptions.totalItems.value,
-    currentPage: subscriptions.currentPage.value
-  })
   await subscriptions.fetchData(page)
-  console.log('UserProfile - Subscriptions Data Updated:', {
-    newItems: subscriptions.items.value.length,
-    newTotal: subscriptions.totalItems.value,
-    newPage: subscriptions.currentPage.value,
-    firstItem: subscriptions.items.value[0]
-  })
 }
 
 const handleViewHistoryPageChange = async (page: number) => {
-  console.log('UserProfile - View History Page Change:', {
-    page,
-    currentItems: viewHistory.items.value.length,
-    currentTotal: viewHistory.totalItems.value,
-    currentPage: viewHistory.currentPage.value
-  })
   await viewHistory.fetchData(page)
-  console.log('UserProfile - View History Data Updated:', {
-    newItems: viewHistory.items.value.length,
-    newTotal: viewHistory.totalItems.value,
-    newPage: viewHistory.currentPage.value,
-    firstItem: viewHistory.items.value[0]
-  })
 }
 
 // Start editing bio

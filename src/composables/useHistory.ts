@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import type { CardView } from '@/types/card'
+import type { Card } from '@/types/card'
 import type { SetPrice } from '@/types'
 
 const HISTORY_STORAGE_KEY = 'setWizardHistory'
@@ -10,7 +10,7 @@ export interface HistoryState {
   categoryId: number
   tags: string[]
   price: SetPrice
-  cards: CardView[]
+  cards: Card[]
 }
 
 export function useHistory() {

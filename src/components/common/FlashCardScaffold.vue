@@ -18,23 +18,21 @@
       <div v-show="!isFlipped" class="card-face front">
         <CardContent 
           :card="card"
-          :mode="editable ? 'edit' : 'view'"
-          side="front"
-          :title="props.title || ''"
-          :description="props.description || ''"
-          :category="props.category || ''"
-          @update="onFrontUpdate"
+          :side="'front'"
+          :is-editing="editable"
+          @update="updateFront"
+          @edit-start="$emit('edit-start')"
+          @edit-end="$emit('edit-end')"
         />
       </div>
       <div v-show="isFlipped" class="card-face back">
         <CardContent 
           :card="card"
-          :mode="editable ? 'edit' : 'view'"
-          side="back"
-          :title="props.title || ''"
-          :description="props.description || ''"
-          :category="props.category || ''"
-          @update="onBackUpdate"
+          :side="'back'"
+          :is-editing="editable"
+          @update="updateBack"
+          @edit-start="$emit('edit-start')"
+          @edit-end="$emit('edit-end')"
         />
       </div>
     </div>
@@ -46,11 +44,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import type { FlashCard } from '@/types/card'
+import type { Card } from '@/types/card'
 import CardContent from './CardContent.vue'
 
 const props = defineProps<{
-  card: FlashCard
+  card: Card
   editable?: boolean
   flipped?: boolean
   showControls?: boolean
@@ -64,15 +62,17 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:card': [card: FlashCard]
-  'flip': [flipped: boolean]
-  'delete': []
-  'next': []
-  'prev': []
+  (e: 'update', card: Card): void
+  (e: 'edit-start'): void
+  (e: 'edit-end'): void
+  (e: 'flip', value: boolean): void
+  (e: 'delete'): void
+  (e: 'next'): void
+  (e: 'prev'): void
 }>()
 
 // State management
-const localFlipped = ref(false)
+const localFlipped = ref(props.flipped || false)
 const isFlipping = ref(false)
 const flipTimeout = ref<number | null>(null)
 const isNavigating = ref(false)
@@ -110,6 +110,11 @@ watch(() => props.card, () => {
 function onCardClick() {
   const now = Date.now()
   const timeSinceLastClick = now - lastClickTime.value
+  
+  // If in edit mode, don't handle clicks for flipping
+  if (props.editable) {
+    return
+  }
   
   // Check if user is selecting text
   const selection = window.getSelection()
@@ -290,34 +295,12 @@ onUnmounted(() => {
   document.removeEventListener('mousedown', handleDocumentClick)
 })
 
-function onFrontUpdate(updatedCard: FlashCard) {
-  console.log('FlashCardScaffold - Front update:', {
-    original: props.card.front,
-    updated: updatedCard.front
-  })
-  emit('update:card', {
-    ...props.card,
-    front: {
-      text: typeof updatedCard.front.text === 'string' ? updatedCard.front.text : '',
-      imageUrl: updatedCard.front.imageUrl,
-      layout: updatedCard.front.layout
-    }
-  })
+function updateFront(card: Card) {
+  emit('update', card)
 }
 
-function onBackUpdate(updatedCard: FlashCard) {
-  console.log('FlashCardScaffold - Back update:', {
-    original: props.card.back,
-    updated: updatedCard.back
-  })
-  emit('update:card', {
-    ...props.card,
-    back: {
-      text: typeof updatedCard.back.text === 'string' ? updatedCard.back.text : '',
-      imageUrl: updatedCard.back.imageUrl,
-      layout: updatedCard.back.layout
-    }
-  })
+function updateBack(card: Card) {
+  emit('update', card)
 }
 </script>
 

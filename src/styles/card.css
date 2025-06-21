@@ -14,8 +14,6 @@
     background: var(--color-surface);
     border: 1.5px solid var(--color-border);
     width: 100%;
-    aspect-ratio: var(--card-aspect-ratio);
-    max-width: 800px;
     display: flex;
     flex-direction: column;
     transition: all 0.18s, border-color 0.18s;
@@ -111,6 +109,10 @@
     position: relative;
 }
 
+.flashcard-scaffold .card {
+    aspect-ratio: var(--card-aspect-ratio);
+}
+
 
 /* Card preview styles */
 
@@ -122,6 +124,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 .card-preview .card-content {

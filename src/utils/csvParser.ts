@@ -64,13 +64,9 @@ export function parseCSV(csvContent: string): ParseResult {
         rawValues: values
       })
 
-      // Validate required fields
-      if (!front && !frontImage) {
-        warnings.push(`Line ${i + 1}: Skipped - missing front content`)
-        continue
-      }
-      if (!back && !backImage) {
-        warnings.push(`Line ${i + 1}: Skipped - missing back content`)
+      // Validate required fields - allow either text or image
+      if (!front && !frontImage && !back && !backImage) {
+        warnings.push(`Line ${i + 1}: Skipped - missing content`)
         continue
       }
 
@@ -85,7 +81,7 @@ export function parseCSV(csvContent: string): ParseResult {
       }
 
       // Validate layouts
-      const validLayouts = ['default', 'two-row', 'two-column']
+      const validLayouts = ['default', 'two-row', 'two-col']
       if (!validLayouts.includes(frontLayout)) {
         warnings.push(`Line ${i + 1}: Invalid front layout, using default`)
         frontLayout = 'default'

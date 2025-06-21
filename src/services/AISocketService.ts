@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/auth'
-import type { Card } from '@/types/card'
+import type { Card, CardLayout } from '@/types/card'
+import { createCellsFromContent } from '@/utils/cellUtils'
 
 interface GenerationCallbacks {
     onCardGenerated: (card: Card) => void
@@ -18,6 +19,32 @@ interface GenerationProgress {
     error?: string
 }
 
+// Helper function to transform old card structure to new cell-based structure
+function transformCardToCellStructure(oldCard: any): Card {
+    return {
+        id: oldCard.id || Date.now() + Math.random(),
+        title: oldCard.title || '',
+        description: oldCard.description || '',
+        front: {
+            cells: createCellsFromContent(oldCard.front?.text || '', oldCard.front?.imageUrl || null, oldCard.front?.layout),
+            layout: (oldCard.front?.layout || 'default') as CardLayout
+        },
+        back: {
+            cells: createCellsFromContent(oldCard.back?.text || '', oldCard.back?.imageUrl || null, oldCard.back?.layout),
+            layout: (oldCard.back?.layout || 'default') as CardLayout
+        },
+        hint: oldCard.hint || undefined,
+        createdAt: oldCard.createdAt || new Date(),
+        updatedAt: oldCard.updatedAt || new Date(),
+        reviewCount: oldCard.reviewCount || 0,
+        difficulty: oldCard.difficulty || 0,
+        isArchived: oldCard.isArchived || false,
+        isPublic: oldCard.isPublic || false,
+        userId: oldCard.userId || '',
+        deckId: oldCard.deckId || ''
+    }
+}
+
 class AISocketService {
     private socket: Socket | null = null
     private isConnected = false
@@ -26,6 +53,7 @@ class AISocketService {
     private reconnectDelay = 1000 // Start with 1 second
     private activeGenerationId: string | null = null
     private eventListeners: Map<string, Set<SocketEventListener>> = new Map()
+    private disconnectListeners: Set<() => void> = new Set()
     private currentTitle: string | null = null
     private currentDescription: string | null = null
     private currentCategory: string | null = null
@@ -33,7 +61,7 @@ class AISocketService {
     private onProgressUpdate: ((progress: GenerationProgress) => void) | null = null
 
     constructor() {
-        this.initialize()
+        // Remove automatic initialization
     }
 
     public get connected(): boolean {
@@ -67,7 +95,7 @@ class AISocketService {
         }
     }
 
-    private initialize() {
+    public initialize() {
         // If socket already exists and is connected, don't reinitialize
         if (this.socket?.connected) {
             console.log('Socket already connected, skipping initialization')
@@ -132,6 +160,7 @@ class AISocketService {
         } catch (error) {
             console.error('Failed to initialize socket:', error)
             this.updateStatus('disconnected', 'Failed to connect to AI service')
+            throw error
         }
     }
 
@@ -166,6 +195,9 @@ class AISocketService {
         this.socket.on('disconnect', (reason) => {
             console.log('Socket disconnected:', reason, 'socket id:', this.socket?.id)
             this.isConnected = false
+            
+            // Notify all disconnect listeners
+            this.disconnectListeners.forEach(callback => callback())
             
             // If the disconnection was not initiated by the client and not due to server disconnect
             if (reason !== 'io client disconnect' && reason !== 'io server disconnect') {
@@ -228,10 +260,14 @@ class AISocketService {
     }
 
     public startGeneration(title: string, description: string, category: string, callbacks: GenerationCallbacks): string | null {
+        // Initialize socket if not already connected
         if (!this.validateConnection()) {
-            const error = this.handleError('Connection not available', 'connection')
-            callbacks.onError(error)
-            return null
+            this.initialize()
+            if (!this.validateConnection()) {
+                const error = this.handleError('Connection not available', 'connection')
+                callbacks.onError(error)
+                return null
+            }
         }
 
         const auth = useAuthStore()
@@ -325,22 +361,15 @@ class AISocketService {
         this.addListener('cardGenerated', (data: { generationId: string, card: any, progress: number, totalCards: number }) => {
             if (data.generationId === generationId) {
                 console.log('Received card data:', data.card)
-                const card: Card = {
-                    id: Date.now(),
-                    setId: 0,
-                    front: {
-                        text: data.card.front.text || '',
-                        imageUrl: data.card.front.imageUrl || null,
-                        layout: data.card.front.layout || 'two-row'
-                    },
-                    back: {
-                        text: data.card.back.text || '',
-                        imageUrl: data.card.back.imageUrl || null,
-                        layout: data.card.back.layout || 'two-row'
-                    },
-                    hint: data.card.hint || null
-                }
-                console.log('Transformed card:', card)
+                const card: Card = transformCardToCellStructure(data.card)
+                console.log('Transformed card to cell structure:', {
+                    frontCells: card.front.cells?.length || 0,
+                    backCells: card.back.cells?.length || 0,
+                    frontText: card.front.cells?.find(c => c.type === 'text')?.content || 'none',
+                    frontMedia: card.front.cells?.find(c => c.type === 'media')?.mediaUrl || 'none',
+                    backText: card.back.cells?.find(c => c.type === 'text')?.content || 'none',
+                    backMedia: card.back.cells?.find(c => c.type === 'media')?.mediaUrl || 'none'
+                })
                 
                 this.updateProgress({
                     status: 'generating',
@@ -453,6 +482,15 @@ class AISocketService {
                 else if (response.text) callbacks.onResult(response.text);
             }
         );
+    }
+
+    // Add disconnect event handling methods
+    public onDisconnect(callback: () => void) {
+        this.disconnectListeners.add(callback)
+    }
+
+    public offDisconnect(callback: () => void) {
+        this.disconnectListeners.delete(callback)
     }
 }
 

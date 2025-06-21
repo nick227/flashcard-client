@@ -9,7 +9,7 @@
         {{ previewMode ? 'Back to Edit' : 'Preview' }}
       </button>
     </div>
-    <div class="card-container">
+    <div class="cards-container">
       <!-- Edit mode: show editable front/back fields -->
       <CardEditor
         v-if="!previewMode"
@@ -17,6 +17,7 @@
         :title="props.title || ''"
         :description="props.description || ''"
         :category="props.category || ''"
+        :onImageFile="props.onImageFile"
         @update="onEditCard"
       />
       <!-- Preview mode: show card scaffold component -->
@@ -43,13 +44,13 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import type { FlashCard } from '@/types/card'
+import type { Card } from '@/types/card'
 import CardEditor from '@/components/creator/CardEditor.vue'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
 import type { CardViewMode } from '@/composables/useCardMediaStyles'
 
 const props = defineProps<{
-  card: FlashCard
+  card: Card
   viewMode?: CardViewMode
   mode?: 'single' | 'multiple'
   autoFocus?: boolean
@@ -57,6 +58,7 @@ const props = defineProps<{
   title?: string
   description?: string
   category?: string
+  onImageFile?: (data: { file: File, side: 'front' | 'back', cellIndex: number }) => void
 }>()
 
 const emit = defineEmits(['update', 'delete', 'request-delete'])
@@ -79,7 +81,7 @@ watch(() => props.card, (newCard) => {
   localCard.value = { ...newCard }
 }, { deep: true })
 
-function onEditCard(updatedCard: FlashCard) {
+function onEditCard(updatedCard: Card) {
   localCard.value = { ...updatedCard }
   emitUpdate()
 }
@@ -115,11 +117,8 @@ const onRequestDelete = () => {
   border-color: #ef4444 !important;
 }
 
-.card-container {
-  display: flex;
-  flex-direction: column;
+.cards-container {
   height: 100%;
-  align-items: center;
 }
 
 .flip-button {

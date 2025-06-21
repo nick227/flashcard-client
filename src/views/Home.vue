@@ -1,41 +1,47 @@
 <template>
-  <div class="container py-0">
-    <HomeHero />
-
-    <!-- Featured Set -->
-    <div v-if="featuredSet">
-      <FeaturedSet :set="featuredSet" @view="startLearning" />
+  <div class="home-page">
+    <div class="container py-8">
+      <SiteLandingPage />
     </div>
+    <div class="container py-0">
+      <HomeHero />
 
-    <!-- All Sets Grid -->
-    <section class="section">
-      <h2 class="mb-8 text-2xl font-bold text-center">Popular Sets</h2>
-      <div v-if="loading" class="text-gray-500 text-center">Loading sets...</div>
-      <div v-else class="cards-grid">
-        <SetPreviewCard
-          v-for="set in sets"
-          :key="set.id"
-          :set="set"
-          @view="startLearning"
-        />
+      <!-- Featured Set -->
+      <div v-if="featuredSet">
+        <FeaturedSet :set="featuredSet" @view="startLearning" />
       </div>
-    </section>
 
-    <!-- Call to Action Section -->
-    <section class="section text-center">
-      <h2 class="text-2xl font-bold mb-4">Ready to start your learning journey?</h2>
-      <p class="mb-6 text-lg opacity-80 max-w-2xl mx-auto">Sign up for free and get instant access to hundreds of flash card sets, or create your own to help others learn.</p>
-      <button @click="router.push('/creator')" class="button button-accent text-lg px-10 py-4">Get Started</button>
-    </section>
+      <!-- All Sets Grid -->
+      <section class="section">
+        <h2 class="mb-8 text-2xl font-bold text-center">Popular Sets</h2>
+        <div v-if="loading" class="text-gray-500 text-center">Loading sets...</div>
+        <div v-else class="cards-grid">
+          <SetPreviewCard
+            v-for="set in sets"
+            :key="set.id"
+            :set="set"
+            @view="startLearning"
+          />
+        </div>
+      </section>
+
+      <!-- Call to Action Section -->
+      <section class="section text-center">
+        <h2 class="text-2xl font-bold mb-4">Ready to start your learning journey?</h2>
+        <p class="mb-6 text-lg opacity-80 max-w-2xl mx-auto">Sign up for free and get instant access to hundreds of flash card sets, or create your own to help others learn.</p>
+        <button @click="router.push('/creator')" class="button button-accent text-lg px-10 py-4">Get Started</button>
+      </section>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import HomeHero from '../components/sections/HomeHero.vue'
-import SetPreviewCard from '../components/cards/SetPreviewCard.vue'
-import FeaturedSet from '../components/home/FeaturedSet.vue'
+import HomeHero from '@/components/sections/HomeHero.vue'
+import SetPreviewCard from '@/components/cards/SetPreviewCard.vue'
+import FeaturedSet from '@/components/home/FeaturedSet.vue'
+import SiteLandingPage from '@/components/home/SiteLandingPage.vue'
 import type { Set } from '@/types/set'
 import { api } from '@/api'
 
@@ -53,7 +59,7 @@ const fetchSets = async () => {
     const res = await api.get('/sets', {
       params: {
         page: 1,
-        limit: 9,
+        limit: 12,
         sortOrder: 'newest'
       }
     })
@@ -68,17 +74,27 @@ const fetchSets = async () => {
       // Ensure all required properties are present
       featuredSet.value = {
         ...set,
-        educatorId: set.educatorId || set.userId, // Fallback to userId if educatorId is not present
-        educatorName: set.educatorName || 'Anonymous', // Fallback to Anonymous if educatorName is not present
-        tags: set.tags || [], // Ensure tags is always an array
-        price: set.price || { type: 'free' }, // Ensure price is always present
+        educatorId: set.educatorId || set.userId,
+        educatorName: set.educatorName || 'Anonymous',
+        tags: set.tags || [],
+        price: set.price || { type: 'free' },
         views: set.views || 0,
         likes: set.likes || 0,
         cardsCount: set.cardsCount || 0,
         type: set.type || 'free',
         isPublic: set.isPublic ?? true,
         hidden: set.hidden ?? false,
-        thumbnail: set.thumbnail || set.thumbnailUrl || ''
+        thumbnail: set.thumbnail || set.thumbnailUrl || '',
+        cards: set.cards?.map((card: any) => ({
+          id: card.id,
+          front: card.front,
+          back: card.back,
+          hint: card.hint || null,
+          front_image: card.front_image,
+          back_image: card.back_image,
+          layout_front: card.layout_front,
+          layout_back: card.layout_back
+        })) || []
       }
     } else {
       featuredSet.value = null

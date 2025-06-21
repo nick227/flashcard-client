@@ -159,7 +159,7 @@ defineEmits<{
 
 <style scoped>
 .featured-set {
-  @apply w-full py-8 md:py-16 md:px-8 mb-8 md:mb-16 bg-gradient-to-r from-gray-50 to-white overflow-hidden;
+  @apply w-full py-8 md:py-16 md:px-8 mb-8 md:mb-16;
 }
 
 .featured-content {
@@ -200,10 +200,6 @@ defineEmits<{
 
 .featured-image img {
   transition: opacity 0.2s ease;
-}
-
-.featured-image img:hover {
-  opacity: 0.9;
 }
 
 .featured-image .text-8xl {

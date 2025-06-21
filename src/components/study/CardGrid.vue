@@ -27,10 +27,7 @@ defineEmits<{
 
 // Helper function to safely get card ID
 function getCardId(card: Card): number {
-  if (typeof card.id !== 'number') {
-    throw new Error('Card ID must be a number')
-  }
-  return card.id
+  return Number(card.id)
 }
 </script>
 

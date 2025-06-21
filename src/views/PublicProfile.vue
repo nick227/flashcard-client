@@ -68,7 +68,10 @@ const totalPages = ref(1)
 
 const fetchEducator = async () => {
   try {
+    console.log('Fetching educator with name:', targetEducatorName)
     const res = await api.get(`/users?name=${targetEducatorName}`)
+    console.log('Educator API response:', res.data)
+    
     const userData = Array.isArray(res.data) ? res.data[0] : res.data
     
     if (!userData) {
@@ -87,6 +90,8 @@ const fetchEducator = async () => {
       role: userData.role || { id: 1, name: 'user' }
     }
 
+    console.log('Processed educator data:', educator.value)
+
     if (educator.value && educator.value.id) {
       await fetchSets()
     } else {
@@ -103,6 +108,8 @@ const fetchEducator = async () => {
 const fetchSets = async () => {
   try {
     loading.value = true
+    console.log('Fetching sets for educator ID:', educator.value?.id)
+    
     const res = await api.get(`/sets`, {
       params: {
         educator_id: educator.value?.id,
@@ -111,36 +118,59 @@ const fetchSets = async () => {
       }
     })
 
+    console.log('Sets API response:', res.data)
+
     if (!res.data || !res.data.items) {
       sets.value = []
       return
     }
 
     const items = Array.isArray(res.data.items) ? res.data.items : []
-    sets.value = items.map((set: any) => ({
-      id: set.id,
-      title: set.title,
-      description: set.description,
-      image: set.thumbnailUrl || set.image,
-      thumbnail: set.thumbnailUrl || set.image,
-      educatorName: educator.value?.name || '',
-      price: set.price || { type: 'free' },
-      category: set.category,
-      tags: set.tags || [],
-      createdAt: set.createdAt,
-      updatedAt: set.updatedAt,
-      cardsCount: set.cards?.length || 0,
-      type: set.type || 'public',
-      isPublic: true,
-      isPurchased: false,
-      isLiked: false,
-      hidden: false,
-      views: set.views || 0,
-      likes: set.likes || 0,
-      educatorId: educator.value?.id,
-      educatorImage: educator.value?.image || undefined,
-      cards: undefined
-    }))
+    console.log('Raw set items:', items)
+    
+    // Debug first set's category and tags
+    if (items.length > 0) {
+      console.log('First set category:', items[0].category, 'Type:', typeof items[0].category)
+      console.log('First set tags:', items[0].tags, 'Type:', typeof items[0].tags)
+    }
+    
+    sets.value = items.map((set: any) => {
+      const mappedSet = {
+        id: set.id,
+        title: set.title,
+        description: set.description,
+        image: set.image || set.thumbnail || '/images/default-set.png',
+        thumbnail: set.image || set.thumbnail || '/images/default-set.png',
+        educatorName: set.educatorName || educator.value?.name || '',
+        price: set.price || { type: 'free' },
+        category: typeof set.category === 'string' ? set.category : (set.category?.name || 'Uncategorized'),
+        tags: Array.isArray(set.tags) ? set.tags.map((tag: any) => typeof tag === 'string' ? tag : tag.name).filter(Boolean) : [],
+        createdAt: set.createdAt || set.created_at,
+        updatedAt: set.updatedAt || set.updated_at,
+        cardsCount: set.cards?.length || 0,
+        type: set.type || 'public',
+        isPublic: true,
+        isPurchased: false,
+        isLiked: false,
+        hidden: set.hidden || false,
+        views: set.views || 0,
+        likes: set.likes || 0,
+        educatorId: set.educatorId || educator.value?.id,
+        educatorImage: set.educatorImage || educator.value?.image || undefined,
+        cards: set.cards?.map((card: any) => ({
+          id: card.id,
+          front: card.front,
+          back: card.back,
+          hint: card.hint || null,
+          front_image: card.front_image,
+          back_image: card.back_image,
+          layout_front: card.layout_front,
+          layout_back: card.layout_back
+        })) || []
+      }
+      console.log('Mapped set:', mappedSet)
+      return mappedSet
+    })
 
     totalPages.value = res.data.pagination?.totalPages || 1
   } catch (err) {

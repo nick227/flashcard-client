@@ -95,11 +95,25 @@ export const cachedApiEndpoints = {
       key: `categories:${inUseOnly}`
     }),
 
+  // Random categories with sets for landing page
+  getRandomCategoriesWithSets: (limit = 4, setsPerCategory = 5) => 
+    cachedApi.get('categories/random-with-sets', { limit, setsPerCategory }, {
+      ttl: 10 * 60 * 1000, // 10 minutes
+      key: `categories:random:${limit}:${setsPerCategory}`
+    }),
+
   // Tags
   getTags: () => 
     cachedApi.get('tags', undefined, {
       ttl: 5 * 60 * 1000, // 5 minutes
       key: 'tags'
+    }),
+
+  // Newest User
+  getNewestUser: () => 
+    cachedApi.get('users/newest', undefined, {
+      ttl: 10 * 60 * 1000, // 10 minutes - longer cache since newest user doesn't change frequently
+      key: 'users:newest'
     }),
 
   // Set cards

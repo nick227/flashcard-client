@@ -89,6 +89,7 @@ export const api = apiConfig.getApi()
 
 // API Endpoints
 export const apiEndpoints = {
+  stockImages: 'stock-images',
   auth: {
     login: 'auth/login',
     logout: 'auth/logout',
@@ -118,6 +119,12 @@ export const apiEndpoints = {
     set: (setId: number) => `history/set/${setId}`
   },
   categories: 'categories',
+  categoriesRandomWithSets: (limit?: number, setsPerCategory?: number) => {
+    const params = new URLSearchParams()
+    if (limit !== undefined) params.append('limit', limit.toString())
+    if (setsPerCategory !== undefined) params.append('setsPerCategory', setsPerCategory.toString())
+    return `categories/random-with-sets${params.toString() ? `?${params.toString()}` : ''}`
+  },
   tags: 'tags',
   setTags: 'set-tags'
 }
@@ -201,6 +208,38 @@ export async function fetchCategories(inUseOnly: boolean = false): Promise<{ id:
 }
 
 /**
+ * Fetch random categories with their sets for landing page.
+ * @param limit - Number of categories to return (default: 4)
+ * @param setsPerCategory - Number of sets per category (default: 5)
+ * @returns Promise with array of categories with sets
+ */
+export async function fetchRandomCategoriesWithSets(limit: number = 4, setsPerCategory: number = 5): Promise<Array<{
+  id: number;
+  name: string;
+  sets: Array<{
+    id: number;
+    title: string;
+    description: string;
+    thumbnail: string | null;
+    price: number;
+    isSubscriberOnly: boolean;
+    educator: {
+      id: number;
+      name: string;
+      image: string | null;
+    } | null;
+  }>;
+}>> {
+  try {
+    const res = await api.get(apiEndpoints.categoriesRandomWithSets(limit, setsPerCategory));
+    return res.data;
+  } catch (error) {
+    console.error('Error fetching random categories with sets:', error);
+    throw new Error('Failed to fetch random categories with sets');
+  }
+}
+
+/**
  * Fetch unique tags from sets (if sets have tags array), else fallback to static tags.
  */
 export async function fetchAvailableTags() {
@@ -275,11 +314,6 @@ export async function createSetWithCards(formData: FormData) {
  */
 export async function updateSetWithCards(setId: number, formData: FormData) {
   try {
-    console.log('Frontend: Starting set update for ID:', setId);
-    console.log('Frontend: FormData contents:');
-    for (let pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
-    }
 
     const response = await api.put(`${apiEndpoints.sets.base}/${setId}`, formData, {
       headers: {
@@ -292,7 +326,6 @@ export async function updateSetWithCards(setId: number, formData: FormData) {
 
     // Invalidate sets cache after update
     cacheService.deleteByPrefix('sets:');
-    console.log('Frontend: Update response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Frontend: Update error:', error);

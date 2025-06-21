@@ -1,112 +1,172 @@
-import axios, { AxiosError } from 'axios'
+import type { Card, CardLayout } from '@/types/card'
+import type { Set, SetCreate, SetUpdate } from '@/types/set'
+import { VALIDATION_LIMITS } from '@/constants/validation'
 import { api } from '@/api'
-import type { FlashCard, SetPrice } from '@/types'
-import type { Card, CardData } from '@/types/card'
-import { CardTransformService } from './CardTransformService'
-
-export interface SetFormData {
-  title: string
-  description: string
-  categoryId: number
-  price: SetPrice
-  tags: string[]
-  thumbnail: string | null
-  cards: FlashCard[]
-  educatorId: number
-}
-
-interface ErrorResponse {
-  error: string;
-  message?: string;
-}
+import { createCellsFromSide } from '@/utils/cellUtils'
 
 export class SetService {
-  private static handleError(error: unknown): never {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<ErrorResponse>
-      throw new Error(axiosError.response?.data?.error || axiosError.message || 'An unexpected error occurred')
-    }
-    throw error
-  }
-
-  static async createSet(formData: FormData) {
-    try {
-      const response = await api.post('/sets', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      return response.data
-    } catch (error) {
-      return SetService.handleError(error)
-    }
-  }
-
-  static async updateSet(setId: number, formData: FormData) {
-    try {
-      const response = await api.patch(`/sets/${setId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-      return response.data
-    } catch (error) {
-      return SetService.handleError(error)
+  static createEmptySet(): Set {
+    return {
+      id: this.generateId(),
+      title: '',
+      description: '',
+      category: '',
+      type: 'free',
+      userId: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      views: 0,
+      likes: 0,
+      cardsCount: 0,
+      tags: [],
+      isPublic: false,
+      price: {
+        type: 'free'
+      },
+      educatorId: 0,
+      educatorName: '',
+      thumbnail: '',
+      hidden: false,
+      cards: [],
+      isArchived: false
     }
   }
 
-  static async fetchSet(setId: number) {
-    try {
-      const response = await api.get(`/sets/${setId}`)
-      return response.data
-    } catch (error) {
-      return SetService.handleError(error)
+  private static generateId(): number {
+    return Date.now()
+  }
+
+  static validateSet(set: Set): { isValid: boolean; error?: string } {
+    if (!set.title.trim()) {
+      return { isValid: false, error: 'Title is required.' }
+    }
+
+    if (set.title.length > VALIDATION_LIMITS.CARD.MAX_CHARS) {
+      return { isValid: false, error: `Title cannot exceed ${VALIDATION_LIMITS.CARD.MAX_CHARS} characters.` }
+    }
+
+    if (set.description && set.description.length > VALIDATION_LIMITS.CARD.MAX_CHARS) {
+      return { isValid: false, error: `Description cannot exceed ${VALIDATION_LIMITS.CARD.MAX_CHARS} characters.` }
+    }
+
+    if (set.cards.length === 0) {
+      return { isValid: false, error: 'At least one card is required.' }
+    }
+
+    return { isValid: true }
+  }
+
+  static updateLocalSet(sets: Set[], updatedSet: Set): Set[] {
+    return sets.map(set => set.id === updatedSet.id ? updatedSet : set)
+  }
+
+  static deleteLocalSet(sets: Set[], id: number): Set[] {
+    return sets.filter(set => set.id !== id)
+  }
+
+  static createEmptySetCreate(): SetCreate {
+    return {
+      title: '',
+      description: '',
+      categoryId: 0,
+      tags: [],
+      isPublic: false,
+      isArchived: false,
+      price: '0',
+      isSubscriberOnly: false,
+      cards: []
     }
   }
 
-  static async fetchSetCards(setId: number) {
-    try {
-      const response = await api.get(`/cards?setId=${setId}`)
-      // Transform the response data to view model
-      return response.data.map((card: CardData) => CardTransformService.toView(card))
-    } catch (error) {
-      return SetService.handleError(error)
+  static createEmptySetUpdate(): SetUpdate {
+    return {
+      id: 0,
+      title: '',
+      description: '',
+      categoryId: 0,
+      tags: [],
+      isPublic: false,
+      isArchived: false,
+      price: '0',
+      isSubscriberOnly: false,
+      cards: []
     }
   }
 
-  static prepareFormData(data: {
-    title: string
-    description: string
-    categoryId: number
-    price: SetPrice
-    tags: string[]
-    thumbnail: string | null
-    cards: Card[]
-    educatorId: number
-  }) {
-    const formData = new FormData()
-    formData.append('title', data.title.trim())
-    formData.append('description', data.description.trim())
-    formData.append('categoryId', data.categoryId.toString())
+  static async fetchSet(setId: number): Promise<Set> {
+    const response = await api.get(`/sets/${setId}`)
+    return response.data
+  }
+
+  static async fetchSetCards(setId: number): Promise<Card[]> {
+    const response = await api.get(`/sets/${setId}/cards`)
+    const cardsData = response.data.cards || [];
+    return cardsData.map((card: any) => this.transformCard(card))
+  }
+
+  // Helper method to transform backend card format to frontend Card type
+  static transformCard(card: {
+    id: string | number;
+    title?: string;
+    description?: string;
+    front?: { text?: string; imageUrl?: string; layout?: string };
+    back?: { text?: string; imageUrl?: string; layout?: string };
+    hint?: string | null;
+    createdAt: string | Date;
+    updatedAt: string | Date;
+    reviewCount?: number;
+    difficulty?: number;
+    userId?: string;
+    deckId?: string;
+    isArchived?: boolean;
+    isPublic?: boolean;
+  }): Card {
+    // Preserve existing card ID if it exists, otherwise generate a new one
+    const cardId = card.id ? Number(card.id) : this.generateId();
     
-    // Handle price based on type
-    const priceAmount = data.price.type === 'free' || data.price.type === 'subscribers' 
-      ? 0 
-      : data.price.amount || 0
-    formData.append('price', priceAmount.toString())
-    formData.append('isSubscriberOnly', data.price.type === 'subscribers' ? 'true' : 'false')
-    
-    formData.append('tags', JSON.stringify(data.tags))
-    if (data.thumbnail) {
-      formData.append('thumbnailUrl', data.thumbnail)
+    return {
+      id: cardId,
+      title: card.title || '',
+      description: card.description || '',
+      front: {
+        layout: (card.front?.layout || 'default') as CardLayout,
+        cells: createCellsFromSide(card.front || {})
+      },
+      back: {
+        layout: (card.back?.layout || 'default') as CardLayout,
+        cells: createCellsFromSide(card.back || {})
+      },
+      hint: card.hint || null,
+      createdAt: new Date(card.createdAt),
+      updatedAt: new Date(card.updatedAt),
+      reviewCount: card.reviewCount || 0,
+      difficulty: card.difficulty || 0,
+      userId: card.userId || '',
+      deckId: card.deckId || '',
+      isArchived: card.isArchived || false,
+      isPublic: card.isPublic || false
     }
+  }
 
-    // Transform cards to data format
-    const outgoingCards = data.cards.map(card => CardTransformService.toData(card))
+  static async createSet(formData: FormData): Promise<any> {
+    const response = await api.post('/sets', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data
+  }
 
-    console.log('[SetService.prepareFormData] Outgoing cards:', outgoingCards)
-    formData.append('cards', JSON.stringify(outgoingCards))
-    formData.append('educatorId', data.educatorId.toString())
-    return formData
+  static async updateSet(id: number, formData: FormData): Promise<any> {
+    const response = await api.patch(`/sets/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data
+  }
+
+  static async deleteSet(setId: number): Promise<void> {
+    await api.delete(`/sets/${setId}`)
   }
 } 

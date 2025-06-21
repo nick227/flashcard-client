@@ -1,4 +1,3 @@
 export { CacheService } from './CacheService'
-export type { CacheEntry, CacheOptions, CacheEvents, CacheStats } from './types'
-export { BatchManager } from './batching'
+export type { CacheOptions, CacheEvents, CacheStats, CacheEntry } from './types'
 export { CacheStorage } from './storage' 

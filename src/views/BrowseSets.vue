@@ -3,87 +3,48 @@
     <BrowseHero />
 
     <!-- Filter & Sort Controls -->
-    <section class="w-full mb-8 gap-4">
+    <section class="w-full my-8 gap-4">
+      
       <div class="flex flex-wrap gap-4 w-full">
-        <!-- Category Chips -->
-        <div class="flex flex-wrap gap-2 mb-2 w-full">
-          <button
-            @click="onCategoryChipClick('')"
-            :class="[
-              'px-4 py-1 rounded-full border transition-colors',
-              !selectedCategory
-                ? 'bg-blue-600 text-white border-blue-600 shadow'
-                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
-            ]"
+        <!-- Category Dropdown -->
+          <select 
+            v-model="selectedCategory"
+            @change="onCategoryChange"
+            class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white max-w-[200px]"
           >
-            All Categories
-          </button>
-          <button
-            v-for="cat in categories"
-            :key="cat.id"
-            @click="onCategoryChipClick(cat.name)"
-            :class="[
-              'px-4 py-1 rounded-full border transition-colors',
-              selectedCategory === cat.name
-                ? 'bg-blue-600 text-white border-blue-600 shadow'
-                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
-            ]"
+            <option value="">All Categories</option>
+            <option 
+              v-for="cat in categories" 
+              :key="cat.id" 
+              :value="cat.name"
+            >
+              {{ cat.name }} ({{ cat.setCount }})
+            </option>
+          </select>
+
+        <!-- Set Type Dropdown -->
+          <select 
+            v-model="selectedSetType"
+            @change="onSetTypeChange"
+            class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white max-w-[200px]"
           >
-            {{ cat.name }} <span class="ml-1 text-xs">({{ cat.setCount }})</span>
-          </button>
-        </div>
-        <!-- Set Type Chips -->
-        <div class="flex flex-wrap gap-2 mb-2">
-          <button
-            @click="onSetTypeChipClick('')"
-            :class="[
-              'px-4 py-1 rounded-full border transition-colors',
-              !selectedSetType
-                ? 'bg-blue-600 text-white border-blue-600 shadow'
-                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
-            ]"
+            <option value="">All Types</option>
+            <option value="free">Free</option>
+            <option value="premium">Premium</option>
+            <option value="subscriber">Subscriber</option>
+          </select>
+        <!-- Sort -->
+          <select 
+            id="sort" 
+            v-model="sortOrder" 
+            class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white max-w-[200px]"
           >
-            All Types
-          </button>
-          <button
-            @click="onSetTypeChipClick('free')"
-            :class="[
-              'px-4 py-1 rounded-full border transition-colors',
-              selectedSetType === 'free'
-                ? 'bg-blue-600 text-white border-blue-600 shadow'
-                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
-            ]"
-          >
-            Free
-          </button>
-          <button
-            @click="onSetTypeChipClick('premium')"
-            :class="[
-              'px-4 py-1 rounded-full border transition-colors',
-              selectedSetType === 'premium'
-                ? 'bg-blue-600 text-white border-blue-600 shadow'
-                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
-            ]"
-          >
-            Premium
-          </button>
-          <button
-            @click="onSetTypeChipClick('subscriber')"
-            :class="[
-              'px-4 py-1 rounded-full border transition-colors',
-              selectedSetType === 'subscriber'
-                ? 'bg-blue-600 text-white border-blue-600 shadow'
-                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-blue-100 hover:border-blue-400'
-            ]"
-          >
-            Subscriber
-          </button>
-        </div>
-      </div>
-      <!-- Search and Sort Controls -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
+            <option value="featured">Featured</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+          </select>
         <!-- Search -->
-        <div class="relative flex-1 max-w-md">
+        <div class="relative flex-1">
           <input 
             type="text" 
             v-model="searchQuery" 
@@ -92,33 +53,12 @@
             @input="onSearchInput"
             :disabled="loading"
           />
-          <button 
-            v-if="searchQuery" 
-            @click="clearSearch" 
-            class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-700"
-            :disabled="loading"
-          >
-            <span class="sr-only">Clear search</span>
-            ✕
-          </button>
         </div>
-        <!-- Sort -->
-        <div class="flex items-center gap-2">
-          <select 
-            id="sort" 
-            v-model="sortOrder" 
-            class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-          >
-            <option value="featured">Featured</option>
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-          </select>
-        </div>
+      </div>
         <!-- Loading indicator -->
         <div v-if="loading" class="flex items-center">
           <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
         </div>
-      </div>
     </section>
 
     <!-- Error Message -->
@@ -257,15 +197,18 @@ watch(sortOrder, (newOrder) => {
   }
 })
 
-const onCategoryChipClick = (catName: string) => {
+const onCategoryChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  const catName = target.value
   // Update URL without triggering a full route change
   const newPath = catName ? `/browse/${encodeURIComponent(catName)}` : '/browse'
   window.history.pushState({}, '', newPath)
   updateCategory(catName)
 }
 
-const onSetTypeChipClick = (type: string) => {
-  selectedSetType.value = type
+const onSetTypeChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  const type = target.value
   updateSetType(type)
 }
 
@@ -368,11 +311,6 @@ watch(() => route.fullPath, () => {
     batchTimeout = null
   }
 })
-
-const clearSearch = () => {
-  searchQuery.value = ''
-  updateSearch('')
-}
 </script>
 
 <style scoped>
@@ -383,5 +321,12 @@ const clearSearch = () => {
 
 .search-input {
   width: calc(100% - 20px);
+}
+
+@media (max-width: 768px) {
+  select {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 </style> 

@@ -1,62 +1,70 @@
 <template>
-  <div v-if="set" class="card">
+  <div v-if="set" class="card flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl">
     <!-- Image Container -->
-    <div @click="handleView" class="relative img-container link"
-      :style="{ backgroundImage: `url(${set.image || set.thumbnail || '/images/default-set.png'})` }">
+    <div @click="handleView" class="relative cursor-pointer">
+      <div class="aspect-video w-full">
+        <img 
+          :src="set.image || set.thumbnail || '/images/default-set.png'" 
+          :alt="set.title" 
+          class="h-full w-full object-cover"
+          loading="lazy"
+        />
+      </div>
       <!-- Price Badge -->
-      <div class="absolute top-3 right-3">
+      <div class="absolute top-2 right-2">
         <span v-if="typeof set.price === 'number' ? set.price > 0 : set.price.type !== 'free'"
-          class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-full shadow-sm">
+          class="rounded-full bg-black bg-opacity-60 px-2 py-1 text-xs font-bold text-white">
           ${{ typeof set.price === 'number' ? set.price : set.price.amount || 0 }}
         </span>
-      </div>
-
-
-      <!-- Category Badge -->
-      <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })"
-        class="text-xs px-2 py-0.5 rounded-full mb-2 cursor-pointer bg-gray-100 category-badge">
-        {{ set.category }}
       </div>
     </div>
 
     <!-- Content Container -->
-    <div class="flex flex-col content-container">
-      <!-- Title -->
-      <h3 @click="handleView"
-        class="text-xl font-semibold mb-2 cursor-pointer hover:text-blue-600 transition-colors p-2"
-        :style="{ backgroundColor: categoryColor }">
-        {{ set.title }}
-      </h3>
-
-      <!-- Description -->
-      <p class="text-gray-600 text-sm mb-4 flex-grow p-2">{{ set.description }}
-        <!-- Tags -->
-        <span v-for="tag in set.tags" :key="tag" class="tag text-xs rounded-full">
-          {{ tag }}
-        </span>
-      </p>
-
-      <!-- Footer -->
-      <div class="flex items-center justify-between mt-auto pt-3 border-t bg-gray-100 p-2">
-        <a @click="handleUserView"
-          class="text-sm text-gray-500 cursor-pointer hover:text-blue-600 transition-colors truncate max-w-[40%]">
-          {{ set.educatorName }}
-        </a>
-
-
-        <!-- Stats -->
-        <div class="flex items-center space-x-4 text-sm text-gray-500 p-2">
-          <span class="flex items-center" title="Views">
-            <EyeIcon class="w-4 h-4 mr-1" />
-            {{ formatNumber(views) }}
-          </span>
-          <span class="flex items-center" title="Likes">
-            <HeartIcon class="w-4 h-4 mr-1" />
-            {{ formatNumber(likes) }}
-          </span>
-          <span class="flex items-center" title="Cards">
-            <DocumentIcon class="w-4 h-4 mr-1" />
-            {{ formatNumber(cards) }}
+    <div class="flex flex-grow flex-col p-4">
+      <div class="flex items-start gap-3">
+        <!-- Educator Avatar -->
+        <div @click="handleUserView" class="flex-shrink-0 cursor-pointer">
+          <img 
+            :src="set.educatorImage || '/images/default-avatar.png'" 
+            :alt="set.educatorName" 
+            class="h-10 w-10 rounded-full object-cover"
+            loading="lazy"
+          />
+        </div>
+        
+        <div class="min-w-0 flex-grow">
+          <!-- Title -->
+          <h3 @click="handleView"
+            class="truncate-2-lines text-base font-semibold leading-tight text-gray-800 hover:text-blue-600 card-title">
+            {{ set.title }}
+          </h3>
+          
+          <!-- Educator Name & Stats -->
+          <div class="mt-1">
+            <a @click="handleUserView"
+              class="text-sm text-gray-500 hover:text-blue-600">
+              {{ set.educatorName }}
+            </a>
+            <div class="flex items-center space-x-2 text-xs text-gray-500">
+              <span>{{ formatNumber(views) }} views</span>
+              <span aria-hidden="true">&middot;</span>
+              <span>{{ formatNumber(likes) }} likes</span>
+              <span aria-hidden="true">&middot;</span>
+              <span>{{ cards }} cards</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Category & Tags Footer -->
+      <div class="mt-auto flex items-center justify-between pt-4 text-xs">
+         <div v-if="set.category" @click="router.push({ path: '/browse/' + set.category })"
+          class="cursor-pointer rounded-full bg-gray-100 px-2 py-1 text-gray-700 hover:bg-gray-200">
+          {{ set.category }}
+        </div>
+        <div class="flex items-center gap-2 overflow-hidden">
+          <span v-for="tag in (set.tags || []).slice(0, 2)" :key="tag" class="text-gray-500">
+            #{{ tag }}
           </span>
         </div>
       </div>
@@ -66,10 +74,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { EyeIcon, HeartIcon, DocumentIcon } from '@heroicons/vue/24/outline'
 import { useRouter } from 'vue-router'
 import { cachedApiEndpoints } from '@/services/CachedApiService'
-import { useCategoryColor } from '@/composables/useCategoryColor'
 
 const router = useRouter()
 
@@ -85,7 +91,16 @@ const props = defineProps<{
     tags?: string[]
     views?: number
     likes?: number
-    cards?: { id: number; setId: number; front: string; back: string; hint?: string }[]
+    cards?: Array<{
+      id: number
+      front: string | { text: string; imageUrl: string | null; layout: string }
+      back: string | { text: string; imageUrl: string | null; layout: string }
+      hint?: string | null
+      front_image?: string | null
+      back_image?: string | null
+      layout_front?: string
+      layout_back?: string
+    }>
     cardsCount?: number
     category?: string
     categoryId?: number
@@ -100,8 +115,6 @@ const props = defineProps<{
     educatorImage?: string | null
   }
 }>()
-
-const { color: categoryColor } = useCategoryColor(props.set?.categoryId)
 
 const emit = defineEmits<{
   (e: 'view', setId: number): void
@@ -121,6 +134,7 @@ const handleUserView = () => {
   if (!props.set) return
   router.push(`/u/${props.set.educatorName}`)
 }
+
 
 // Format number with K/M suffix for large numbers
 const formatNumber = (num: number): string => {
@@ -190,38 +204,22 @@ const cards = computed(() => {
 </script>
 
 <style scoped>
-.card {
-  min-height: 420px;
-  display: flex;
-  flex-direction: column;
+.truncate-2-lines {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Remove default margin from h3 */
-h3 {
-  margin: 0;
+.card {
+  /* Ensure the card itself doesn't have a fixed height so it can be defined by its content and aspect ratio image */
+  height: 100%; 
 }
 
-.img-container {
-  width: 100%;
-  height: 260px;
-  content: "";
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+.card-title {
+  margin-top: 2px;
+  font-size: 1.25em;
 }
 
-.content-container {
-  width: 100%;
-  height: 180px;
-}
-
-.tag {
-  text-decoration: underline;
-  padding: 0.25rem;
-  border-radius: 0.25rem;
-  display: inline-block;
-  margin-left: 0.5rem;
-  float: right;
-}
 </style>

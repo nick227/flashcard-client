@@ -2,26 +2,18 @@ import { ref, computed } from 'vue'
 import type { CacheEntry, CacheOptions, CacheEvents, CacheStats } from './types'
 import { DEFAULT_OPTIONS } from './types'
 import { CacheStorage } from './storage'
-import { BatchManager } from './batching'
 
 const MEMORY_WARNING_THRESHOLD = 0.8 // 80% of max memory
 const STORAGE_RETRY_ATTEMPTS = 3
 const STORAGE_RETRY_DELAY = 1000 // 1 second
-const BATCH_TIMEOUT = 30000 // 30 seconds
-const CLEANUP_BATCH_SIZE = 100
 
 export class CacheService {
   private cache: Map<string, CacheEntry<any>>
   private options: CacheOptions
   private cleanupIntervalId: number | null = null
   private stats: CacheStats = { hits: 0, misses: 0, sets: 0, evictions: 0 }
-  private requestQueue: Map<string, Promise<any>> = new Map()
-  private batchQueue: Map<string, Array<() => Promise<any>>> = new Map()
-  private batchTimeouts: Map<string, number> = new Map()
   private events: CacheEvents = {}
   private storage: CacheStorage
-  private batchManager: BatchManager
-  private locks: Map<string, Promise<void>> = new Map()
   private cleanupInProgress = false
   private initialized = false
 
@@ -39,10 +31,6 @@ export class CacheService {
     this.events = events
     this.cache = new Map()
     this.storage = new CacheStorage(this.options)
-    this.batchManager = new BatchManager({
-      ...this.options,
-      timeout: BATCH_TIMEOUT
-    })
   }
 
   async initialize() {
@@ -149,271 +137,96 @@ export class CacheService {
     }
   }
 
-  private async acquireLock(key: string): Promise<void> {
-    while (this.locks.has(key)) {
-      await this.locks.get(key)
-    }
-    this.locks.set(key, new Promise(resolve => {
-      setTimeout(() => {
-        this.locks.delete(key)
-        resolve()
-      }, 5000) // 5 second timeout to prevent deadlocks
-    }))
-  }
-
-  private releaseLock(key: string): void {
-    this.locks.delete(key)
-  }
-
   async get<T>(key: string): Promise<T | null> {
-    await this.acquireLock(key)
-    try {
-      const entry = this.cache.get(key)
-      if (!entry) {
-        this.stats.misses++
-        if (this.options.logging) console.log(`[Cache] MISS: ${key}`)
-        return null
-      }
-      if (Date.now() > entry.expiresAt) {
-        this.cache.delete(key)
-        this.stats.misses++
-        this.events.onExpire?.(key)
-        if (this.options.logging) console.log(`[Cache] EXPIRED: ${key}`)
-        return null
-      }
-      entry.lastAccessed = Date.now()
-      this.stats.hits++
-      if (this.options.logging) console.log(`[Cache] HIT: ${key}`)
-      return entry.data
-    } finally {
-      this.releaseLock(key)
+    const entry = this.cache.get(key)
+    if (!entry) {
+      this.stats.misses++
+      if (this.options.logging) console.log(`[Cache] MISS: ${key}`)
+      return null
     }
-  }
-
-  private getBatchKey(key: string): string {
-    try {
-      // Extract the base resource and action from the key
-      const match = key.match(/^([^|]+)\|get\|\/([^\/]+)(?:\/batch\/([^\/]+))?/)
-      if (!match) return key
-      
-      const [, , resource, action] = match
-      
-      // For batch operations, use the full key
-      if (action) return key
-      
-      // For main resources, batch by resource
-      return resource
-    } catch (error) {
-      console.warn('Error in getBatchKey for key:', key, error)
-      return key
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key)
+      this.stats.misses++
+      this.events.onExpire?.(key)
+      if (this.options.logging) console.log(`[Cache] EXPIRED: ${key}`)
+      return null
     }
+    entry.lastAccessed = Date.now()
+    this.stats.hits++
+    if (this.options.logging) console.log(`[Cache] HIT: ${key}`)
+    return entry.data
   }
 
   async getOrSet<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<T> {
-    await this.acquireLock(key)
-    try {
-      const cached = await this.get<T>(key)
-      if (cached) {
-        return cached
-      }
-
-      // Check if there's already a pending request
-      if (this.requestQueue.has(key)) {
-        if (this.options.logging) console.log(`[Cache] QUEUED: ${key}`)
-        return this.requestQueue.get(key) as Promise<T>
-      }
-
-      // Handle batching
-      if (this.options.batchWindow && this.options.batchWindow > 0) {
-        const batchKey = this.getBatchKey(key)
-        
-        // If the batch key is the same as the original key, don't batch
-        if (batchKey === key) {
-          const request = fetcher().then(async data => {
-            await this.set(key, data, ttl)
-            this.requestQueue.delete(key)
-            return data
-          }).catch(async (error: any) => {
-            this.requestQueue.delete(key)
-            throw error
-          })
-          this.requestQueue.set(key, request)
-          return request
-        }
-        
-        // Add to batch queue
-        if (!this.batchQueue.has(batchKey)) {
-          this.batchQueue.set(batchKey, [])
-        }
-        
-        const batchPromise = new Promise<T>((resolve, reject) => {
-          this.batchQueue.get(batchKey)!.push(async () => {
-            try {
-              const result = await fetcher()
-              await this.set(key, result, ttl)
-              resolve(result)
-              return result
-            } catch (error: any) {
-              if (error?.__CANCEL__ && error?.promise) {
-                try {
-                  const result = await error.promise
-                  await this.set(key, result.data, ttl)
-                  resolve(result.data)
-                  return result.data
-                } catch (innerError) {
-                  reject(innerError)
-                  throw innerError
-                }
-              }
-              reject(error)
-              throw error
-            }
-          })
-        })
-
-        // Set up batch timeout if not already set
-        if (!this.batchTimeouts.has(batchKey)) {
-          const timeoutId = window.setTimeout(async () => {
-            try {
-              await this.processBatch<T>(batchKey)
-            } catch (error) {
-              console.error('[Cache] Batch processing error:', error)
-              this.events.onError?.(error as Error)
-            }
-          }, this.options.batchWindow)
-          this.batchTimeouts.set(batchKey, timeoutId)
-        }
-
-        // Process batch immediately if it's full or if it's a bulk operation
-        const batch = this.batchQueue.get(batchKey)!
-        if (batch.length >= (this.options.maxBatchSize || 10) || batchKey.includes('bulk')) {
-          return this.processBatch<T>(batchKey)
-        }
-
-        return batchPromise
-      }
-
-      // Handle single request
-      const request = fetcher().then(async data => {
-        await this.set(key, data, ttl)
-        this.requestQueue.delete(key)
-        return data
-      }).catch(async (error: any) => {
-        if (error?.__CANCEL__ && error?.promise) {
-          try {
-            const result = await error.promise
-            await this.set(key, result.data, ttl)
-            this.requestQueue.delete(key)
-            return result.data
-          } catch (innerError) {
-            this.requestQueue.delete(key)
-            throw innerError
-          }
-        }
-        this.requestQueue.delete(key)
-        throw error
-      })
-
-      this.requestQueue.set(key, request)
-      return request
-    } finally {
-      this.releaseLock(key)
-    }
-  }
-
-  private async processBatch<T>(batchKey: string): Promise<T> {
-    const batch = this.batchQueue.get(batchKey)
-    if (!batch || batch.length === 0) {
-      throw new Error('No batch to process')
+    const cached = await this.get<T>(key)
+    if (cached !== null) {
+      return cached
     }
 
-    // Clear the batch queue and timeout
-    this.batchQueue.delete(batchKey)
-    if (this.batchTimeouts.has(batchKey)) {
-      clearTimeout(this.batchTimeouts.get(batchKey)!)
-      this.batchTimeouts.delete(batchKey)
-    }
-
-    // Execute all requests in the batch
-    const results = await Promise.all(batch.map(fn => fn()))
-    
-    // For bulk operations, merge the results
-    if (batchKey.includes('bulk')) {
-      return this.mergeBulkResults(results as Array<Record<string, any>>) as T
-    }
-    
-    return results[0] // Return the first result for non-bulk operations
-  }
-
-  private mergeBulkResults(results: Array<Record<string, any>>): Record<string, any> {
-    if (results.length === 0) return {}
-    
-    // Merge bulk results (assuming they're objects with numeric keys)
-    return results.reduce((merged, result) => {
-      if (typeof result === 'object' && result !== null) {
-        Object.assign(merged, result)
-      }
-      return merged
-    }, {})
+    const data = await fetcher()
+    await this.set(key, data, ttl)
+    return data
   }
 
   async set<T>(key: string, data: T, ttl?: number): Promise<void> {
-    await this.acquireLock(key)
-    try {
-      const now = Date.now()
-      const expiresAt = now + (ttl || this.options.ttl!)
-      const size = this.estimateSize(data)
+    const now = Date.now()
+    const expiresAt = now + (ttl || this.options.ttl!)
+    const size = this.estimateSize(data)
 
-      if (this.currentMemoryUsage.value + size > (this.options.maxMemoryBytes || Infinity)) {
-        await this.evictLRU()
-      }
+    if (this.currentMemoryUsage.value + size > (this.options.maxMemoryBytes || Infinity)) {
+      await this.evictLRU()
+    }
 
-      this.cache.set(key, {
-        data,
-        timestamp: now,
-        expiresAt,
-        lastAccessed: now,
-        size
-      })
+    this.cache.set(key, {
+      data,
+      timestamp: now,
+      expiresAt,
+      lastAccessed: now,
+      size
+    })
 
-      this.currentMemoryUsage.value += size
-      this.size.value = this.cache.size
-      this.stats.sets++
-      
-      if (this.options.logging) {
-        console.log(`[Cache] SET: ${key} (${size} bytes)`)
-      }
-      
-      this.events.onSet?.(key, data)
+    this.currentMemoryUsage.value += size
+    this.size.value = this.cache.size
+    this.stats.sets++
+    
+    if (this.options.logging) {
+      console.log(`[Cache] SET: ${key} (${size} bytes)`)
+    }
+    
+    this.events.onSet?.(key, data)
 
-      if (this.options.persist) {
-        await this.saveToStorage()
-      }
-    } finally {
-      this.releaseLock(key)
+    if (this.options.persist) {
+      await this.saveToStorage()
     }
   }
 
   async delete(key: string): Promise<void> {
-    await this.acquireLock(key)
-    try {
-      const entry = this.cache.get(key)
-      if (entry) {
-        this.currentMemoryUsage.value -= (entry.size || 0)
-        this.cache.delete(key)
-        this.size.value = this.cache.size
-        this.events.onDelete?.(key)
-        if (this.options.logging) console.log(`[Cache] DELETE: ${key}`)
-      }
-    } finally {
-      this.releaseLock(key)
+    const entry = this.cache.get(key)
+    if (entry) {
+      this.currentMemoryUsage.value -= entry.size || 0
+    }
+    this.cache.delete(key)
+    this.size.value = this.cache.size
+    if (this.options.logging) console.log(`[Cache] DELETE: ${key}`)
+    if (this.options.persist) {
+      await this.saveToStorage()
     }
   }
 
   async deleteByPrefix(prefix: string): Promise<void> {
-    const keys = Array.from(this.cache.keys()).filter(key => key.startsWith(prefix))
-    for (const key of keys) {
+    const keysToDelete: string[] = []
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        keysToDelete.push(key)
+      }
+    }
+    
+    for (const key of keysToDelete) {
       await this.delete(key)
+    }
+    
+    if (this.options.logging) {
+      console.log(`[Cache] DELETE BY PREFIX: ${prefix} (${keysToDelete.length} entries)`)
     }
   }
 
@@ -421,60 +234,55 @@ export class CacheService {
     this.cache.clear()
     this.currentMemoryUsage.value = 0
     this.size.value = 0
-    await this.batchManager.clearAllBatches()
     if (this.options.logging) console.log('[Cache] CLEAR: All entries')
+    if (this.options.persist) {
+      await this.saveToStorage()
+    }
   }
 
   private async evictLRU(count: number = 1): Promise<void> {
     const entries = Array.from(this.cache.entries())
-      .sort(([, a], [, b]) => a.lastAccessed - b.lastAccessed)
+      .sort((a, b) => a[1].lastAccessed - b[1].lastAccessed)
       .slice(0, count)
 
-    for (const [key, entry] of entries) {
-      await this.acquireLock(key)
-      try {
-        this.currentMemoryUsage.value -= (entry.size || 0)
-        this.cache.delete(key)
-        this.stats.evictions++
-        this.events.onEvict?.(key, 'size')
-        if (this.options.logging) console.log(`[Cache] EVICT LRU: ${key} (${entry.size} bytes)`)
-      } finally {
-        this.releaseLock(key)
-      }
+    for (const [key] of entries) {
+      await this.delete(key)
+    }
+
+    this.stats.evictions += entries.length
+    if (this.options.logging) {
+      console.log(`[Cache] EVICTED: ${entries.length} entries`)
     }
   }
 
   private startCleanupInterval(): void {
     if (this.cleanupIntervalId) return
-    const interval = this.options.cleanupInterval || DEFAULT_OPTIONS.cleanupInterval
+    
     this.cleanupIntervalId = window.setInterval(() => {
       if (this.cleanupInProgress) return
       this.cleanupInProgress = true
+      this.cleanup()
+      this.cleanupInProgress = false
+    }, this.options.cleanupInterval || 60000)
+  }
 
-      try {
-        const now = Date.now()
-        const entries = Array.from(this.cache.entries())
-        let count = 0
+  private async cleanup(): Promise<void> {
+    const now = Date.now()
+    const expiredKeys: string[] = []
 
-        for (let i = 0; i < entries.length; i += CLEANUP_BATCH_SIZE) {
-          const batch = entries.slice(i, i + CLEANUP_BATCH_SIZE)
-          for (const [key, entry] of batch) {
-            if (now > entry.expiresAt) {
-              this.delete(key)
-              count++
-            }
-          }
-          // Allow other operations between batches
-          setTimeout(() => {}, 0)
-        }
-
-        if (count > 0 && this.options.logging) {
-          console.log(`[Cache] CLEANUP: Removed ${count} expired entries`)
-        }
-      } finally {
-        this.cleanupInProgress = false
+    for (const [key, entry] of this.cache.entries()) {
+      if (now > entry.expiresAt) {
+        expiredKeys.push(key)
       }
-    }, interval)
+    }
+
+    for (const key of expiredKeys) {
+      await this.delete(key)
+    }
+
+    if (expiredKeys.length > 0 && this.options.logging) {
+      console.log(`[Cache] CLEANUP: Removed ${expiredKeys.length} expired entries`)
+    }
   }
 
   stopCleanupInterval(): void {

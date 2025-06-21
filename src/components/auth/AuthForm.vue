@@ -116,23 +116,17 @@ onUnmounted(() => {
 
 async function checkNameExists(value: string) {
   if (!value || value.length < 2) {
-    console.log('Frontend - Name too short:', { value, length: value?.length });
     return false;
   }
   checkingName.value = true;
   try {
-    console.log('Frontend - Checking name:', { value });
     // Ensure we're using the correct API URL
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    console.log('Frontend - Using API URL:', apiUrl);
     const res = await axios.get(`${apiUrl}/users/name-exists?name=${encodeURIComponent(value)}`);
-    console.log('Frontend - Name check response:', res.data);
     if (res.data.exists) {
-      console.log('Frontend - Name exists:', { value });
       nameError.value = 'This name is already taken';
       return false;
     }
-    console.log('Frontend - Name available:', { value });
     nameError.value = '';
     return true;
   } catch (err) {
@@ -179,19 +173,14 @@ async function onNameInput() {
 
 async function onSubmit() {
   if (props.mode === 'register') {
-    console.log('Frontend - Validating name before submit:', { name: name.value });
     if (!validateName()) {
-      console.log('Frontend - Name validation failed');
       return;
     }
     // Final check for name existence before submission
-    console.log('Frontend - Final name check before submit:', { name: name.value });
     const isNameAvailable = await checkNameExists(name.value.trim());
     if (!isNameAvailable) {
-      console.log('Frontend - Name not available, preventing submit');
       return;
     }
-    console.log('Frontend - Name available, proceeding with submit');
   }
   
   emit('submit', { 

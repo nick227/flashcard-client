@@ -13,7 +13,6 @@ import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
 const route = useRoute()
 const setId = computed(() => {
   const id = Number(route.params.setId)
-  console.log('SetView - Computed setId:', id, 'from params:', route.params)
   return id
 })
 

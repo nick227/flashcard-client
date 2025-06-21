@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col">
+  <div class="min-h-screen">
     <Toaster :toasts="toasts" @remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" />
 
     <main class="container flex-1">
@@ -32,7 +32,7 @@
           <div class="flex items-center justify-end gap-2 flex-nowrap button-row">
             <AISetGenerator :disabled="isAIGeneratorDisabled" :title="title" :description="description"
               :category="selectedCategoryName" @add-set="onAddSet" @update:generating="setGenerating = $event" />
-            <AddCardButton :disabled="isAddCardDisabled" :class="{ 'input-error': cardsTouched && cards.length === 0 }"
+            <AddCardButton :class="{ 'input-error': cardsTouched && cards.length === 0 }"
               @add-card="onAddCard" />
             <!-- Submit button -->
             <button class="button button-success" :disabled="isSubmitDisabled" @click="onSubmit"
@@ -46,7 +46,7 @@
             @update-order="onUpdateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
             @request-delete="onRequestDelete" />
           <DraggableCardList v-else :cards="cards" :cardComponent="CardFullView" layout="list"
-            :cardProps="{ mode: 'single', autoFocus: false, autoFocusId: cards.length ? cards[0].id : null, title: title, description: description, category: selectedCategoryName }"
+            :cardProps="{ mode: 'single', autoFocus: false, autoFocusId: cards.length ? cards[0].id : null, title: title, description: description, category: selectedCategoryName, onImageFile }"
             @update-order="onUpdateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
             @request-delete="onRequestDelete" />
         </div>
@@ -62,7 +62,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { CardView, CardLayout } from '@/types/card'
+import type { Card, CardLayout } from '@/types/card'
 import ImportBar from '@/components/creator/ImportBar.vue'
 import SetInfoForm from '@/components/creator/SetInfoForm.vue'
 import ViewToggle from '@/components/creator/ViewToggle.vue'
@@ -81,6 +81,7 @@ import { useHistory, type HistoryState } from '@/composables/useHistory.ts'
 import { parseFlashCardCsv, type ParsedCard } from '@/utils/csv.ts'
 import { fetchCategories, fetchTags } from '@/api/index'
 import { SetService } from '@/services/SetService'
+import { createCellsFromContent, processCellsToLegacyFormat } from '@/utils/cellUtils'
 
 const router = useRouter()
 const route = useRoute()
@@ -98,6 +99,9 @@ const setId = computed(() => Number(route.params.setId) || 0)
 const submitButtonText = computed(() => setId.value ? 'Save Changes' : 'Submit Set')
 const hasCards = computed(() => cards.value.length > 0)
 
+// Track pending image files for upload during submission
+const pendingImageFiles = ref<Map<string, File>>(new Map())
+
 const {
   title,
   description,
@@ -109,11 +113,8 @@ const {
   cards,
   formSubmitted,
   cardsTouched,
-  hasBlankCard,
   validateForm,
-  resetForm,
   addCard,
-  updateCard,
   deleteCard,
   updateOrder,
   setGenerating
@@ -122,7 +123,9 @@ const {
 const {
   saveProgress,
   clearProgress,
-  loadProgress
+  loadProgress,
+  markAsSubmitted,
+  hasUnsubmittedProgress
 } = useSetWizardStorage()
 
 const {
@@ -151,6 +154,14 @@ watch(
   ],
   () => {
     if (setId.value) return // Don't save progress for existing sets
+    
+    // Convert pending image files to base64 for storage
+    const cardImageFiles: { [key: string]: { data: string, type: string, name: string } } = {}
+    
+    // Note: We can't convert File objects to base64 in a watch function
+    // The actual conversion happens in onImageFile when files are added
+    // Here we just save the current state without the file data
+    
     saveProgress({
       title: title.value,
       description: description.value,
@@ -158,7 +169,8 @@ watch(
       tags: setTags.value,
       price: setPrice.value,
       thumbnail: setThumbnail.value,
-      cards: cards.value
+      cards: cards.value,
+      cardImageFiles
     })
   },
   { deep: true }
@@ -169,17 +181,14 @@ const isAIGeneratorDisabled = computed(() => {
   return setGenerating.value || !title.value || !description.value || !category.value
 })
 
-const isAddCardDisabled = computed(() => {
-  return hasBlankCard.value
-})
-
 const isSubmitDisabled = computed(() => {
   return submitting.value ||
     setGenerating.value ||
     !title.value ||
     !description.value ||
     !category.value ||
-    !hasCards.value
+    !hasCards.value ||
+    !setThumbnail.value
 })
 
 const handleThumbnailUpdate = (thumbnail: string | File | null) => {
@@ -288,6 +297,11 @@ function applyHistoryState(state: HistoryState) {
 
 // Load saved progress on mount
 onMounted(async () => {
+  // Check for unsubmitted progress first
+  if (hasUnsubmittedProgress()) {
+    toast('Work in progress found. Your previous set data has been restored.', 'info')
+  }
+
   const progress = loadProgress()
   if (progress) {
     title.value = progress.title
@@ -307,27 +321,38 @@ onMounted(async () => {
     } else {
       setThumbnail.value = progress.thumbnail
     }
-  }
-
-  // Load set data if editing
-  if (setId.value) {
-    try {
-      const setData = await SetService.fetchSet(setId.value)
-      title.value = setData.title
-      description.value = setData.description
-      category.value = setData.categoryId || 0
-      setTags.value = setData.tags
-      // Ensure price is in the correct format
-      setPrice.value = {
-        type: setData.isSubscriberOnly ? 'subscribers' : (setData.price > 0 ? 'premium' : 'free'),
-        amount: setData.price > 0 ? setData.price : undefined
+    
+    // Handle card image files restoration
+    if (progress.cardImageFiles) {
+      for (const [key, fileData] of Object.entries(progress.cardImageFiles)) {
+        try {
+          // Convert base64 back to File object
+          const response = await fetch(fileData.data)
+          const blob = await response.blob()
+          const file = new File([blob], fileData.name, { type: fileData.type })
+          
+          // Add to pending files
+          pendingImageFiles.value.set(key, file)
+          
+          // Create blob URL for preview
+          const blobUrl = URL.createObjectURL(file)
+          
+          // Update the corresponding card cell with the blob URL
+          const [side, cellIndexStr] = key.split('_')
+          const cellIndex = parseInt(cellIndexStr)
+          
+          if (cards.value[cellIndex]) {
+            const card = cards.value[cellIndex]
+            const sideData = side === 'front' ? card.front : card.back
+            
+            if (sideData.cells && sideData.cells[cellIndex]) {
+              sideData.cells[cellIndex].mediaUrl = blobUrl
+            }
+          }
+        } catch (error) {
+          console.error('Error restoring card image file:', key, error)
+        }
       }
-      setThumbnail.value = setData.thumbnail
-
-      const setCards = await SetService.fetchSetCards(setData.id)
-      cards.value = setCards
-    } catch (error) {
-      toast('Error loading set: ' + error, 'error')
     }
   }
 
@@ -343,17 +368,42 @@ onMounted(async () => {
     toast('Error loading categories and tags: ' + error, 'error')
   }
 
+  // Load set data if editing
+  if (setId.value) {
+    try {
+      const setData = await SetService.fetchSet(setId.value)
+      title.value = setData.title
+      description.value = setData.description
+      category.value = setData.categoryId || 0
+      setTags.value = setData.tags
+      // Ensure price is in the correct format
+      setPrice.value = {
+        type: setData.isSubscriberOnly ? 'subscribers' : (Number(setData.price) > 0 ? 'premium' : 'free'),
+        amount: Number(setData.price) > 0 ? Number(setData.price) : undefined
+      }
+      setThumbnail.value = setData.thumbnail
+
+      // Transform cards from setData directly instead of making another API call
+      if (setData.cards && Array.isArray(setData.cards)) {
+        cards.value = setData.cards.map((card: any) => SetService.transformCard(card))
+      } else {
+        cards.value = []
+      }
+    } catch (error) {
+      toast('Error loading set: ' + error, 'error')
+    }
+  }
+
   // Add keyboard shortcut listeners
   window.addEventListener('keydown', handleKeyDown)
 })
 
 function onAddCard() {
-  if (hasBlankCard.value) return
   addCard()
   takeSnapshot()
 }
 
-function onUpdateOrder(newOrder: CardView[]) {
+function onUpdateOrder(newOrder: Card[]) {
   updateOrder(newOrder)
 }
 
@@ -362,8 +412,64 @@ function onDeleteCard(index: number) {
   takeSnapshot()
 }
 
-function onEditCard(updatedCard: CardView) {
-  updateCard(updatedCard)
+function onEditCard(updatedCard: Card) {
+  const index = cards.value.findIndex(c => c.id === updatedCard.id)
+  if (index !== -1) {
+    cards.value[index] = updatedCard
+    cardsTouched.value = true
+    
+    // Force save progress after card update
+    saveProgress({
+      title: title.value,
+      description: description.value,
+      categoryId: category.value,
+      tags: setTags.value,
+      price: setPrice.value,
+      thumbnail: setThumbnail.value,
+      cards: cards.value,
+      cardImageFiles: {} // Will be populated by onImageFile when files are added
+    })
+  }
+}
+
+// Handle image file events from CardContent components
+function onImageFile(data: { file: File, side: 'front' | 'back', cellIndex: number }) {
+  const key = `${data.side}_${data.cellIndex}`
+  pendingImageFiles.value.set(key, data.file)
+  
+  // Convert file to base64 and save to localStorage
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const base64Data = e.target?.result as string
+    const currentProgress = {
+      title: title.value,
+      description: description.value,
+      categoryId: category.value,
+      tags: setTags.value,
+      price: setPrice.value,
+      thumbnail: setThumbnail.value,
+      cards: cards.value,
+      cardImageFiles: {
+        [key]: {
+          data: base64Data,
+          type: data.file.type,
+          name: data.file.name
+        }
+      }
+    }
+    
+    // Merge with existing card image files
+    const existingProgress = loadProgress()
+    if (existingProgress?.cardImageFiles) {
+      currentProgress.cardImageFiles = {
+        ...existingProgress.cardImageFiles,
+        ...currentProgress.cardImageFiles
+      }
+    }
+    
+    saveProgress(currentProgress)
+  }
+  reader.readAsDataURL(data.file)
 }
 
 function onRequestDelete(cardId: number) {
@@ -376,9 +482,6 @@ function resetAllState() {
   // Clear progress and history using composable functions
   clearProgress()
   clearHistory()
-  
-  // Reset form state
-  resetForm()
   
   // Reset UI state
   cardsTouched.value = false
@@ -404,22 +507,19 @@ function resetAllState() {
   description.value = ''
   category.value = 0
   setTags.value = []
-  setPrice.value = { type: 'free', amount: 0 }
+  setPrice.value = { type: 'free' }
   cards.value = []
 
   // Clear both storage locations
   localStorage.removeItem('setWizardProgress')
   localStorage.removeItem('setWizardHistory')
 
-  // Force a page reload to ensure clean state
-  setTimeout(() => {
-    window.location.reload()
-  }, 300)
+  toast('Set has been reset. You can now start fresh.', 'success')
 }
 
 function onReset() {
-  confirmTitle.value = 'Delete Everything?'
-  confirmMessage.value = 'Are you sure you want to reset everything? This will clear all cards, form data, and cannot be undone.'
+  confirmTitle.value = 'Delete Cards?'
+  confirmMessage.value = 'This will clear all card and cannot be undone.'
   confirmVisible.value = true
   cardToDelete.value = -1 // Special value to indicate reset
 }
@@ -452,21 +552,30 @@ async function onImportCsv(file: File) {
   try {
     const text = await file.text()
     const cardsData = await parseFlashCardCsv(text)
-    const parsedCards = cardsData.map((card: ParsedCard) => ({
-      id: Date.now() + Math.random(),
-      setId: 0,
-      front: {
-        text: card.front,
-        imageUrl: card.frontImage,
-        layout: (card.frontLayout || 'default') as CardLayout
-      },
-      back: {
-        text: card.back,
-        imageUrl: card.backImage,
-        layout: (card.backLayout || 'default') as CardLayout
-      },
-      hint: card.hint || null
-    }))
+    const parsedCards = cardsData.map((card: ParsedCard) => {
+      return {
+        id: Date.now() + Math.random(),
+        title: '',
+        description: '',
+        front: {
+          layout: (card.frontLayout || 'default') as CardLayout,
+          cells: createCellsFromContent(card.front || '', card.frontImage || null, (card.frontLayout || 'default') as CardLayout)
+        },
+        back: {
+          layout: (card.backLayout || 'default') as CardLayout,
+          cells: createCellsFromContent(card.back || '', card.backImage || null, (card.backLayout || 'default') as CardLayout)
+        },
+        hint: card.hint || undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        reviewCount: 0,
+        difficulty: 0,
+        isArchived: false,
+        isPublic: false,
+        userId: '',
+        deckId: ''
+      }
+    })
     cards.value = parsedCards
     cardsTouched.value = true
     importFileName.value = file.name
@@ -475,21 +584,9 @@ async function onImportCsv(file: File) {
   }
 }
 
-function onAddSet(newCards: CardView | CardView[]) {
+function onAddSet(newCards: Card | Card[]) {
   const cardsToAdd = Array.isArray(newCards) ? newCards : [newCards]
-  // Set default layout for AI-generated cards
-  const processedCards = cardsToAdd.map(card => ({
-    ...card,
-    front: {
-      ...card.front,
-      layout: 'default' as CardLayout
-    },
-    back: {
-      ...card.back,
-      layout: 'default' as CardLayout
-    }
-  }))
-  cards.value.push(...processedCards)
+  cards.value.push(...cardsToAdd)
   cardsTouched.value = true
 }
 
@@ -502,82 +599,123 @@ async function onSubmit() {
 
   submitting.value = true
   try {
+    // Create FormData to handle file upload
     const formData = new FormData()
+    
+    // Add basic set data
     formData.append('title', title.value)
     formData.append('description', description.value)
-    formData.append('categoryId', category.value.toString())
+    formData.append('category_id', category.value.toString())
     formData.append('tags', JSON.stringify(setTags.value))
-    formData.append('price', setPrice.value.type === 'free' ? '0' : (setPrice.value.amount?.toString() || '0'))
+    formData.append('isPublic', 'true')
+    formData.append('isArchived', 'false')
+    formData.append('price', setPrice.value.type === 'free' ? '0' : setPrice.value.amount?.toString() || '0')
     formData.append('isSubscriberOnly', setPrice.value.type === 'subscribers' ? 'true' : 'false')
-    
 
-    // Handle thumbnail
-    if (setThumbnail.value) {
+    // Handle thumbnail - either file or URL
+    if (thumbnailFile.value) {
+      formData.append('thumbnail', thumbnailFile.value)
+    } else if (setThumbnail.value) {
+      // If it's a base64 string, convert it to a file
       if (setThumbnail.value.startsWith('data:')) {
-        // Convert base64 to file
         const response = await fetch(setThumbnail.value)
         const blob = await response.blob()
-        const file = new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' })
+        const file = new File([blob], 'thumbnail.png', { type: 'image/png' })
         formData.append('thumbnail', file)
       } else {
-        // Use existing URL
+        // If it's a URL, send it as is
         formData.append('thumbnailUrl', setThumbnail.value)
       }
     }
 
-    // Transform cards to match server's expected format
-    const cardsData = cards.value.map(card => ({
+    // Add cards data
+    const cardsData = cards.value.map((card) => {
+      const frontProcessed = processCellsToLegacyFormat(card.front.cells || [])
+      const backProcessed = processCellsToLegacyFormat(card.back.cells || [])
+
+      // Handle pending image files for blob URLs
+      if (frontProcessed.imageFile === null && card.front.cells) {
+        const mediaCell = card.front.cells.find(cell => cell.type === 'media' && cell.mediaUrl?.startsWith('blob:'))
+        if (mediaCell) {
+          const cellIndex = card.front.cells.indexOf(mediaCell)
+          const key = `front_${cellIndex}`
+          frontProcessed.imageFile = pendingImageFiles.value.get(key) || null
+        }
+      }
+      
+      if (backProcessed.imageFile === null && card.back.cells) {
+        const mediaCell = card.back.cells.find(cell => cell.type === 'media' && cell.mediaUrl?.startsWith('blob:'))
+        if (mediaCell) {
+          const cellIndex = card.back.cells.indexOf(mediaCell)
+          const key = `back_${cellIndex}`
+          backProcessed.imageFile = pendingImageFiles.value.get(key) || null
+        }
+      }
+
+      return {
+        front: {
+          text: frontProcessed.text,
+          imageUrl: frontProcessed.imageUrl,
+          imageFile: frontProcessed.imageFile,
+          layout: card.front.layout || 'default'
+        },
+        back: {
+          text: backProcessed.text,
+          imageUrl: backProcessed.imageUrl,
+          imageFile: backProcessed.imageFile,
+          layout: card.back.layout || 'default'
+        },
+        hint: card.hint || null
+      }
+    })
+
+    // Add image files to FormData
+    cardsData.forEach((card, cardIndex) => {
+      if (card.front.imageFile) {
+        formData.append(`card_${cardIndex}_front_image`, card.front.imageFile)
+      }
+      if (card.back.imageFile) {
+        formData.append(`card_${cardIndex}_back_image`, card.back.imageFile)
+      }
+    })
+
+    // Remove imageFile from cards data before JSON serialization
+    const cardsDataForJson = cardsData.map(card => ({
       front: {
-        text: card.front.text || '',
-        imageUrl: card.front.imageUrl || null,
-        layout: card.front.layout || 'default' // Use front layout
+        text: card.front.text,
+        imageUrl: card.front.imageUrl,
+        layout: card.front.layout
       },
       back: {
-        text: card.back.text || '',
-        imageUrl: card.back.imageUrl || null,
-        layout: card.back.layout || 'default' // Use back layout
+        text: card.back.text,
+        imageUrl: card.back.imageUrl,
+        layout: card.back.layout
       },
-      hint: card.hint || null
+      hint: card.hint
     }))
 
-    // Add cards as a single JSON string
-    formData.append('cards', JSON.stringify(cardsData))
-
-    // Log the form data
-    console.log('Form Data Contents:')
-    for (const [key, value] of formData.entries()) {
-      console.log(`${key}:`, value)
-    }
-
-    console.log('Cards Data:', cardsData)
-    console.log('Stringified Cards:', JSON.stringify(cardsData))
+    formData.append('cards', JSON.stringify(cardsDataForJson))
 
     if (setId.value) {
-      console.log('Updating set:', setId.value)
-      const response = await SetService.updateSet(setId.value, formData)
-      console.log('Update Response:', response)
+      await SetService.updateSet(setId.value, formData)
       toast('Set updated successfully', 'success')
+      // Mark as submitted and clear progress after successful update
+      markAsSubmitted()
+      clearProgress()
       router.push(`/sets/${setId.value}`)
     } else {
-      console.log('Creating new set')
       const response = await SetService.createSet(formData)
-      console.log('Create Response:', response)
-
-      // Check for the response structure we see in the logs
-      if (response && typeof response === 'object' && 'id' in response) {
-        const setId = response.id
-        console.log('Navigating to set:', setId)
-        toast('Set created successfully', 'success')
-
-        // Clear storage and history after successful submission
-        clearProgress()
-        clearHistory()
-
-        router.push(`/sets/${setId}`)
-      } else {
+      
+      if (!response || !response.id) {
         console.error('Invalid response structure:', response)
-        throw new Error('Invalid response from server: missing set ID')
+        throw new Error('Invalid response from server - missing set ID')
       }
+      
+      toast('Set created successfully', 'success')
+      // Mark as submitted and clear progress after successful creation
+      markAsSubmitted()
+      clearProgress()
+      router.push(`/sets/${response.id}`)
     }
   } catch (error: unknown) {
     console.error('Error saving set:', error)
@@ -586,6 +724,14 @@ async function onSubmit() {
       stack: error instanceof Error ? error.stack : undefined,
       response: error && typeof error === 'object' && 'response' in error
         ? (error.response as any)?.data
+        : undefined,
+      responseStructure: error && typeof error === 'object' && 'response' in error
+        ? {
+            status: (error.response as any)?.status,
+            statusText: (error.response as any)?.statusText,
+            data: (error.response as any)?.data,
+            headers: (error.response as any)?.headers
+          }
         : undefined
     })
     toast('Error saving set: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error')
@@ -600,15 +746,31 @@ const getSubmitButtonTitle = computed(() => {
   if (!title.value) return 'Title is required'
   if (!description.value) return 'Description is required'
   if (!category.value) return 'Category is required'
+  if (!setThumbnail.value) return 'Thumbnail is required'
   if (!hasCards.value) return 'At least one card is required'
   if (submitting.value) return 'Submitting...'
   return 'Submit Set'
 })
 
-// Add watch for cards changes
-watch(cards, (newCards) => {
-  console.log('SetWizard - Cards updated:', newCards)
-}, { deep: true })
+// Update the watch for cards to ensure changes are saved
+watch(
+  cards,
+  (newCards) => {
+    if (!setId.value) { // Only save progress for new sets
+      saveProgress({
+        title: title.value,
+        description: description.value,
+        categoryId: category.value,
+        tags: setTags.value,
+        price: setPrice.value,
+        thumbnail: setThumbnail.value,
+        cards: newCards,
+        cardImageFiles: {} // Will be populated by onImageFile when files are added
+      })
+    }
+  },
+  { deep: true }
+)
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)

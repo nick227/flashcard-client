@@ -120,8 +120,13 @@
         <!-- Single Card View -->
         <div class="flex-1 flex flex-col">
           <div class="flex-1 flex items-center justify-center">
-            <FlashCardScaffold v-if="cards && cards.length > 0 && cards[currentIndex]" :card="cards[currentIndex]"
-              :flipped="flipped" :current-flip="currentFlip" @flip="handleCardFlip" />
+            <FlashCardScaffold 
+              v-if="cards && cards.length > 0 && cards[currentIndex]" 
+              :card="cards[currentIndex]"
+              :flipped="flipped" 
+              :current-flip="currentFlip" 
+              @flip="handleCardFlip" 
+            />
             <div v-else class="text-center text-gray-500 py-8">
               No cards available to display
             </div>
@@ -134,14 +139,26 @@
 
       <!-- Bottom Controls -->
       <div class="flex justify-center w-full mb-4 flex-wrap main-controls">
-          <a @click="handleRestart" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-rotate-right"></i> Restart</a>
-          <a @click="handleShuffle" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-shuffle"></i>
-            Shuffle</a>
-          <a @click="toggleGridView" :class="['button-round', { active: showGridView }]" href="javascript:void(0)"><i class="fa-solid fa-table-cells"></i> Grid</a>
-          <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)"><i class="fa-solid fa-mobile"></i> Mobile</a>
-          <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)"><i class="fa-solid fa-expand"></i>
-            Full-Screen</a>
-        <CardHint v-if="cards[currentIndex]?.hint" :hint="cards[currentIndex].hint || ''" @show-hint="showHintToast" />
+        <a @click="handleRestart" class="button-round" href="javascript:void(0)">
+          <i class="fa-solid fa-rotate-right"></i> Restart
+        </a>
+        <a @click="handleShuffle" class="button-round" href="javascript:void(0)">
+          <i class="fa-solid fa-shuffle"></i> Shuffle
+        </a>
+        <a @click="toggleGridView" :class="['button-round', { active: showGridView }]" href="javascript:void(0)">
+          <i class="fa-solid fa-table-cells"></i> Grid
+        </a>
+        <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)">
+          <i class="fa-solid fa-mobile"></i> Mobile
+        </a>
+        <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)">
+          <i class="fa-solid fa-expand"></i> Full-Screen
+        </a>
+        <CardHint 
+          v-if="cards[currentIndex]?.hint" 
+          :hint="cards[currentIndex].hint || ''" 
+          @show-hint="() => showHintToast(cards[currentIndex]?.hint || '')" 
+        />
       </div>
     </div>
 
@@ -156,6 +173,11 @@
       <CardRiverMobile :cards="cards" />
     </div>
 
+    <!-- Related Sets-->
+     <div v-if="set" class="mt-4 w-full">
+      <RelatedSets :set-id="set.id" />
+     </div>
+
     <Toaster :toasts="toasts" @remove="remove" />
   </div>
 </template>
@@ -168,18 +190,18 @@ import CardControls from './CardControls.vue'
 import CardGrid from './CardGrid.vue'
 import CardHeader from './CardHeader.vue'
 import CardHint from './CardHint.vue'
-import { useCardNavigation } from '@/composables/useCardNavigation.ts'
-import { useCardProgress } from '@/composables/useCardProgress.ts'
+import RelatedSets from './RelatedSets.vue'
 import { useCardLikes } from '@/composables/useCardLikes.ts'
 import { useCardGrid } from '@/composables/useCardGrid.ts'
-import type { Card } from '@/types/card'
+import type { Card, CardLayout } from '@/types/card'
 import type { FlashCardSet } from '@/types'
 import { useRouter, useRoute } from 'vue-router'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/common/Toaster.vue'
-import { useViewHistory } from '@/composables/useViewHistory'
 import CardRiverMobile from './CardRiverMobile.vue'
-import { CardTransformService } from '@/services/CardTransformService'
+import { useCardViewer } from '@/composables/useCardViewer'
+import { useCardControls } from '@/composables/useCardControls'
+import { createCellsFromContent } from '@/utils/cellUtils'
 
 const props = defineProps<{
   setId: number | string
@@ -204,14 +226,25 @@ const {
   currentFlip,
   isPrevDisabled,
   isNextDisabled,
+  progressPercent,
+  historyLoading,
+  historyError,
+  viewedCards,
+  handleCardFlip,
+  handleNextCardWithHistory,
   prevCard,
-  nextCard: handleNextCard,
-  handleCardFlip: handleCardNavigation
-} = useCardNavigation(cards)
+  initializeViewer,
+  handleRestart
+} = useCardViewer(cards, Number(props.setId))
 
 const {
-  progressPercent
-} = useCardProgress(cards, currentFlip)
+  isFullScreen,
+  showHint,
+  toggleFullScreen,
+  handleFullScreenChange,
+  showHintToast,
+  handleKeyDown
+} = useCardControls(cards)
 
 const {
   likes: setLikes,
@@ -225,7 +258,6 @@ const {
 const {
   showGridView,
   gridCardStates,
-  viewedCards,
   toggleGridView,
   shuffleCardOrder,
   handleGridCardFlip,
@@ -245,58 +277,56 @@ watch(showGridView, (newValue) => {
   }
 })
 
-const showHint = ref(false)
-
-const isFullScreen = ref(false)
-
-const toggleFullScreen = () => {
-  const mainCardArea = document.querySelector('.main-card-area') as HTMLElement | null
-  if (!mainCardArea) return
-
-  if (!document.fullscreenElement) {
-    mainCardArea.requestFullscreen()
-    isFullScreen.value = true
-    document.addEventListener('fullscreenchange', handleFullScreenChange)
-    // Ensure focus after entering fullscreen
-    setTimeout(() => {
-      mainCardArea.focus()
-    }, 100)
-  } else {
-    document.exitFullscreen()
-    isFullScreen.value = false
-  }
-}
-
-const handleFullScreenChange = () => {
-  isFullScreen.value = !!document.fullscreenElement
-  const mainCardArea = document.querySelector('.main-card-area') as HTMLElement | null
-  if (mainCardArea) {
-    // Ensure focus after fullscreen change
-    setTimeout(() => {
-      mainCardArea.focus()
-    }, 100)
-  }
-}
-
-const showHintToast = () => {
-  const hint = cards.value[currentIndex.value]?.hint
-  if (hint) {
-    toast(hint, 'info')
-  }
-}
-
 function formatPrice(price: number | undefined): string {
   if (!price) return '0.00'
   return price.toFixed(2)
 }
 
-const {
-  loading: historyLoading,
-  error: historyError,
-  initializeHistory,
-  updateCardsViewed,
-  markAsCompleted
-} = useViewHistory(Number(props.setId))
+// Add type for raw card data from API
+interface RawCard {
+  id: number
+  front: {
+    text?: string
+    imageUrl?: string
+    layout?: CardLayout
+  }
+  back: {
+    text?: string
+    imageUrl?: string
+    layout?: CardLayout
+  }
+  hint?: string
+  createdAt?: string
+  updatedAt?: string
+  reviewCount?: number
+  lastReviewed?: string
+  difficulty?: number
+  deckId?: string
+}
+
+// Helper function to transform a card
+function transformCard(card: RawCard, setData: any): Card {
+  return {
+    id: Number(card.id),
+    title: setData.title || '',
+    description: setData.description || '',
+    front: {
+      layout: card.front.layout || 'default' as CardLayout,
+      cells: createCellsFromContent(card.front.text, card.front.imageUrl, card.front.layout)
+    },
+    back: {
+      layout: card.back.layout || 'default' as CardLayout,
+      cells: createCellsFromContent(card.back.text, card.back.imageUrl, card.back.layout)
+    },
+    hint: card.hint || null,
+    createdAt: card.createdAt || new Date().toISOString(),
+    updatedAt: card.updatedAt || new Date().toISOString(),
+    reviewCount: card.reviewCount || 0,
+    difficulty: card.difficulty || 0,
+    userId: setData.educatorId?.toString() || '0',
+    deckId: card.deckId || ''
+  }
+}
 
 const fetchSet = async () => {
   if (!props.setId) {
@@ -314,36 +344,19 @@ const fetchSet = async () => {
       cards.value = []
     } else {
       const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
-      console.log('Raw cards data:', cardsData)
       
-      // Use CardTransformService to transform cards
-      cards.value = cardsData.map((card: any) => CardTransformService.toView(card))
-      console.log('Transformed cards:', cards.value)
+      // Transform cards using the new helper function
+      cards.value = cardsData.map((card: RawCard) => transformCard(card, res.data))
+      console.log('All transformed cards:', cards.value)
 
-      // Initialize history tracking
-      try {
-        await initializeHistory()
-      } catch (historyErr) {
-        console.error('Error initializing history:', historyErr)
-        error.value = 'Note: Progress tracking is unavailable'
-      }
+      // Initialize viewer
+      await initializeViewer()
 
-      // Reset state
-      currentIndex.value = 0
-      flipped.value = false
-      showHint.value = false
-      currentFlip.value = 0
-
-      // Initialize viewed cards
-      viewedCards.value = cards.value.map(card => ({
-        id: getCardId(card),
-        frontViewed: false,
-        backViewed: false
-      }))
+      // Initialize likes state
+      await initializeLikes()
     }
   } catch (err) {
     console.error('Error fetching set:', err)
-    // Try to extract a specific error message/code
     let message = 'Failed to load flashcard set'
     const e = err as any
     if (e.response && e.response.data) {
@@ -377,11 +390,11 @@ const downloadSet = async () => {
       }
 
       return [
-        formatField(card.front.text),
-        formatField(card.back.text),
+        formatField(card.front.cells?.[0]?.content),
+        formatField(card.back.cells?.[0]?.content),
         formatField(card.hint),
-        formatField(card.front.imageUrl),
-        formatField(card.back.imageUrl),
+        formatField(card.front.cells?.[1]?.mediaUrl),
+        formatField(card.back.cells?.[1]?.mediaUrl),
         formatField(card.front.layout),
         formatField(card.back.layout)
       ]
@@ -456,28 +469,6 @@ const subscribeToUnlockSet = async (userId: number | string) => {
   }
 }
 
-// Keyboard navigation
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape' && isFullScreen.value) {
-    document.exitFullscreen()
-    return
-  }
-
-  switch (e.key) {
-    case 'ArrowLeft':
-      prevCard()
-      break
-    case 'ArrowRight':
-      handleNextCardWithHistory()
-      break
-    case 'h':
-      if (cards.value[currentIndex.value]?.hint) {
-        showHint.value = !showHint.value
-      }
-      break
-  }
-}
-
 // Initialize likes state
 const initializeLikes = async () => {
   try {
@@ -496,7 +487,6 @@ watch(() => props.setId, async (newId) => {
     loading.value = true
     try {
       await fetchSet()
-      await initializeLikes()
     } catch (err) {
       console.error('Error fetching set data:', err)
     } finally {
@@ -505,7 +495,7 @@ watch(() => props.setId, async (newId) => {
   }
 }, { immediate: true })
 
-// Initialize likes state on mount
+// Initialize on mount
 onMounted(async () => {
   if (route.query.canceled === 'true') {
     toast('Checkout was canceled. You can try again when you\'re ready.', 'info')
@@ -513,56 +503,25 @@ onMounted(async () => {
   }
 
   // Add global keyboard listener
-  window.addEventListener('keydown', handleKeyDown)
-
-  // Initialize likes state
-  await initializeLikes()
-})
-
-// Cleanup
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-  document.removeEventListener('fullscreenchange', handleFullScreenChange)
-})
-
-const handleRestart = () => {
-  currentIndex.value = 0
-  flipped.value = false
-  currentFlip.value = 0
-}
-
-// Helper function to safely get card ID
-function getCardId(card: Card): number {
-  if (typeof card.id !== 'number') {
-    throw new Error('Card ID must be a number')
+  const handleKeyDownWrapper = (e: KeyboardEvent) => {
+    handleKeyDown(
+      e,
+      isFullScreen.value,
+      prevCard,
+      handleNextCardWithHistory,
+      showHint,
+      cards.value[currentIndex.value]
+    )
   }
-  return card.id
-}
+  window.addEventListener('keydown', handleKeyDownWrapper)
 
-// Update viewed cards initialization
-viewedCards.value = cards.value.map(card => ({
-  id: getCardId(card),
-  frontViewed: false,
-  backViewed: false
-}))
-
-// Update card initialization watch
-watch(() => cards.value, (newCards) => {
-  if (newCards && newCards.length > 0 && !initialized) {
-    currentIndex.value = 0
-    flipped.value = false
-    currentFlip.value = 0
-
-    viewedCards.value = newCards.map(card => ({
-      id: getCardId(card),
-      frontViewed: false,
-      backViewed: false
-    }))
-    initialized = true
-  }
+  // Cleanup
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDownWrapper)
+    document.removeEventListener('fullscreenchange', handleFullScreenChange)
+  })
 })
 
-// Update grid state handling
 const handleShuffle = () => {
   const currentProgress = currentIndex.value
   const { newOrder } = shuffleCardOrder()
@@ -590,98 +549,10 @@ const handleShuffle = () => {
   }
 }
 
-// Update handleCardFlip to properly track progress
-const handleCardFlip = async () => {
-  console.log('Card flip triggered:', {
-    currentIndex: currentIndex.value,
-    currentCard: cards.value[currentIndex.value],
-    flipped: flipped.value,
-    viewedCards: viewedCards.value
-  })
-
-  // Call the navigation handler first
-  handleCardNavigation(!flipped.value)
-
-  // Update viewed cards state
-  if (cards.value[currentIndex.value]) {
-    const cardId = cards.value[currentIndex.value].id
-    const cardState = viewedCards.value.find(state => state.id === cardId)
-    if (cardState) {
-      if (!flipped.value) {
-        cardState.frontViewed = true
-      } else {
-        cardState.backViewed = true
-      }
-    }
-  }
-
-  // Update history with number of cards viewed
-  const uniqueViewedCards = viewedCards.value.filter(card => card.frontViewed || card.backViewed).length
-  console.log('Updating cards viewed:', uniqueViewedCards)
-  await updateCardsViewed(uniqueViewedCards)
-
-  // Check if this is the last card and both sides have been viewed
-  if (currentIndex.value === cards.value.length - 1 &&
-    flipped.value &&
-    viewedCards.value.every(card => card.frontViewed && card.backViewed)) {
-    console.log('Marking set as completed')
-    await markAsCompleted()
-  }
+// Helper function to safely get card ID
+function getCardId(card: Card): number {
+  return typeof card.id === 'string' ? parseInt(card.id, 10) : card.id
 }
-
-// Update nextCard to check for completion
-const handleNextCardWithHistory = async () => {
-  if (isNextDisabled.value) return
-
-  // Call the navigation handler first
-  handleNextCard()
-
-  // If we're at the last card and it's flipped, mark as completed
-  if (currentIndex.value === cards.value.length - 1 && flipped.value) {
-    await markAsCompleted()
-  }
-}
-
-let initialized = false;
-watch(() => cards.value, (newCards) => {
-  if (newCards && newCards.length > 0 && !initialized) {
-    // Reset navigation state only once
-    currentIndex.value = 0
-    flipped.value = false
-    currentFlip.value = 0
-
-    // Reset viewed cards tracking
-    viewedCards.value = newCards.map(card => ({
-      id: getCardId(card),
-      frontViewed: false,
-      backViewed: false
-    }))
-    initialized = true;
-  }
-})
-
-// Add debug logging to track card data
-watch(() => cards.value, (newCards) => {
-  console.log('Cards data updated:', {
-    currentIndex: currentIndex.value,
-    currentCard: newCards[currentIndex.value],
-    flipped: flipped.value,
-    totalCards: newCards.length,
-    isNextDisabled: isNextDisabled.value,
-    isPrevDisabled: isPrevDisabled.value
-  })
-}, { deep: true })
-
-watch([currentIndex, flipped], ([newIndex, newFlipped]) => {
-  console.log('Card state changed:', {
-    index: newIndex,
-    flipped: newFlipped,
-    currentCard: cards.value[newIndex],
-    totalCards: cards.value.length,
-    isNextDisabled: isNextDisabled.value,
-    isPrevDisabled: isPrevDisabled.value
-  })
-})
 </script>
 
 <style scoped>

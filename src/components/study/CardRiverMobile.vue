@@ -3,14 +3,16 @@
     <div v-for="card in cards" :key="card.id" class="panel-river-item">
       <div class="panel-face front">
         <div class="panel-content formatted-content">
-          <img v-if="card.front.imageUrl" :src="card.front.imageUrl" class="max-w-full max-h-full object-contain" />
-          <div v-if="card.front.text" class="panel-text" v-html="card.front.text"></div>
+          <img v-if="getFrontImage(card) && !isYouTubeUrl(getFrontImage(card))" :src="getFrontImage(card)" class="max-w-full max-h-full object-contain" />
+          <div v-if="getFrontImage(card) && isYouTubeUrl(getFrontImage(card))" class="youtube-embed" v-html="getYouTubeEmbed(getFrontImage(card)!)"></div>
+          <div v-if="getFrontText(card)" class="panel-text" v-html="getFrontText(card)"></div>
         </div>
       </div>
       <div class="panel-face back">
         <div class="panel-content formatted-content">
-          <img v-if="card.back.imageUrl" :src="card.back.imageUrl" class="max-w-full max-h-full object-contain" />
-          <div v-if="card.back.text" class="panel-text" v-html="card.back.text"></div>
+          <img v-if="getBackImage(card) && !isYouTubeUrl(getBackImage(card))" :src="getBackImage(card)" class="max-w-full max-h-full object-contain" />
+          <div v-if="getBackImage(card) && isYouTubeUrl(getBackImage(card))" class="youtube-embed" v-html="getYouTubeEmbed(getBackImage(card)!)"></div>
+          <div v-if="getBackText(card)" class="panel-text" v-html="getBackText(card)"></div>
         </div>
         <div v-if="card.hint" class="panel-hint">{{ card.hint }}</div>
       </div>
@@ -20,7 +22,96 @@
 
 <script setup lang="ts">
 import type { Card } from '@/types/card'
+
 defineProps<{ cards: Card[] }>()
+
+const getFrontText = (card: Card): string | undefined => {
+  const textContent = card.front?.cells?.find(cell => cell.type === 'text')?.content || undefined
+  return textContent ? processTextContent(textContent) : undefined
+}
+
+const getFrontImage = (card: Card): string | undefined => {
+  return card.front?.cells?.find(cell => cell.type === 'media')?.mediaUrl || undefined
+}
+
+const getBackText = (card: Card): string | undefined => {
+  const textContent = card.back?.cells?.find(cell => cell.type === 'text')?.content || undefined
+  return textContent ? processTextContent(textContent) : undefined
+}
+
+const getBackImage = (card: Card): string | undefined => {
+  return card.back?.cells?.find(cell => cell.type === 'media')?.mediaUrl || undefined
+}
+
+// Simple YouTube URL detection and iframe generation
+const processTextContent = (content: string): string => {
+  if (!content) return ''
+  
+  // Check if content is a YouTube URL
+  const youtubeId = extractYouTubeId(content)
+  if (youtubeId) {
+    return `<div class="youtube-embed">
+      <iframe 
+        width="100%" 
+        height="100%" 
+        src="https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1&autoplay=0" 
+        frameborder="0" 
+        allow="fullscreen" 
+        loading="lazy"
+        referrerpolicy="no-referrer"
+        title="YouTube video player"
+      ></iframe>
+    </div>`
+  }
+  
+  // Return original content if not a YouTube URL
+  return content
+}
+
+const extractYouTubeId = (url: string): string | null => {
+  const cleanedUrl = url.replace(/\s+/g, '').trim()
+  if (!cleanedUrl) return null
+  
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?.*&v=([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/
+  ]
+  
+  for (const pattern of patterns) {
+    const match = cleanedUrl.match(pattern)
+    if (match?.[1] && /^[a-zA-Z0-9_-]{11}$/.test(match[1])) {
+      return match[1]
+    }
+  }
+  
+  return null
+}
+
+const isYouTubeUrl = (url: string | undefined): boolean => {
+  if (!url) return false
+  const cleanedUrl = url.replace(/\s+/g, '').trim()
+  return cleanedUrl.startsWith('https://www.youtube.com/') || cleanedUrl.startsWith('https://youtu.be/')
+}
+
+const getYouTubeEmbed = (url: string): string => {
+  const youtubeId = extractYouTubeId(url)
+  if (youtubeId) {
+    return `<div class="youtube-embed">
+      <iframe 
+        width="100%" 
+        height="100%" 
+        src="https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1&autoplay=0" 
+        frameborder="0" 
+        allow="fullscreen" 
+        loading="lazy"
+        referrerpolicy="no-referrer"
+        title="YouTube video player"
+      ></iframe>
+    </div>`
+  }
+  return ''
+}
 </script>
 
 <style scoped>
@@ -96,6 +187,25 @@ defineProps<{ cards: Card[] }>()
   opacity: 0.85;
   text-align: center;
 }
+
+.youtube-embed {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.youtube-embed iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
 @media (max-width: 600px) {
   .panel-river-mobile {
     max-width: 100vw;
@@ -113,6 +223,9 @@ defineProps<{ cards: Card[] }>()
   }
   .panel-text {
     font-size: 1.05rem;
+  }
+  .youtube-embed {
+    min-height: 150px;
   }
 }
 </style> 

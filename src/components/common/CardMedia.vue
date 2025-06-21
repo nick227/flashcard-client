@@ -92,7 +92,7 @@ const onError = (e: Event) => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   background: transparent;
 }
 

@@ -84,23 +84,7 @@ const showStockNotification = () => {
 
 // Set up socket status and progress callbacks
 onMounted(() => {
-    aiSocketService.setStatusCallback((status) => {
-        if (status.includes('error') || status.includes('Failed')) {
-            queueToast(status, 'error')
-            canRetry.value = status.includes('connection') || status.includes('timeout')
-        } else if (status.includes('reconnect')) {
-            queueToast(status, 'info')
-        } else if (status.includes('Connected')) {
-            queueToast(status, 'success')
-        } else {
-            queueToast(status, 'info')
-        }
-    })
-
-    aiSocketService.setProgressCallback((newProgress) => {
-        progress.value = newProgress
-        updateProgressUI(newProgress)
-    })
+    // Remove socket setup from here
 })
 
 const queueToast = (message: string, type: ToastType) => {
@@ -160,27 +144,65 @@ const updateProgressUI = (newProgress: GenerationProgress) => {
 }
 
 const generateSet = async () => {
+    const confirmation = await confirm('Are you sure you want to generate a set with AI?')
+    if (!confirmation) return
     if (!aiSocketService) {
         throw new Error('AI Socket Service not initialized')
     }
 
     try {
-        // Ensure socket is connected
-        if (!aiSocketService.connected) {
-            queueToast('Connecting to AI service...', 'info')
-            // Wait a bit for connection
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            if (!aiSocketService.connected) {
-                throw new Error('Could not establish connection to AI service')
-            }
-        }
-
-        queueToast('Starting AI generation...', 'info')
+        // Start showing progress immediately
         generating.value = true
         emit('update:generating', true)
         canRetry.value = false
         error.value = null
         generationId.value = null
+        progress.value = {
+            status: 'preparing',
+            cardsGenerated: 0,
+            totalCards: 0,
+            currentOperation: 'Connecting to AI service...'
+        }
+
+        // Set up socket status and progress callbacks right before generation
+        aiSocketService.setStatusCallback((status) => {
+            if (status.includes('error') || status.includes('Failed')) {
+                queueToast(status, 'error')
+                canRetry.value = status.includes('connection') || status.includes('timeout')
+            } else if (status.includes('reconnect')) {
+                queueToast(status, 'info')
+            } else if (status.includes('Connected')) {
+                queueToast(status, 'success')
+            } else {
+                queueToast(status, 'info')
+            }
+        })
+
+        aiSocketService.setProgressCallback((newProgress) => {
+            progress.value = newProgress
+            updateProgressUI(newProgress)
+        })
+
+        // Initialize socket if not connected
+        if (!aiSocketService.connected) {
+            queueToast('Connecting to AI service...', 'info')
+            // Initialize socket
+            aiSocketService.initialize()
+            
+            // Wait for connection with timeout
+            const connectionTimeout = 5000 // 5 seconds
+            const startTime = Date.now()
+            
+            while (!aiSocketService.connected && Date.now() - startTime < connectionTimeout) {
+                await new Promise(resolve => setTimeout(resolve, 100))
+            }
+            
+            if (!aiSocketService.connected) {
+                throw new Error('Could not establish connection to AI service within timeout')
+            }
+        }
+
+        queueToast('Starting AI generation...', 'info')
         progress.value = {
             status: 'preparing',
             cardsGenerated: 0,
@@ -230,7 +252,7 @@ const generateSet = async () => {
 }
 
 const handleCardGenerated = (card: Card) => {
-    console.log('Handling generated card:', card)
+    console.log('AISetGenerator - Raw generated card:', JSON.stringify(card, null, 2))
     // Update progress first
     progress.value = {
         ...progress.value,
@@ -238,8 +260,23 @@ const handleCardGenerated = (card: Card) => {
         currentOperation: `Generated ${progress.value.cardsGenerated + 1} of ${progress.value.totalCards} cards`
     }
     
+    // The card is already in the correct cell-based structure from AISocketService
+    // Just ensure layout is set correctly
+    const cardWithLayout = {
+        ...card,
+        front: {
+            ...card.front,
+            layout: card.front.layout || 'default'
+        },
+        back: {
+            ...card.back,
+            layout: card.back.layout || 'default'
+        }
+    }
+    
+    console.log('AISetGenerator - Processed card before emit:', JSON.stringify(cardWithLayout, null, 2))
     // Emit the card to be added to the set immediately
-    emit('add-set', card)
+    emit('add-set', cardWithLayout)
     
     // Show toast for each card
     queueToast(`Generated card ${progress.value.cardsGenerated} of ${progress.value.totalCards}`, 'info')
@@ -296,7 +333,7 @@ onUnmounted(() => {
   animation: ai-gradient-move 2s linear infinite;
   color: #fff;
   border: 3px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 0 0 3px rgba(80, 143, 255, 0.2);
   overflow: hidden;
 }

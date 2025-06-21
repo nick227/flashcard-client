@@ -43,15 +43,12 @@ onMounted(async () => {
   try {
     // Sets count
     const setsCountRes = await api.get('/sets/count')
-    console.log('setsCountRes', setsCountRes.data)
     setsCount.value = setsCountRes.data.count
     // Users count
     const usersCountRes = await api.get('/users/count')
-    console.log('usersCountRes', usersCountRes.data)
     usersCount.value = usersCountRes.data.count
     // Categories count
     const categoriesCountRes = await api.get('/categories/count')
-    console.log('categoriesCountRes', categoriesCountRes.data)
     categoriesCount.value = categoriesCountRes.data.count
   } catch (e) {
     // fallback: show dashes

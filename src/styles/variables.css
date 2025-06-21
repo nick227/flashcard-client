@@ -15,6 +15,9 @@
     --color-subtle: whitesmoke;
     --color-white: #ffffff;
     --color-black: #000000;
+    --card-back-background: #1d4ed8;
+    --card-front-background: #ffffff;
+    --card-border: #e5e7eb;
     /* Spacing & Sizing */
     --space-xs: 0.5rem;
     --space-sm: 1rem;
@@ -26,6 +29,7 @@
     --radius-lg: 2rem;
     --shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08);
     --shadow-xl: 0 8px 32px 0 rgba(30, 41, 59, 0.16);
+    --aspect-ratio: 16/9;
     /* Typography */
     --font-main: 'Inter', 'Segoe UI', Arial, sans-serif;
     --font-size-base: 1.125rem;

@@ -21,7 +21,7 @@ defineProps<{ mode: 'login' | 'register' }>()
 
 <style scoped>
 .toggle-btn {
-  padding: 0.6em 2em;
+  padding: 0.6em 1em;
   border-radius: 0.7em;
   border: none;
   background: var(--color-subtle);
@@ -30,6 +30,8 @@ defineProps<{ mode: 'login' | 'register' }>()
   font-size: 1.1em;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  font-size: 1em;
 }
 .toggle-btn.active {
   background: var(--color-primary);

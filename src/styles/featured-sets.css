@@ -2,13 +2,7 @@
     position: relative;
     overflow: hidden;
     border-radius: 0.75rem;
-    background-color: white;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
     transition: all 0.3s;
-}
-
-.featured-set:hover {
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
 }
 
 .featured-set-image {
@@ -23,10 +17,6 @@
     width: 100%;
     object-fit: cover;
     transition: transform 0.3s;
-}
-
-.featured-set:hover .featured-set-image img {
-    transform: scale(1.05);
 }
 
 .featured-set-content {

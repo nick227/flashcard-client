@@ -17,7 +17,6 @@ const isProd = import.meta.env.PROD
 const API_URL = import.meta.env.VITE_API_URL || (isProd ? 'https://flashcard-server-production.up.railway.app' : 'http://localhost:5000')
 
 // Configure axios defaults
-console.log('[Debug] Configuring axios')
 axios.defaults.baseURL = API_URL
 axios.defaults.timeout = 30000 // 30 seconds
 
@@ -31,7 +30,6 @@ declare module 'axios' {
 }
 
 // NProgress
-console.log('[Debug] Setting up NProgress')
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 NProgress.configure({ 
@@ -179,9 +177,9 @@ axios.interceptors.response.use(
                            config.url?.includes('/users/me') ||
                            config.url?.includes('/sets/liked')
       if (isAuthEndpoint) {
-        auth?.logout()
-        auth?.setMessage('Session expired. Please log in again.')
-        window.location.href = '/login'
+      auth?.logout()
+      auth?.setMessage('Session expired. Please log in again.')
+      window.location.href = '/login'
       }
     }
     return Promise.reject(err)
