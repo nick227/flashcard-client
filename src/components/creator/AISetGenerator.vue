@@ -29,6 +29,7 @@ import { ref, onUnmounted, onMounted } from 'vue'
 import { useToaster } from '@/composables/useToaster'
 import type { Card } from '@/types/card'
 import { aiSocketService } from '@/services/AISocketService'
+import { determineOptimalLayout } from '@/utils/cellUtils'
 
 type GenerationProgress = {
     status: 'preparing' | 'generating' | 'completed' | 'failed'
@@ -315,21 +316,33 @@ const generateSet = async () => {
 const handleCardGenerated = (card: Card) => {
     console.log('AISetGenerator - Raw generated card:', JSON.stringify(card, null, 2))
     
-    // The card is already in the correct cell-based structure from AISocketService
-    // Just ensure layout is set correctly
+    // Determine optimal layout based on content for each side
+    const frontLayout = determineOptimalLayout(
+        card.front.cells?.[0]?.content, // text from first cell
+        card.front.cells?.[1]?.mediaUrl || card.front.cells?.[0]?.mediaUrl, // image from any cell
+        card.front.layout
+    )
+    
+    const backLayout = determineOptimalLayout(
+        card.back.cells?.[0]?.content, // text from first cell
+        card.back.cells?.[1]?.mediaUrl || card.back.cells?.[0]?.mediaUrl, // image from any cell
+        card.back.layout
+    )
+    
+    // Apply the determined layouts
     const cardWithLayout = {
         ...card,
         front: {
             ...card.front,
-            layout: card.front.layout || 'default'
+            layout: frontLayout
         },
         back: {
             ...card.back,
-            layout: card.back.layout || 'default'
+            layout: backLayout
         }
     }
     
-    console.log('AISetGenerator - Processed card before emit:', JSON.stringify(cardWithLayout, null, 2))
+    console.log('AISetGenerator - Processed card with smart layout:', JSON.stringify(cardWithLayout, null, 2))
     
     // Store card locally for backup
     generatedCards.value.push(cardWithLayout)
