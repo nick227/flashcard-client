@@ -83,7 +83,7 @@ function selectImage(url: string) {
 
 @media (max-width: 600px) {
     .stock-images-grid {
-        grid-template-columns: repeat(3, 1fr);
+        gap: 0.1rem;
     }
 }
 </style>
