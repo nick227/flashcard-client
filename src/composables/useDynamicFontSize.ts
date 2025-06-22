@@ -1,5 +1,4 @@
 interface FontSizeOptions {
-  isMobile?: boolean
   width?: number
   height?: number
 }
@@ -8,91 +7,116 @@ interface TextStyle {
   fontSize: string
 }
 
-// Font size constants
-const MIN_FONT_SIZE = 1
-const MAX_FONT_SIZE = 4.0
-const MIN_CHARS = 1
-const MAX_CHARS = 90
-const MOBILE_MULTIPLIER = 0.8
+interface FontSizeConfig {
+  minFontSize: number
+  maxFontSize: number
+  minChars: number
+  maxChars: number
+  minContainerSize: number
+  maxContainerSize: number
+  sizeMultiplier: number
+  minAspectRatio: number
+  maxAspectRatio: number
+  minAspectMultiplier: number
+  minSizeMultiplier: number
+  logScaleFactor: number
+}
 
-// Container size thresholds and multipliers
-const MIN_CONTAINER_SIZE = 250   // Lowered to handle narrow containers
-const MAX_CONTAINER_SIZE = 5000 // Adjusted for typical card sizes
-const SIZE_MULTIPLIER = 1.02     // Reduced for more subtle scaling
-const MIN_ASPECT_RATIO = 0.1    // More permissive for tall containers
-const MAX_ASPECT_RATIO = 10.0   // More permissive for wide containers
+// Single configuration for all platforms
+const FONT_CONFIG: FontSizeConfig = {
+  minFontSize: 0.9,
+  maxFontSize: 4,
+  minChars: 20,
+  maxChars: 140,
+  minContainerSize: 500,
+  maxContainerSize: 300000,
+  sizeMultiplier: 1.5,
+  minAspectRatio: 0.1,
+  maxAspectRatio: 10.0,
+  minAspectMultiplier: 0.25,
+  minSizeMultiplier: 0.5,
+  logScaleFactor: 0.3
+}
 
-// Scaling constants
-const MIN_ASPECT_MULTIPLIER = 0.5  // Minimum multiplier for extreme aspect ratios
-const MIN_SIZE_MULTIPLIER = 0.85    // Minimum multiplier for extreme sizes
-const LOG_SCALE_FACTOR = 0.3        // Controls how quickly the log scale affects the multiplier
+function calculateFontSize(text: string, options: FontSizeOptions = {}, config: FontSizeConfig): number {
+  if (!text) {
+    return config.maxFontSize
+  }
 
-function calculateFontSize(text: string, options: FontSizeOptions = {}): number {
-  if (!text) return MAX_FONT_SIZE
-
-  const { isMobile = false, width = 0, height = 0 } = options
+  const { width = 0, height = 0 } = options
   const length = text.trim().length
   const area = width * height
   const aspectRatio = width && height ? width / height : 1
 
-  // Base font size from character count with MIN_CHARS consideration
+  // Base font size from character count with minChars consideration
   let baseFontSize: number
-  if (length <= MIN_CHARS) {
-    baseFontSize = MAX_FONT_SIZE
-  } else if (length >= MAX_CHARS) {
-    baseFontSize = MIN_FONT_SIZE
+  if (length <= config.minChars) {
+    baseFontSize = config.maxFontSize
+  } else if (length >= config.maxChars) {
+    baseFontSize = config.minFontSize
   } else {
-    // Normalize length between MIN_CHARS and MAX_CHARS
-    const normalizedLength = (length - MIN_CHARS) / (MAX_CHARS - MIN_CHARS)
+    // Normalize length between minChars and maxChars
+    const normalizedLength = (length - config.minChars) / (config.maxChars - config.minChars)
     const scale = 1 - (normalizedLength * normalizedLength) // Quadratic scaling
-    baseFontSize = MIN_FONT_SIZE + (MAX_FONT_SIZE - MIN_FONT_SIZE) * scale
+    baseFontSize = config.minFontSize + (config.maxFontSize - config.minFontSize) * scale
   }
 
-  // Container size multiplier
+  // For very short text (≤ minChars), skip container scaling to ensure maxFontSize
+  if (length <= config.minChars) {
+    return baseFontSize // Return exactly maxFontSize (4rem) for short text
+  }
+
+  // Container size multiplier (only applied to longer text)
   let sizeMultiplier = 1.0
   if (area > 0) {
     // Logarithmic area scaling for more natural visual behavior
     const logArea = Math.log(area)
-    const logMinArea = Math.log(MIN_CONTAINER_SIZE)
-    const logMaxArea = Math.log(MAX_CONTAINER_SIZE)
+    const logMinArea = Math.log(config.minContainerSize)
+    const logMaxArea = Math.log(config.maxContainerSize)
     const normalizedArea = Math.min(
       Math.max((logArea - logMinArea) / (logMaxArea - logMinArea), 0),
       1
     )
     
+    
     // Aspect ratio adjustment with minimum bound
     let aspectMultiplier = 1.0
-    if (aspectRatio < MIN_ASPECT_RATIO) {
+    if (aspectRatio < config.minAspectRatio) {
       aspectMultiplier = Math.max(
-        Math.pow(aspectRatio / MIN_ASPECT_RATIO, 0.5),
-        MIN_ASPECT_MULTIPLIER
+        Math.pow(aspectRatio / config.minAspectRatio, 0.5),
+        config.minAspectMultiplier
       )
-    } else if (aspectRatio > MAX_ASPECT_RATIO) {
+    } else if (aspectRatio > config.maxAspectRatio) {
       aspectMultiplier = Math.max(
-        Math.pow(MAX_ASPECT_RATIO / aspectRatio, 0.5),
-        MIN_ASPECT_MULTIPLIER
+        Math.pow(config.maxAspectRatio / aspectRatio, 0.5),
+        config.minAspectMultiplier
       )
     }
     
     // Combine area and aspect ratio effects with logarithmic scaling
-    const areaEffect = 1.0 - (SIZE_MULTIPLIER * Math.pow(normalizedArea, LOG_SCALE_FACTOR))
+    const areaEffect = 1.0 - (config.sizeMultiplier * Math.pow(normalizedArea, config.logScaleFactor))
     sizeMultiplier = areaEffect * aspectMultiplier
     
     // Ensure minimum multiplier for extreme cases
-    sizeMultiplier = Math.max(sizeMultiplier, MIN_SIZE_MULTIPLIER)
+    sizeMultiplier = Math.max(sizeMultiplier, config.minSizeMultiplier)
   }
 
   let fontSize = baseFontSize * sizeMultiplier
-  if (isMobile) fontSize *= MOBILE_MULTIPLIER
   
   // Ensure font size stays within bounds
-  return Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, fontSize))
+  const finalFontSize = Math.max(config.minFontSize, Math.min(config.maxFontSize, fontSize))
+  
+  return finalFontSize
 }
-
 
 export function useDynamicFontSize() {
   const getTextStyle = (text: string, options: FontSizeOptions = {}): TextStyle => {
-    return { fontSize: `${calculateFontSize(text, options).toFixed(2)}rem` }
+    
+    const fontSize = calculateFontSize(text, options, FONT_CONFIG)
+    const result = { fontSize: `${fontSize.toFixed(2)}rem` }
+    
+    return result
   }
+  
   return { getTextStyle }
 }

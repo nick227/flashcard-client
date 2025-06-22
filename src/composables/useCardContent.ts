@@ -3,7 +3,6 @@ import type { ContentCell } from '@/types/card'
 import { useDynamicFontSize } from './useDynamicFontSize'
 
 interface CardContentOptions {
-  isMobile?: boolean
   width?: number
   height?: number
 }
@@ -29,7 +28,6 @@ export function useCardContent(
     const currentOptions = 'value' in options ? options.value : options
     
     return getTextStyle(content, {
-      isMobile: currentOptions.isMobile,
       width: currentOptions.width,
       height: currentOptions.height
     })

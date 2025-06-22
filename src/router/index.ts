@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { nextTick } from 'vue'
 
 // Lazy load components
 const Home = () => import('../views/Home.vue')
@@ -167,24 +168,17 @@ export const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, _from, savedPosition) {
-    // If there's a saved position (browser back/forward), use it
-    if (savedPosition) {
-      return savedPosition
-    }
-    
-    // If there's a hash in the URL, scroll to it
-    if (to.hash) {
-      return {
-        el: to.hash,
-        behavior: 'smooth'
-      }
-    }
-    
-    // For all other cases, scroll to top
-    return {
-      top: 0,
-      behavior: 'smooth'
-    }
+    if (savedPosition) return savedPosition
+  
+    return new Promise(resolve => {
+      nextTick(() => {
+        if (to.hash && document.querySelector(to.hash)) {
+          resolve({ el: to.hash, behavior: 'smooth' })
+        } else {
+          resolve({ top: 0, behavior: 'smooth' })
+        }
+      })
+    })
   }
 })
 

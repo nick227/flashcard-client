@@ -81,22 +81,18 @@ const extractYouTubeId = (url: string): string | null => {
 
 // Media Type Detection
 const detectUrlType = (url: string): MediaType => {
-    console.log('🔍 detectUrlType called with:', url)
     
     const cleanedUrl = url.replace(/\s+/g, '').trim()
     if (!cleanedUrl) {
-        console.log('❌ Empty URL, returning text')
         return 'text'
     }
     
     try {
         const parsedUrl = new URL(cleanedUrl)
-        console.log('🔍 Parsed URL:', { hostname: parsedUrl.hostname, pathname: parsedUrl.pathname })
         
         // Check for YouTube first
         if (cleanedUrl.includes('youtube.com') || cleanedUrl.includes('youtu.be')) {
             const videoId = extractYouTubeId(cleanedUrl)
-            console.log('🔍 YouTube check:', { hasVideoId: !!videoId })
             return videoId ? 'youtube' : 'link'
         }
         
@@ -104,7 +100,6 @@ const detectUrlType = (url: string): MediaType => {
         const hasImageExtension = MEDIA_CONFIG.image.allowedExtensions.some(ext => 
             parsedUrl.pathname.toLowerCase().endsWith(ext)
         )
-        console.log('🔍 Image extension check:', { hasImageExtension, pathname: parsedUrl.pathname })
         
         // Check for common image hosting domains
         const isImageHost = [
@@ -116,7 +111,6 @@ const detectUrlType = (url: string): MediaType => {
             'flickr.com',
             'staticflickr.com'
         ].some(domain => parsedUrl.hostname.toLowerCase().includes(domain))
-        console.log('🔍 Image host check:', { isImageHost, hostname: parsedUrl.hostname })
         
         // Check for image-related query parameters
         const hasImageParams = [
@@ -129,23 +123,18 @@ const detectUrlType = (url: string): MediaType => {
             parsedUrl.pathname.toLowerCase().includes(param) || 
             parsedUrl.searchParams.toString().toLowerCase().includes(param)
         )
-        console.log('🔍 Image params check:', { hasImageParams })
         
         if (hasImageExtension || isImageHost || hasImageParams) {
-            console.log('✅ Detected as image')
             return 'image'
         }
         
         // Check for other video platforms
         if (cleanedUrl.includes('vimeo.com') || cleanedUrl.includes('dailymotion.com')) {
-            console.log('🔍 Detected as video link')
             return 'link'
         }
         
-        console.log('🔍 Defaulting to text')
         return 'text'
     } catch (error) {
-        console.error('❌ Error parsing URL:', error)
         return 'text'
     }
 }
@@ -302,37 +291,29 @@ export function useMediaUtils(): MediaUtils {
     }
     
     const detectAndRenderMedia = (text: string, isEditing: boolean = false): string => {
-        console.log('🔍 detectAndRenderMedia called:', { text, isEditing })
         
         if (!text?.trim()) {
-            console.log('❌ Empty text, returning empty string')
             return ''
         }
 
         const cleanedText = text.replace(/\s+/g, ' ').trim()
-        console.log('🔍 Cleaned text:', cleanedText)
         
         let lastIndex = 0
         let result = ''
         let match
 
         while ((match = URL_REGEX.exec(cleanedText)) !== null) {
-            console.log('🔍 URL match found:', match[0])
             
             result += cleanedText.slice(lastIndex, match.index)
             
             const url = match[1].trim()
-            console.log('🔍 Processing URL:', url)
             
             const media = detectMediaType(url)
-            console.log('🔍 Media type detected:', media)
             
             if (media.type === 'youtube' || media.type === 'image') {
                 const html = generateMediaHtml(media, isEditing)
-                console.log('🔍 Generated HTML for', media.type, ':', html)
                 result += html
             } else {
-                console.log('🔍 Creating link for non-embed media type:', media.type)
                 result += `<a href="${url}" target="_blank" rel="noopener noreferrer" class="embedded-link" onclick="event.stopPropagation()">${url}</a>`
             }
             
@@ -340,7 +321,6 @@ export function useMediaUtils(): MediaUtils {
         }
         
         result += cleanedText.slice(lastIndex)
-        console.log('🔍 Final result:', result)
         return result
     }
 

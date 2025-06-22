@@ -11,7 +11,7 @@
       <div class="bg-white p-8 mb-8">
         <SetInfoForm :title="title" :description="description" :category="category" :tags="setTags" :price="setPrice"
           :categories="categories" :availableTags="availableTags" :thumbnail="setThumbnail" :setId="setId || 0"
-          :isSubmitting="submitting" :formSubmitted="formSubmitted" @update:title="title = $event"
+          :isSubmitting="isSubmitting" :formSubmitted="formSubmitted" @update:title="title = $event"
           @update:description="description = $event" @update:category="category = $event"
           @update:tags="setTags = $event" @update:price="setPrice = $event" @update:thumbnail="handleThumbnailUpdate" />
         <div class="flex flex-wrap items-center gap-6 mb-8">
@@ -61,7 +61,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import type { Card, CardLayout } from '@/types/card'
 import ImportBar from '@/components/creator/ImportBar.vue'
 import SetInfoForm from '@/components/creator/SetInfoForm.vue'
@@ -81,9 +81,10 @@ import { useHistory, type HistoryState } from '@/composables/useHistory.ts'
 import { parseFlashCardCsv, type ParsedCard } from '@/utils/csv.ts'
 import { fetchCategories, fetchTags } from '@/api/index'
 import { SetService } from '@/services/SetService'
-import { createCellsFromContent, processCellsToLegacyFormat } from '@/utils/cellUtils'
+import { createCellsFromContent } from '@/utils/cellUtils'
+import { useSetSubmission } from '@/composables/useSetSubmission'
+import { useFormValidation } from '@/composables/useFormValidation'
 
-const router = useRouter()
 const route = useRoute()
 const { toasts, toast } = useToaster()
 const viewMode = ref<'grid' | 'single'>('single')
@@ -94,7 +95,6 @@ const confirmVisible = ref(false)
 const categories = ref<{ id: number, name: string }[]>([])
 const availableTags = ref<string[]>([])
 const cardToDelete = ref<number | null>(null)
-const submitting = ref(false)
 const setId = computed(() => Number(route.params.setId) || 0)
 const submitButtonText = computed(() => setId.value ? 'Save Changes' : 'Submit Set')
 const hasCards = computed(() => cards.value.length > 0)
@@ -113,7 +113,6 @@ const {
   cards,
   formSubmitted,
   cardsTouched,
-  validateForm,
   addCard,
   deleteCard,
   updateOrder,
@@ -182,7 +181,7 @@ const isAIGeneratorDisabled = computed(() => {
 })
 
 const isSubmitDisabled = computed(() => {
-  return submitting.value ||
+  return isSubmitting.value ||
     setGenerating.value ||
     !title.value ||
     !description.value ||
@@ -498,7 +497,7 @@ function resetAllState() {
   history.value = []
   
   // Reset submission state
-  submitting.value = false
+  isSubmitting.value = false
   formSubmitted.value = false
   setGenerating.value = false
 
@@ -590,6 +589,23 @@ function onAddSet(newCards: Card | Card[]) {
   cardsTouched.value = true
 }
 
+// Initialize composables
+const { isSubmitting, submitSet, navigateToSet } = useSetSubmission()
+
+// Create reactive form data for validation
+const formDataForValidation = computed(() => ({
+  title: title.value,
+  description: description.value,
+  category: category.value,
+  thumbnail: setThumbnail.value,
+  cards: cards.value,
+  setGenerating: setGenerating.value,
+  isSubmitting: isSubmitting.value
+}))
+
+const { validateForm, getSubmitButtonTitle } = useFormValidation(formDataForValidation)
+
+// Replace the existing onSubmit function
 async function onSubmit() {
   const validation = validateForm()
   if (!validation.isValid) {
@@ -597,160 +613,29 @@ async function onSubmit() {
     return
   }
 
-  submitting.value = true
   try {
-    // Create FormData to handle file upload
-    const formData = new FormData()
+    const submissionData = {
+      title: title.value,
+      description: description.value,
+      category: category.value,
+      tags: setTags.value,
+      price: setPrice.value,
+      thumbnail: setThumbnail.value,
+      thumbnailFile: thumbnailFile.value,
+      cards: cards.value,
+      pendingImageFiles: pendingImageFiles.value
+    }
+
+    const newSetId = await submitSet(submissionData, setId.value)
     
-    // Add basic set data
-    formData.append('title', title.value)
-    formData.append('description', description.value)
-    formData.append('category_id', category.value.toString())
-    formData.append('tags', JSON.stringify(setTags.value))
-    formData.append('isPublic', 'true')
-    formData.append('isArchived', 'false')
-    formData.append('price', setPrice.value.type === 'free' ? '0' : setPrice.value.amount?.toString() || '0')
-    formData.append('isSubscriberOnly', setPrice.value.type === 'subscribers' ? 'true' : 'false')
-
-    // Handle thumbnail - either file or URL
-    if (thumbnailFile.value) {
-      formData.append('thumbnail', thumbnailFile.value)
-    } else if (setThumbnail.value) {
-      // If it's a base64 string, convert it to a file
-      if (setThumbnail.value.startsWith('data:')) {
-        const response = await fetch(setThumbnail.value)
-        const blob = await response.blob()
-        const file = new File([blob], 'thumbnail.png', { type: 'image/png' })
-        formData.append('thumbnail', file)
-      } else {
-        // If it's a URL, send it as is
-        formData.append('thumbnailUrl', setThumbnail.value)
-      }
-    }
-
-    // Add cards data
-    const cardsData = cards.value.map((card) => {
-      const frontProcessed = processCellsToLegacyFormat(card.front.cells || [])
-      const backProcessed = processCellsToLegacyFormat(card.back.cells || [])
-
-      // Handle pending image files for blob URLs
-      if (frontProcessed.imageFile === null && card.front.cells) {
-        const mediaCell = card.front.cells.find(cell => cell.type === 'media' && cell.mediaUrl?.startsWith('blob:'))
-        if (mediaCell) {
-          const cellIndex = card.front.cells.indexOf(mediaCell)
-          const key = `front_${cellIndex}`
-          frontProcessed.imageFile = pendingImageFiles.value.get(key) || null
-        }
-      }
-      
-      if (backProcessed.imageFile === null && card.back.cells) {
-        const mediaCell = card.back.cells.find(cell => cell.type === 'media' && cell.mediaUrl?.startsWith('blob:'))
-        if (mediaCell) {
-          const cellIndex = card.back.cells.indexOf(mediaCell)
-          const key = `back_${cellIndex}`
-          backProcessed.imageFile = pendingImageFiles.value.get(key) || null
-        }
-      }
-
-      return {
-        front: {
-          text: frontProcessed.text,
-          imageUrl: frontProcessed.imageUrl,
-          imageFile: frontProcessed.imageFile,
-          layout: card.front.layout || 'default'
-        },
-        back: {
-          text: backProcessed.text,
-          imageUrl: backProcessed.imageUrl,
-          imageFile: backProcessed.imageFile,
-          layout: card.back.layout || 'default'
-        },
-        hint: card.hint || null
-      }
-    })
-
-    // Add image files to FormData
-    cardsData.forEach((card, cardIndex) => {
-      if (card.front.imageFile) {
-        formData.append(`card_${cardIndex}_front_image`, card.front.imageFile)
-      }
-      if (card.back.imageFile) {
-        formData.append(`card_${cardIndex}_back_image`, card.back.imageFile)
-      }
-    })
-
-    // Remove imageFile from cards data before JSON serialization
-    const cardsDataForJson = cardsData.map(card => ({
-      front: {
-        text: card.front.text,
-        imageUrl: card.front.imageUrl,
-        layout: card.front.layout
-      },
-      back: {
-        text: card.back.text,
-        imageUrl: card.back.imageUrl,
-        layout: card.back.layout
-      },
-      hint: card.hint
-    }))
-
-    formData.append('cards', JSON.stringify(cardsDataForJson))
-
-    if (setId.value) {
-      await SetService.updateSet(setId.value, formData)
-      toast('Set updated successfully', 'success')
-      // Mark as submitted and clear progress after successful update
-      markAsSubmitted()
-      clearProgress()
-      router.push(`/sets/${setId.value}`)
-    } else {
-      const response = await SetService.createSet(formData)
-      
-      if (!response || !response.id) {
-        console.error('Invalid response structure:', response)
-        throw new Error('Invalid response from server - missing set ID')
-      }
-      
-      toast('Set created successfully', 'success')
-      // Mark as submitted and clear progress after successful creation
-      markAsSubmitted()
-      clearProgress()
-      router.push(`/sets/${response.id}`)
-    }
+    // Mark as submitted and clear progress after successful submission
+    markAsSubmitted()
+    clearProgress()
+    navigateToSet(newSetId)
   } catch (error: unknown) {
-    console.error('Error saving set:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      response: error && typeof error === 'object' && 'response' in error
-        ? (error.response as any)?.data
-        : undefined,
-      responseStructure: error && typeof error === 'object' && 'response' in error
-        ? {
-            status: (error.response as any)?.status,
-            statusText: (error.response as any)?.statusText,
-            data: (error.response as any)?.data,
-            headers: (error.response as any)?.headers
-          }
-        : undefined
-    })
     toast('Error saving set: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error')
-  } finally {
-    submitting.value = false
   }
 }
-
-// Add a computed property for the submit button title
-const getSubmitButtonTitle = computed(() => {
-  if (setGenerating.value) return 'Please wait for AI generation to complete'
-  if (!title.value) return 'Title is required'
-  if (!description.value) return 'Description is required'
-  if (!category.value) return 'Category is required'
-  if (!setThumbnail.value) return 'Thumbnail is required'
-  if (!hasCards.value) return 'At least one card is required'
-  if (submitting.value) return 'Submitting...'
-  return 'Submit Set'
-})
 
 // Update the watch for cards to ensure changes are saved
 watch(

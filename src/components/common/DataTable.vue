@@ -20,7 +20,7 @@
 
     <!-- Table Content -->
     <div v-else ref="tableContainer">
-      <table class="min-w-full bg-white rounded-xl shadow">
+      <table class="min-w-full bg-white rounded-xl shadow px-2">
         <thead>
           <tr class="bg-gray-50 text-gray-700 text-left">
             <th 

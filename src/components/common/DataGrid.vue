@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-xl shadow-lg p-6">
+  <div class="bg-gray-50 rounded-xl p-6">
     <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
       <i :class="icon" :style="{ color: iconColor }"></i>
       {{ title }}

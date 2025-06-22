@@ -17,7 +17,7 @@
       <a 
         :href="`/sets/${item.id}`"
         target="_blank"
-        class="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+        class="font-semibold text-blue-600 hover:text-blue-800 hover:underline line-clamp-2"
         :aria-label="`View set: ${item.title}`"
       >
         {{ item.title }}
@@ -36,7 +36,7 @@
       />
     </template>
     <template #actions="{ item }">
-      <div class="flex space-x-4">
+      <div class="flex space-x-2">
         <button
           @click="handleAction('edit', item)"
           :disabled="props.loading"
@@ -67,9 +67,9 @@ import VisibilityToggle from './VisibilityToggle.vue'
 const columns = [
   { key: 'title', label: 'Title', sortable: true },
   { key: 'price', label: 'Price', sortable: true },
-  { key: 'createdAt', label: 'Created', sortable: true },
-  { key: 'hidden', label: 'Hidden' },
-  { key: 'actions', label: 'Actions' }
+  { key: 'createdAt', label: 'Date', sortable: true },
+  { key: 'hidden', label: 'Show' },
+  { key: 'actions', label: 'Edit' }
 ]
 
 interface Props {

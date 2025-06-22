@@ -141,19 +141,16 @@ export class CacheService {
     const entry = this.cache.get(key)
     if (!entry) {
       this.stats.misses++
-      if (this.options.logging) console.log(`[Cache] MISS: ${key}`)
       return null
     }
     if (Date.now() > entry.expiresAt) {
       this.cache.delete(key)
       this.stats.misses++
       this.events.onExpire?.(key)
-      if (this.options.logging) console.log(`[Cache] EXPIRED: ${key}`)
       return null
     }
     entry.lastAccessed = Date.now()
     this.stats.hits++
-    if (this.options.logging) console.log(`[Cache] HIT: ${key}`)
     return entry.data
   }
 
@@ -189,10 +186,6 @@ export class CacheService {
     this.size.value = this.cache.size
     this.stats.sets++
     
-    if (this.options.logging) {
-      console.log(`[Cache] SET: ${key} (${size} bytes)`)
-    }
-    
     this.events.onSet?.(key, data)
 
     if (this.options.persist) {
@@ -207,7 +200,6 @@ export class CacheService {
     }
     this.cache.delete(key)
     this.size.value = this.cache.size
-    if (this.options.logging) console.log(`[Cache] DELETE: ${key}`)
     if (this.options.persist) {
       await this.saveToStorage()
     }
@@ -225,16 +217,12 @@ export class CacheService {
       await this.delete(key)
     }
     
-    if (this.options.logging) {
-      console.log(`[Cache] DELETE BY PREFIX: ${prefix} (${keysToDelete.length} entries)`)
-    }
   }
 
   async clear(): Promise<void> {
     this.cache.clear()
     this.currentMemoryUsage.value = 0
     this.size.value = 0
-    if (this.options.logging) console.log('[Cache] CLEAR: All entries')
     if (this.options.persist) {
       await this.saveToStorage()
     }
@@ -250,9 +238,6 @@ export class CacheService {
     }
 
     this.stats.evictions += entries.length
-    if (this.options.logging) {
-      console.log(`[Cache] EVICTED: ${entries.length} entries`)
-    }
   }
 
   private startCleanupInterval(): void {
@@ -280,9 +265,6 @@ export class CacheService {
       await this.delete(key)
     }
 
-    if (expiredKeys.length > 0 && this.options.logging) {
-      console.log(`[Cache] CLEANUP: Removed ${expiredKeys.length} expired entries`)
-    }
   }
 
   stopCleanupInterval(): void {

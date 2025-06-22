@@ -1,27 +1,14 @@
 <template>
   <div class="visibility-toggle">
-    <label 
-      class="switch" 
-      :title="isHidden ? 'Hidden (click to show)' : 'Visible (click to hide)'" 
-      :aria-label="isHidden ? 'Show set' : 'Hide set'"
-      :class="{ 'opacity-50': loading }"
-    >
-      <input
-        type="checkbox"
-        :checked="!isHidden"
-        @change="handleToggle"
-        :disabled="loading"
-        :aria-disabled="loading"
-      />
-      <span 
-        class="visibility-text" 
-        :class="[
-          isHidden ? 'text-red-500' : 'text-green-600',
-          { 'opacity-50': loading }
-        ]"
-      >
-        {{ isHidden ? 'Hidden' : 'Visible' }}
-      </span>
+    <label class="switch" :title="isHidden ? 'Hidden (click to show)' : 'Visible (click to hide)'"
+      :aria-label="isHidden ? 'Show set' : 'Hide set'" :class="{ 'opacity-50': loading }">
+      <input type="checkbox" :checked="!isHidden" @change="handleToggle" :disabled="loading" :aria-disabled="loading" />
+      <div v-if="isHidden" class="visibility-text text-red-500">
+        <i class="fa-solid fa-eye-slash"></i>
+      </div>
+      <div v-else class="visibility-text text-green-600">
+        <i class="fa-solid fa-eye"></i>
+      </div>
     </label>
   </div>
 </template>
@@ -46,7 +33,7 @@ watch(() => props.initialHidden, (newValue) => {
 const handleToggle = async () => {
   if (loading.value) return
   loading.value = true
-  
+
   try {
     await api.post(`/sets/${props.setId}/toggle-hidden`)
     isHidden.value = !isHidden.value
@@ -89,4 +76,4 @@ const handleToggle = async () => {
   transition: all 0.2s ease;
   white-space: nowrap;
 }
-</style> 
+</style>

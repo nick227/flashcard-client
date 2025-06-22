@@ -21,37 +21,20 @@
       </button>
     </div>
     
-    <!-- Image Upload Modal -->
-    <div v-if="showImageUpload" class="image-upload-modal">
-      <div class="modal-overlay" @click="closeImageUpload"></div>
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Upload Image for {{ side === 'front' ? 'Front' : 'Back' }}</h3>
-          <button @click="closeImageUpload" class="close-button">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="modal-body">
-          <ImageUploader
-            ref="imageUploaderRef"
-            :title="`Upload ${side === 'front' ? 'Front' : 'Back'} Image`"
-            :label="`Upload ${side === 'front' ? 'Front' : 'Back'} Image`"
-            :show-label="true"
-            :smart-compression="true"
-            :target-size="500 * 1024"
-            @file-selected="handleFileSelected"
-            @remove="handleImageRemove"
-          />
-        </div>
-      </div>
-    </div>
+    <!-- Hidden file input for direct image upload -->
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept="image/*"
+      style="display: none"
+      @change="handleFileSelected"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Card, CardSide, CardLayout, ContentCell } from '@/types/card'
 import CardContentLayout from './CardContent/CardContentLayout.vue'
-import ImageUploader from './ImageUploader.vue'
 import { useCardContentState } from './CardContent/CardContentState'
 import { useCardContentAI } from './CardContent/CardContentAI'
 import { useToaster } from '@/composables/useToaster'
@@ -78,9 +61,8 @@ const emit = defineEmits<{
 const { toast } = useToaster()
 const { cardState, currentSide, updateLayout, addCell, updateCell, removeCell } = useCardContentState(props)
 
-// Image upload state
-const showImageUpload = ref(false)
-const imageUploaderRef = ref<InstanceType<typeof ImageUploader> | null>(null)
+// File input reference
+const fileInputRef = ref<HTMLInputElement | null>(null)
 const blobUrls = ref<Set<string>>(new Set()) // Track all blob URLs for cleanup
 
 const handleCellUpdate = (index: number, updates: Partial<ContentCell>) => {
@@ -94,18 +76,20 @@ const handleCellRemove = (index: number) => {
 }
 
 const handleAddImage = () => {
-  showImageUpload.value = true
+  // Directly trigger file input
+  fileInputRef.value?.click()
 }
 
-const closeImageUpload = () => {
-  showImageUpload.value = false
-  // Do NOT reset the uploader's state here. The modal is just closing.
-  // The uploader's state will be reset when the parent component (e.g., SetWizard)
-  // is destroyed or decides to clear the card content.
-}
-
-const handleFileSelected = (file: File) => {
-  // The file received from the uploader is already compressed.
+const handleFileSelected = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (!file) return
+  
+  // Reset the input so the same file can be selected again
+  target.value = ''
+  
+  // Create blob URL for preview
   const blobUrl = URL.createObjectURL(file)
   blobUrls.value.add(blobUrl) // Track for cleanup
 
@@ -147,13 +131,6 @@ const handleFileSelected = (file: File) => {
   }
   
   emit('update', cardState.value)
-  closeImageUpload()
-}
-
-const handleImageRemove = () => {
-  // This is now handled by the remove event from the uploader
-  // We may need to find the cell with the image and remove it.
-  // For now, this is sufficient to reset the uploader's state.
 }
 
 const onToggleLayout = () => {
@@ -230,10 +207,6 @@ onUnmounted(() => {
     URL.revokeObjectURL(url)
   })
   blobUrls.value.clear()
-  
-  if (imageUploaderRef.value) {
-    imageUploaderRef.value.removeImage()
-  }
 })
 </script>
 
@@ -276,75 +249,6 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-/* Image Upload Modal */
-.image-upload-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  position: relative;
-  background: white;
-  border-radius: var(--radius-lg);
-  padding: 0;
-  max-width: 500px;
-  width: 90%;
-  max-height: 80vh;
-  overflow: hidden;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 1.25rem;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  padding: 0.5rem;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-}
-
-.close-button:hover {
-  background: var(--color-background-alt);
-  color: var(--color-text);
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
 /* Mobile styles */
 @media (max-width: 600px) {
   .card-controls {
@@ -353,11 +257,6 @@ onUnmounted(() => {
   
   .control-button {
     flex: 1 1 calc(50% - var(--space-sm));
-  }
-  
-  .modal-content {
-    width: 95%;
-    margin: 1rem;
   }
 }
 </style> 

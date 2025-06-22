@@ -79,7 +79,7 @@ const emit = defineEmits<{
 
 const contentRef = ref<HTMLElement | null>(null)
 const containerRef = ref<HTMLElement | null>(null)
-const containerSize = ref({ width: 621, height: 317 })
+const containerSize = ref({ width: 0, height: 0 })
 
 // Make cell reactive
 const reactiveCell = computed(() => props.cell)
@@ -94,7 +94,6 @@ const reactiveContainerSize = computed(() => {
 const cardContentOptions = computed(() => {
   const size = reactiveContainerSize.value
   return {
-    isMobile: props.isMobile,
     width: size.width,
     height: size.height
   }
@@ -196,12 +195,20 @@ const handleBlur = () => {
 
 // Update container size when it changes
 const updateContainerSize = () => {
-  if (containerRef.value) {
+  // Measure the inner text-content div for more accurate font sizing
+  const elementToMeasure = contentRef.value || containerRef.value
+  
+  if (elementToMeasure) {
+    const rect = elementToMeasure.getBoundingClientRect()
     const newSize = {
-      width: Math.max(containerRef.value.clientWidth, 621),
-      height: Math.max(containerRef.value.clientHeight, 317)
+      width: Math.max(0, rect.width),
+      height: Math.max(0, rect.height)
     }
-    containerSize.value = newSize
+    
+    // Only update if we have valid dimensions
+    if (newSize.width > 0 && newSize.height > 0) {      
+      containerSize.value = newSize
+    }
   }
 }
 
@@ -239,29 +246,40 @@ onMounted(() => {
     nextTick(() => {
       setupEventListeners()
     })
-    
-    // Set up ResizeObserver with debounce
-    let resizeTimeout: number | null = null
-    const resizeObserver = new ResizeObserver(() => {
-      if (resizeTimeout) {
-        window.clearTimeout(resizeTimeout)
-      }
-      resizeTimeout = window.setTimeout(() => {
-        updateContainerSize()
-      }, 100)
-    })
-    if (containerRef.value) {
-      resizeObserver.observe(containerRef.value)
+  }
+})
+
+// Set up ResizeObserver with debounce - moved outside onMounted for better timing
+let resizeTimeout: number | null = null
+const resizeObserver = new ResizeObserver(() => {
+  if (resizeTimeout) {
+    window.clearTimeout(resizeTimeout)
+  }
+  resizeTimeout = window.setTimeout(() => {
+    updateContainerSize()
+  }, 100)
+})
+
+// Watch for when contentRef becomes available
+watch(() => contentRef.value, (newContentRef) => {
+  if (newContentRef && props.cell.type === 'text') {
+    // Observe the text-content div for more accurate measurements
+    const elementToObserve = newContentRef || containerRef.value
+    if (elementToObserve) {
+      resizeObserver.observe(elementToObserve)
       // Set initial size immediately
       updateContainerSize()
     }
-    onUnmounted(() => {
-      if (resizeTimeout) {
-        window.clearTimeout(resizeTimeout)
-      }
-      resizeObserver.disconnect()
-    })
   }
+}, { immediate: true })
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (resizeTimeout) {
+    window.clearTimeout(resizeTimeout)
+  }
+  resizeObserver.disconnect()
+  cleanupEventListeners()
 })
 
 // Watch for changes in editing mode
@@ -303,42 +321,33 @@ onUnmounted(() => {
 
 // Pure JS mode switching functions
 const enterEditMode = () => {
-  console.log('🔍 enterEditMode called for cell:', props.cell)
   const element = contentRef.value
   if (element) {
     try {
       // In edit mode, we want to show embeds for URLs but preserve raw data
       // Use detectAndRenderMedia to find and render URLs within the content
       if (props.cell.content && props.cell.content.trim()) {
-        console.log('🔍 Calling detectAndRenderMedia for edit mode with content:', props.cell.content)
         const processedContent = detectAndRenderMedia(props.cell.content, true)
-        console.log('🔍 Processed content for edit mode:', processedContent)
         element.innerHTML = processedContent
       } else {
         // For empty content, just set empty text
-        console.log('🔍 Empty content, setting empty text')
         element.textContent = ''
       }
     } catch (error) {
-      console.error('❌ Error entering edit mode:', error)
       element.textContent = props.cell.content || ''
     }
   }
 }
 
 const exitEditMode = () => {
-  console.log('🔍 exitEditMode called for cell:', props.cell)
   const element = contentRef.value
   if (element) {
     try {
       // Process content through useMediaUtils for view mode
-      console.log('🔍 Calling detectAndRenderMedia for view mode with content:', props.cell.content)
       const processedContent = detectAndRenderMedia(props.cell.content, false)
-      console.log('🔍 Processed content for view mode:', processedContent)
       // Restore with processed embeds
       element.innerHTML = processedContent
     } catch (error) {
-      console.error('❌ Error exiting edit mode:', error)
       // Fallback to plain text if processing fails
       element.textContent = props.cell.content || ''
     }
@@ -347,23 +356,18 @@ const exitEditMode = () => {
 
 // Handle content changes from parent - ONLY when NOT editing
 const updateContent = () => {
-  console.log('🔍 updateContent called for cell:', props.cell)
   // Don't update if user is editing
   if (props.isEditing) {
-    console.log('🔍 Skipping updateContent - user is editing')
     return
   }
   
   if (contentRef.value) {
     try {
       // Always use detectAndRenderMedia for view mode to ensure URLs are properly embedded
-      console.log('🔍 Calling detectAndRenderMedia for content update with content:', props.cell.content)
       const processedContent = detectAndRenderMedia(props.cell.content, false)
-      console.log('🔍 Processed content for update:', processedContent)
       contentRef.value.innerHTML = processedContent
       
     } catch (error) {
-      console.error('❌ Error updating content:', error)
       // Fallback to plain text
       contentRef.value.textContent = props.cell.content || ''
     }

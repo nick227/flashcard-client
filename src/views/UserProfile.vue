@@ -1,10 +1,10 @@
 <template>
 
-  <div class="container mx-auto px-4 py-8 min-h-screen bg-gray-50">
+  <div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Authenticated user profile view -->
     <div v-if="isAuthenticated && user" class="max-w-6xl mx-auto">
       <!-- Profile header card -->
-      <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+      <div class="bg-white rounded-xl p-8 mb-8">
         <div class="flex items-center gap-6">
           <!-- Profile image section -->
           <div class="relative flex flex-col gap-4 items-center">
@@ -117,7 +117,7 @@
     </div>
 
     <!-- Unauthenticated user view -->
-    <div v-else class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+    <div v-else class="max-w-md mx-auto bg-white rounded-xl p-8">
       <div class="text-center">
         <h2 class="text-2xl font-bold mb-4">Welcome to Flashcard Academy</h2>
         <p class="text-gray-600 mb-6">Please log in to view your profile and access your content.</p>
@@ -378,6 +378,5 @@ async function updateProfileImage(file: File) {
 
 .bio-display:focus-within {
   border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 </style>

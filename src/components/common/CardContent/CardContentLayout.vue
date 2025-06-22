@@ -37,6 +37,7 @@ defineEmits<{
   display: flex;
   width: 100%;
   height: 100%;
+  max-height: 380px;
   padding: var(--space-md);
   box-sizing: border-box;
   border-radius: var(--radius-lg);
@@ -48,6 +49,8 @@ defineEmits<{
   align-items: center;
   justify-content: center;
   overflow: visible;
+  width: 100%;
+  height: 100%;
 }
 
 /* Layout styles */
