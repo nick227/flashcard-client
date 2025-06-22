@@ -213,7 +213,8 @@ const onSetTypeChange = (event: Event) => {
 }
 
 const viewSet = (setId: number) => {
-  router.push({ path: '/study', query: { set: setId } })
+  //router.push({ path: '/study/' + setId })
+  window.location.href = '/study/' + setId
 }
 
 // Debounced search input

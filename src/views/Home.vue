@@ -8,7 +8,7 @@
 
       <!-- Featured Set -->
       <div v-if="featuredSet">
-        <FeaturedSet :set="featuredSet" @view="startLearning" />
+        <FeaturedSet :set="featuredSet" @view="viewSet" />
       </div>
 
       <!-- All Sets Grid -->
@@ -20,7 +20,7 @@
             v-for="set in sets"
             :key="set.id"
             :set="set"
-            @view="startLearning"
+            @view="viewSet"
           />
         </div>
       </section>
@@ -109,7 +109,7 @@ const fetchSets = async () => {
   }
 }
 
-const startLearning = (setId: number) => {
+const viewSet = (setId: number) => {
   router.push({ path: '/study', query: { set: setId } })
 }
 
