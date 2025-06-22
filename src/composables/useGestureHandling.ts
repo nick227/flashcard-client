@@ -13,6 +13,16 @@ interface GestureOptions {
   editable?: boolean
 }
 
+interface Point {
+  x: number
+  y: number
+}
+
+interface Movement {
+  diffX: number
+  diffY: number
+}
+
 export function useGestureHandling(
   callbacks: GestureCallbacks,
   options: GestureOptions = {}
@@ -21,21 +31,39 @@ export function useGestureHandling(
   const SWIPE_THRESHOLD = options.swipeThreshold || 50
   const CLICK_DELAY = options.clickDelay || 300
   const FLIP_ANIMATION_DURATION = options.flipAnimationDuration || 300
+  const SWIPE_COOLDOWN = 500
 
   // State
   const isFlipping = ref(false)
   const isNavigating = ref(false)
   const isSwiping = ref(false)
   const lastClickTime = ref(0)
-  const touchStartX = ref(0)
-  const touchStartY = ref(0)
+  const touchStartPoint = ref<Point>({ x: 0, y: 0 })
   const lastSwipeTime = ref(0)
   
   // Timeouts
   const flipTimeout = ref<number | null>(null)
   const clickTimeout = ref<number | null>(null)
 
-  // Utility functions
+  // Cached DOM elements and utilities
+  let cardElement: HTMLElement | null = null
+  let textElements: NodeListOf<HTMLElement> | null = null
+  let selection: Selection | null = null
+
+  // DOM Management
+  const initCachedElements = () => {
+    cardElement = document.querySelector('.flashcard-scaffold')
+    textElements = document.querySelectorAll('.card-text') as NodeListOf<HTMLElement>
+    selection = window.getSelection()
+  }
+
+  const clearCachedElements = () => {
+    cardElement = null
+    textElements = null
+    selection = null
+  }
+
+  // Timeout Management
   const clearClickTimeout = () => {
     if (clickTimeout.value) {
       clearTimeout(clickTimeout.value)
@@ -51,88 +79,114 @@ export function useGestureHandling(
     clearClickTimeout()
   }
 
-  // Gesture detection
-  const isHorizontalSwipe = (diffX: number, diffY: number): boolean => {
-    return Math.abs(diffX) > Math.abs(diffY)
-  }
-
-  // Click handling
-  const handleCardClick = () => {
-    const now = Date.now()
-    const timeSinceLastClick = now - lastClickTime.value
-    
-    // If in edit mode, don't handle clicks for flipping
-    if (options.editable) {
-      return
-    }
-    
-    // Check if user is selecting text
-    const selection = window.getSelection()
-    if (selection?.toString()) {
-      clearClickTimeout()
-      return
-    }
-    
-    // Remove selection if clicking without text selected
-    if (!selection?.toString()) {
-      selection?.removeAllRanges()
-      const textElements = document.querySelectorAll('.card-text')
+  // Text Selection Management
+  const clearTextHighlights = () => {
+    if (textElements) {
       textElements.forEach(element => {
         element.classList.remove('highlight')
       })
     }
-    
-    if (timeSinceLastClick < CLICK_DELAY) {
-      clearClickTimeout()
-      return
-    }
-    
-    lastClickTime.value = now
-    
-    if (!options.editable) {
-      clickTimeout.value = window.setTimeout(handleFlip, CLICK_DELAY)
+  }
+
+  const clearSelection = () => {
+    if (selection) {
+      selection.removeAllRanges()
     }
   }
 
-  const handleDoubleClick = (e: MouseEvent) => {
-    // Check if user is selecting text
-    const selection = window.getSelection()
-    if (selection?.toString()) {
-      // If text is already selected, don't do anything
-      return
-    }
+  const hasTextSelection = (): boolean => {
+    return Boolean(selection?.toString())
+  }
 
-    // Get the text element that was double-clicked
-    const textElement = (e.target as HTMLElement).closest('.card-text')
-    if (!textElement) return
-
-    // Create a range to select the text
+  const selectTextElement = (element: HTMLElement) => {
     const range = document.createRange()
-    range.selectNodeContents(textElement)
-    
-    // Clear any existing selection and add our new one
-    selection?.removeAllRanges()
+    range.selectNodeContents(element)
+    clearSelection()
     selection?.addRange(range)
-
-    // Add highlight class for visual feedback
-    textElement.classList.add('highlight')
+    element.classList.add('highlight')
   }
 
-  // Flip handling
-  const handleFlip = () => {
-    if (isFlipping.value || isNavigating.value) {
-      return
+  // Gesture Detection
+  const isHorizontalSwipe = (movement: Movement): boolean => {
+    return Math.abs(movement.diffX) > Math.abs(movement.diffY)
+  }
+
+  const isSwipeThresholdMet = (movement: Movement): boolean => {
+    return Math.abs(movement.diffX) > SWIPE_THRESHOLD
+  }
+
+  const isSignificantDrag = (movement: Movement): boolean => {
+    return Math.abs(movement.diffX) > SWIPE_THRESHOLD || Math.abs(movement.diffY) > SWIPE_THRESHOLD
+  }
+
+  // Movement Calculation
+  const calculateMovement = (currentPoint: Point): Movement => {
+    return {
+      diffX: currentPoint.x - touchStartPoint.value.x,
+      diffY: currentPoint.y - touchStartPoint.value.y
     }
+  }
+
+  const getTouchPoint = (e: TouchEvent): Point => {
+    return {
+      x: e.changedTouches[0].clientX,
+      y: e.changedTouches[0].clientY
+    }
+  }
+
+  const getMousePoint = (e: MouseEvent): Point => {
+    return {
+      x: e.clientX,
+      y: e.clientY
+    }
+  }
+
+  // State Management
+  const startSwipe = (point: Point) => {
+    isSwiping.value = false
+    touchStartPoint.value = point
+    isSwiping.value = true
+  }
+
+  const endSwipe = () => {
+    isSwiping.value = false
+  }
+
+  const isInEditMode = (): boolean => {
+    return Boolean(options.editable)
+  }
+
+  const isActionBlocked = (): boolean => {
+    return isFlipping.value || isNavigating.value
+  }
+
+  // Timing Management
+  const isClickTooSoon = (): boolean => {
+    const now = Date.now()
+    const timeSinceLastClick = now - lastClickTime.value
+    return timeSinceLastClick < CLICK_DELAY
+  }
+
+  const isSwipeTooSoon = (): boolean => {
+    const now = Date.now()
+    const timeSinceLastSwipe = now - lastSwipeTime.value
+    return timeSinceLastSwipe < SWIPE_COOLDOWN
+  }
+
+  const updateClickTime = () => {
+    lastClickTime.value = Date.now()
+  }
+
+  const updateSwipeTime = () => {
+    lastSwipeTime.value = Date.now()
+  }
+
+  // Action Handlers
+  const handleFlip = () => {
+    if (isActionBlocked()) return
     
-    // Clear selection when flipping
-    const selection = window.getSelection()
-    selection?.removeAllRanges()
-    
-    // Remove highlight
-    const textElements = document.querySelectorAll('.card-text')
-    textElements.forEach(element => {
-      element.classList.remove('highlight')
-    })
+    clearSelection()
+    clearTextHighlights()
     
     isFlipping.value = true
     callbacks.onFlip()
@@ -142,96 +196,87 @@ export function useGestureHandling(
     }, FLIP_ANIMATION_DURATION)
   }
 
-  // Swipe handling
-  const handleSwipeEnd = (diffX: number, diffY: number) => {
-    const now = Date.now()
-    const timeSinceLastSwipe = now - lastSwipeTime.value
-    
-    // Add cooldown to prevent rapid-fire swiping
-    if (timeSinceLastSwipe < 500) {
-      isSwiping.value = false
+  const handleNavigation = (movement: Movement) => {
+    if (isSwipeTooSoon()) {
+      endSwipe()
       return
     }
     
-    if (Math.abs(diffX) > SWIPE_THRESHOLD && isHorizontalSwipe(diffX, diffY)) {
-      lastSwipeTime.value = now
-      // Navigate without resetting card flip state
-      if (diffX < 0) {
-        callbacks.onNext()
-      } else {
-        callbacks.onPrev()
-      }
+    if (isSwipeThresholdMet(movement) && isHorizontalSwipe(movement)) {
+      updateSwipeTime()
+      movement.diffX < 0 ? callbacks.onNext() : callbacks.onPrev()
     }
-    isSwiping.value = false
+    
+    endSwipe()
   }
 
-  // Touch event handlers
+  // Click Handling
+  const handleCardClick = () => {
+    if (isInEditMode()) return
+    if (hasTextSelection()) {
+      clearClickTimeout()
+      return
+    }
+    
+    clearSelection()
+    clearTextHighlights()
+    
+    if (isClickTooSoon()) {
+      clearClickTimeout()
+      return
+    }
+    
+    updateClickTime()
+    clickTimeout.value = window.setTimeout(handleFlip, CLICK_DELAY)
+  }
+
+  const handleDoubleClick = (e: MouseEvent) => {
+    if (hasTextSelection()) return
+
+    const textElement = (e.target as HTMLElement).closest('.card-text') as HTMLElement
+    if (!textElement) return
+
+    selectTextElement(textElement)
+  }
+
+  // Event Handlers
   const onTouchStart = (e: TouchEvent) => {
-    // Reset state on new touch
-    isSwiping.value = false
-    touchStartX.value = e.changedTouches[0].clientX
-    touchStartY.value = e.changedTouches[0].clientY
-    isSwiping.value = true
+    startSwipe(getTouchPoint(e))
   }
 
   const onTouchEnd = (e: TouchEvent) => {
-    if (!isSwiping.value) {
-      return
-    }
+    if (!isSwiping.value) return
     
-    const diffX = e.changedTouches[0].clientX - touchStartX.value
-    const diffY = e.changedTouches[0].clientY - touchStartY.value
-    handleSwipeEnd(diffX, diffY)
+    const movement = calculateMovement(getTouchPoint(e))
+    handleNavigation(movement)
   }
 
-  // Mouse event handlers
   const onMouseDown = (e: MouseEvent) => {
-    // Reset state on new mouse interaction
-    isSwiping.value = false
-    touchStartX.value = e.clientX
-    touchStartY.value = e.clientY
-    isSwiping.value = true
-    // Don't prevent default - let click events work
+    startSwipe(getMousePoint(e))
   }
 
   const onMouseUp = (e: MouseEvent) => {
-    if (!isSwiping.value) {
-      return
-    }
+    if (!isSwiping.value) return
     
-    const diffX = e.clientX - touchStartX.value
-    const diffY = e.clientY - touchStartY.value
+    const movement = calculateMovement(getMousePoint(e))
     
-    // Only handle as swipe if it's a significant drag
-    if (Math.abs(diffX) > SWIPE_THRESHOLD || Math.abs(diffY) > SWIPE_THRESHOLD) {
-      handleSwipeEnd(diffX, diffY)
+    if (isSignificantDrag(movement)) {
+      handleNavigation(movement)
+    } else {
+      endSwipe()
     }
-    isSwiping.value = false
   }
 
-  // Document click handler for deselection
   const handleDocumentClick = (e: MouseEvent) => {
-    const cardEl = document.querySelector('.flashcard-scaffold')
-    if (!cardEl) return
-    if (!cardEl.contains(e.target as Node)) {
-      // Remove highlight
-      const textElements = document.querySelectorAll('.card-text')
-      textElements.forEach(element => {
-        element.classList.remove('highlight')
-      })
-      // Remove selection
-      const selection = window.getSelection()
-      selection?.removeAllRanges()
+    if (!cardElement || !cardElement.contains(e.target as Node)) {
+      clearTextHighlights()
+      clearSelection()
     }
   }
 
   // Lifecycle
   onMounted(() => {
-    const element = document.querySelector('.flashcard-scaffold')
-    if (element) {
-      // Remove the touchmove handler entirely - it's interfering with touch events
-      // The touchstart/touchend events should be sufficient for swipe detection
-    }
+    initCachedElements()
     document.addEventListener('mousedown', handleDocumentClick)
   })
 
@@ -242,9 +287,9 @@ export function useGestureHandling(
       element.removeEventListener('touchmove', (element as any)._touchMoveHandler)
     }
     document.removeEventListener('mousedown', handleDocumentClick)
+    clearCachedElements()
   })
 
-  // Reset state when card changes
   const resetState = () => {
     clearTimeouts()
     isNavigating.value = true
@@ -252,6 +297,7 @@ export function useGestureHandling(
     
     setTimeout(() => {
       isNavigating.value = false
+      initCachedElements()
     }, 50)
   }
 
