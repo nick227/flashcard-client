@@ -47,13 +47,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import SetPreviewCard from '@/components/cards/SetPreviewCard.vue'
 import { api } from '@/api'
 import type { User, FlashCardSet } from '@/types'
 
 const route = useRoute()
-const router = useRouter()
 
 // The userName from the URL is the target educator's name
 const targetEducatorName = route.params.userName as string
@@ -183,7 +182,8 @@ const fetchSets = async () => {
 }
 
 const viewSet = (setId: number) => {
-  router.push(`/study/${setId}`)
+  //router.push(`/study/${setId}`)
+  window.location.href = '/study/' + setId
 }
 
 onMounted(async () => {

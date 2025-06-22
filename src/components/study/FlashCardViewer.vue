@@ -127,6 +127,8 @@
               :flipped="flipped" 
               :current-flip="currentFlip" 
               @flip="handleCardFlip" 
+              @next="handleNextWithLog"
+              @prev="handlePrevWithLog"
             />
             <div v-else class="text-center text-gray-500 py-8">
               No cards available to display
@@ -269,6 +271,17 @@ const {
 // Separate state for grid view
 const gridFlipped = ref(false)
 const gridCurrentFlip = ref(0)
+
+// Wrapper functions with console logs for debugging
+const handleNextWithLog = () => {
+  console.log('🎯 Next event received from FlashCardScaffold')
+  handleNextCardWithHistory()
+}
+
+const handlePrevWithLog = () => {
+  console.log('🎯 Prev event received from FlashCardScaffold')
+  prevCard()
+}
 
 // Reset grid state when toggling views
 watch(showGridView, (newValue) => {

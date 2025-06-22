@@ -110,7 +110,8 @@ const fetchSets = async () => {
 }
 
 const viewSet = (setId: number) => {
-  router.push({ path: '/study', query: { set: setId } })
+  //router.push({ path: '/study', query: { set: setId } })
+  window.location.href = '/study/' + setId
 }
 
 onMounted(fetchSets)

@@ -125,7 +125,8 @@ const createSet = () => {
 }
 
 const viewSet = (id: string) => {
-  router.push(`/sets/${id}`)
+  //router.push(`/sets/${id}`)
+  window.location.href = '/sets/' + id
 }
 
 const viewEducator = (id: string) => {
