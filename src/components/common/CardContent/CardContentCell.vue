@@ -419,8 +419,7 @@ const updateContent = () => {
 }
 
 .text-content[contenteditable="true"]:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+  border-radius: var(--radius-sm);
 }
 
 .media-container {

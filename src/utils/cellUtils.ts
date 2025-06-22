@@ -37,6 +37,34 @@ export function createEmptyCell(): ContentCell {
 }
 
 /**
+ * Intelligently determines the best layout based on content
+ */
+export function determineOptimalLayout(
+  text?: string, 
+  imageUrl?: string | null, 
+  currentLayout?: CardLayout
+): CardLayout {
+  const hasText = text && text.trim().length > 0
+  const hasImage = imageUrl && imageUrl.trim().length > 0
+  
+  // If user explicitly set a layout, respect it
+  if (currentLayout) {
+    return currentLayout
+  }
+  
+  // Auto-determine based on content only when no layout is specified
+  if (hasText && hasImage) {
+    return 'two-row'  // Best for text + image combination
+  } else if (hasText) {
+    return 'default'  // Text only works well in default
+  } else if (hasImage) {
+    return 'default'  // Image only works well in default
+  } else {
+    return 'default'  // Empty content defaults to default
+  }
+}
+
+/**
  * Creates cells from text and image URL, handling layout-specific logic
  */
 export function createCellsFromContent(
@@ -46,8 +74,11 @@ export function createCellsFromContent(
 ): ContentCell[] {
   const cells: ContentCell[] = []
   
-  // Handle layout-specific logic (like two-col layout)
-  if (layout === 'two-col' && text) {
+  // Determine optimal layout based on content
+  const effectiveLayout = determineOptimalLayout(text, imageUrl, layout)
+  
+  // Handle layout-specific logic
+  if (effectiveLayout === 'two-col' && text) {
     const lines = text.split('\n').filter(line => line.trim())
     
     // Check if the first line is an image URL
@@ -66,6 +97,14 @@ export function createCellsFromContent(
       // No image URL in text, treat as text only
       cells.push(createTextCell(text))
     }
+  } else if (effectiveLayout === 'two-row') {
+    // For two-row layout, add text first, then image
+    if (text && text.trim()) {
+      cells.push(createTextCell(text))
+    }
+    if (imageUrl) {
+      cells.push(createMediaCell(imageUrl))
+    }
   } else {
     // Default handling for other layouts
     if (text && text.trim()) {
@@ -75,7 +114,7 @@ export function createCellsFromContent(
   
   // Add media from separate imageUrl field if it exists and we don't already have it
   if (imageUrl && !cells.some(cell => cell.type === 'media')) {
-    if (layout === 'two-col') {
+    if (effectiveLayout === 'two-col') {
       cells.unshift(createMediaCell(imageUrl))
     } else {
       cells.push(createMediaCell(imageUrl))
@@ -165,7 +204,15 @@ export function normalizeCellsForLayout(
 ): ContentCell[] {
   const expectedCount = LAYOUT_CELL_COUNTS[layout]
   
+  console.log(`[normalizeCellsForLayout] Input:`, { 
+    layout, 
+    expectedCount, 
+    cellCount: cells.length,
+    cells: cells.map(c => ({ type: c.type, hasContent: c.type === 'text' ? !!c.content?.trim() : !!c.mediaUrl }))
+  })
+  
   if (cells.length === expectedCount) {
+    console.log(`[normalizeCellsForLayout] No change needed, returning as-is`)
     return cells
   }
   
@@ -174,33 +221,66 @@ export function normalizeCellsForLayout(
     const mediaCells = cells.filter(cell => cell.type === 'media')
     const textCells = cells.filter(cell => cell.type === 'text')
     
+    console.log(`[normalizeCellsForLayout] Reducing cells:`, { 
+      mediaCount: mediaCells.length, 
+      textCount: textCells.length 
+    })
+    
     if (layout === 'default') {
-      // For default layout (1 cell), prioritize media if it exists, otherwise merge all text
-      if (mediaCells.length > 0) {
-        return [mediaCells[0]]
-      } else {
+      // For default layout (1 cell), prioritize content intelligently
+      // If we have both text and media, prefer text for default layout
+      // as it's more readable in a single cell
+      if (textCells.length > 0) {
         const mergedText = textCells.map(cell => cell.content).join('\n').trim()
-        return [createTextCell(mergedText)]
+        const result = [createTextCell(mergedText)]
+        console.log(`[normalizeCellsForLayout] Default layout: returning text cell with merged content`)
+        return result
+      } else if (mediaCells.length > 0) {
+        const result = [mediaCells[0]]
+        console.log(`[normalizeCellsForLayout] Default layout: returning media cell`)
+        return result
+      } else {
+        const result = [createEmptyCell()]
+        console.log(`[normalizeCellsForLayout] Default layout: returning empty cell`)
+        return result
       }
     } else {
       // For two-col/two-row layouts (2 cells), try to preserve media + text structure
       if (mediaCells.length > 0 && textCells.length > 0) {
-        return [mediaCells[0], textCells[0]]
+        // For two-row, put text first, then media
+        if (layout === 'two-row') {
+          const result = [textCells[0], mediaCells[0]]
+          console.log(`[normalizeCellsForLayout] Two-row layout: text first, then media`)
+          return result
+        } else {
+          // For two-col, put media first, then text
+          const result = [mediaCells[0], textCells[0]]
+          console.log(`[normalizeCellsForLayout] Two-col layout: media first, then text`)
+          return result
+        }
       } else if (mediaCells.length > 0) {
-        return [mediaCells[0], createEmptyCell()]
+        const result = [mediaCells[0], createEmptyCell()]
+        console.log(`[normalizeCellsForLayout] ${layout} layout: media + empty`)
+        return result
       } else if (textCells.length > 0) {
         const mergedText = textCells.map(cell => cell.content).join('\n').trim()
-        return [createTextCell(mergedText), createEmptyCell()]
+        const result = [createTextCell(mergedText), createEmptyCell()]
+        console.log(`[normalizeCellsForLayout] ${layout} layout: merged text + empty`)
+        return result
       } else {
-        return [createEmptyCell(), createEmptyCell()]
+        const result = [createEmptyCell(), createEmptyCell()]
+        console.log(`[normalizeCellsForLayout] ${layout} layout: two empty cells`)
+        return result
       }
     }
   } else {
     // Add empty cells when we need more
-    return [
+    const result = [
       ...cells,
       ...Array(expectedCount - cells.length).fill(null).map(() => createEmptyCell())
     ]
+    console.log(`[normalizeCellsForLayout] Adding ${expectedCount - cells.length} empty cells`)
+    return result
   }
 }
 
@@ -247,4 +327,37 @@ export function validateCellsForLayout(cells: ContentCell[], layout: CardLayout)
  */
 export function getLayoutCellCount(layout: CardLayout): number {
   return LAYOUT_CELL_COUNTS[layout]
+}
+
+/**
+ * Validates and fixes layout inconsistencies
+ * Ensures the layout matches the actual content
+ */
+export function validateAndFixLayout(
+  cells: ContentCell[], 
+  layout: CardLayout
+): { cells: ContentCell[], layout: CardLayout } {
+  const textCells = cells.filter(cell => cell.type === 'text' && cell.content?.trim())
+  const mediaCells = cells.filter(cell => cell.type === 'media' && cell.mediaUrl)
+  
+  // Determine what layout we actually need based on content
+  const optimalLayout = determineOptimalLayout(
+    textCells.map(cell => cell.content).join('\n'),
+    mediaCells[0]?.mediaUrl || null,
+    layout
+  )
+  
+  // If layout doesn't match content, fix it
+  if (optimalLayout !== layout) {
+    return {
+      cells: normalizeCellsForLayout(cells, optimalLayout),
+      layout: optimalLayout
+    }
+  }
+  
+  // If layout is correct, just normalize cells
+  return {
+    cells: normalizeCellsForLayout(cells, layout),
+    layout
+  }
 } 

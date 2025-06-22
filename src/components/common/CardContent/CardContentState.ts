@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue'
 import type { Card, CardSide, CardLayout, ContentCell } from '@/types/card'
-import { createEmptyCell, normalizeCellsForLayout, getLayoutCellCount } from '@/utils/cellUtils'
+import { createEmptyCell, normalizeCellsForLayout, getLayoutCellCount, validateAndFixLayout } from '@/utils/cellUtils'
 
 export function useCardContentState(props: { card: Card; side: CardSide }) {
   const cardState = ref<Card>(JSON.parse(JSON.stringify(props.card)))
@@ -12,9 +12,15 @@ export function useCardContentState(props: { card: Card; side: CardSide }) {
     ;(['front', 'back'] as CardSide[]).forEach(side => {
       const layout = newCard[side].layout || 'default'
       const cells = newCard[side].cells || []
-      const expectedCellCount = getLayoutCellCount(layout as CardLayout)
       
-      if (cells.length !== expectedCellCount) {
+      // Only validate and fix if the layout is 'default' (auto-determined)
+      // Don't override user-set layouts
+      if (layout === 'default') {
+        const { cells: normalizedCells, layout: fixedLayout } = validateAndFixLayout(cells, layout as CardLayout)
+        newCard[side].layout = fixedLayout
+        newCard[side].cells = normalizedCells
+      } else {
+        // For user-set layouts, just normalize cells to match the layout
         newCard[side].cells = normalizeCellsForLayout(cells, layout as CardLayout)
       }
     })
@@ -39,14 +45,31 @@ export function useCardContentState(props: { card: Card; side: CardSide }) {
     const currentCells = cardState.value[side].cells || []
     const currentLayout = cardState.value[side].layout
     
+    console.log(`[updateLayout] Updating ${side} layout:`, {
+      from: currentLayout,
+      to: layout,
+      cellCount: currentCells.length
+    })
+    
     if (layout === currentLayout) {
+      console.log(`[updateLayout] No change needed, layout is already ${layout}`)
       return
     }
 
-    cardState.value[side].layout = layout
+    // Respect the user's layout choice and just normalize cells to match
+    // Don't override the layout with validateAndFixLayout
+    const normalizedCells = normalizeCellsForLayout(currentCells, layout)
     
-    // Normalize cells to match new layout
-    cardState.value[side].cells = normalizeCellsForLayout(currentCells, layout)
+    console.log(`[updateLayout] Normalized cells:`, {
+      originalCount: currentCells.length,
+      normalizedCount: normalizedCells.length,
+      layout
+    })
+    
+    cardState.value[side].layout = layout
+    cardState.value[side].cells = normalizedCells
+    
+    console.log(`[updateLayout] Layout updated successfully to ${layout}`)
   }
 
   const addCell = (side: CardSide, type: 'text' | 'media' = 'text', force: boolean = false) => {
@@ -115,6 +138,25 @@ export function useCardContentState(props: { card: Card; side: CardSide }) {
     cardState.value = updatedCard
   }
 
+  const replaceCells = (side: CardSide, newCells: ContentCell[]) => {
+    console.log(`[replaceCells] Replacing ${side} cells:`, {
+      currentCount: cardState.value[side].cells?.length || 0,
+      newCount: newCells.length,
+      newCells: newCells.map(c => ({ type: c.type, hasContent: c.type === 'text' ? !!c.content?.trim() : !!c.mediaUrl }))
+    })
+    
+    const updatedCard = {
+      ...cardState.value,
+      [side]: {
+        ...cardState.value[side],
+        cells: newCells
+      }
+    }
+    cardState.value = updatedCard
+    
+    console.log(`[replaceCells] Successfully replaced ${side} cells`)
+  }
+
   const toggleSide = () => {
     currentSide.value = currentSide.value === 'front' ? 'back' : 'front'
   }
@@ -127,6 +169,7 @@ export function useCardContentState(props: { card: Card; side: CardSide }) {
     addCell,
     updateCell,
     removeCell,
+    replaceCells,
     toggleSide
   }
 } 

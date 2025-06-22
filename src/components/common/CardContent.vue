@@ -10,14 +10,16 @@
       @remove="handleCellRemove"
     />
     <div v-if="isEditing" class="card-controls">
-      <button class="control-button" @click="onToggleLayout" title="Toggle Layout">
+      <button class="control-button" @click="onToggleLayout" :title="`Current: ${cardState[currentSide].layout}. Click to cycle layouts`">
         <i class="fas fa-th-large"></i>
+        <span class="layout-indicator">{{ cardState[currentSide].layout }}</span>
       </button>
       <button class="control-button" @click="handleAddImage" title="Add Image">
         <i class="fas fa-image"></i>
       </button>
       <button class="control-button" @click="handleAIGenerate" :disabled="aiLoading" title="Generate with AI">
         <i class="fas fa-magic"></i>
+        <span v-if="aiLoading" class="loading-text">Generating...</span>
       </button>
     </div>
     
@@ -59,7 +61,7 @@ const emit = defineEmits<{
 }>()
 
 const { toast } = useToaster()
-const { cardState, currentSide, updateLayout, addCell, updateCell, removeCell } = useCardContentState(props)
+const { cardState, currentSide, updateLayout, addCell, updateCell, removeCell, replaceCells } = useCardContentState(props)
 
 // File input reference
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -136,9 +138,40 @@ const handleFileSelected = (event: Event) => {
 const onToggleLayout = () => {
   const side = currentSide.value
   const currentLayout = cardState.value[side].layout
-  const layouts: CardLayout[] = ['default', 'two-col', 'two-row']
+  const cells = cardState.value[side].cells || []
+  
+  console.log(`[onToggleLayout] Starting toggle for ${side}:`, {
+    currentLayout,
+    cellCount: cells.length,
+    cells: cells.map(c => ({ type: c.type, hasContent: c.type === 'text' ? !!c.content?.trim() : !!c.mediaUrl }))
+  })
+  
+  // Get current content to make intelligent layout decisions
+  const textCells = cells.filter(cell => cell.type === 'text' && cell.content?.trim())
+  const mediaCells = cells.filter(cell => cell.type === 'media' && cell.mediaUrl)
+  const hasText = textCells.length > 0
+  const hasMedia = mediaCells.length > 0
+  
+  console.log(`[onToggleLayout] Content analysis:`, { hasText, hasMedia, textCount: textCells.length, mediaCount: mediaCells.length })
+  
+  // Define the layout cycle
+  const layouts: CardLayout[] = ['default', 'two-row', 'two-col']
   const currentIndex = layouts.indexOf(currentLayout)
-  const nextLayout = layouts[(currentIndex + 1) % layouts.length]
+  
+  // Get next layout in cycle
+  let nextLayout = layouts[(currentIndex + 1) % layouts.length]
+  
+  console.log(`[onToggleLayout] Layout cycle:`, { currentIndex, nextLayout, currentLayout })
+  
+  // If we have both text and media, prefer two-row over two-col
+  // But still allow cycling through all layouts
+  if (hasText && hasMedia && nextLayout === 'two-col' && currentLayout === 'default') {
+    // Skip two-col and go directly to two-row when we have both content types
+    nextLayout = 'two-row'
+    console.log(`[onToggleLayout] Smart shortcut: skipping two-col, going to two-row`)
+  }
+  
+  console.log(`[onToggleLayout] Final layout choice:`, nextLayout)
   
   updateLayout(side, nextLayout)
   emit('update', cardState.value)
@@ -152,35 +185,89 @@ const onToggleLayout = () => {
 
 // Initialize AI with proper callbacks
 const { aiLoading, aiGenerate } = useCardContentAI(
-  (message: string) => toast(message, 'info'),
-  (text: string) => {
-    // Handle AI generation result - add as new text cell (force to bypass layout limits)
-    addCell(currentSide.value, 'text', true)
-    // Update the last cell with the generated content
-    const cells = cardState.value[currentSide.value].cells || []
-    if (cells.length > 0) {
-      updateCell(currentSide.value, cells.length - 1, { content: text })
-    }
-    emit('update', cardState.value)
+  (message: string) => {
+    console.log('[CardContent] AI Message:', message)
+    toast(message, 'info')
   },
-  (error: string) => toast(error, 'error')
+  (text: string) => {
+    console.log('[CardContent] AI Generation Result:', text)
+    
+    // Validate AI response
+    if (!text || typeof text !== 'string') {
+      console.error('[CardContent] Invalid AI response:', text)
+      toast('Invalid AI response received', 'error')
+      return
+    }
+    
+    if (text.trim().length === 0) {
+      console.warn('[CardContent] Empty AI response received')
+      toast('AI generated empty content', 'info')
+      return
+    }
+    
+    try {
+      // Create a new text cell with the AI-generated content
+      const newCell = { type: 'text' as const, content: text.trim() }
+      
+      // Replace all existing cells with the new AI-generated content
+      replaceCells(currentSide.value, [newCell])
+      
+      // Set layout to 'default' for text-only content
+      // Update layout directly without normalizing cells again
+      const currentLayout = cardState.value[currentSide.value].layout
+      if (currentLayout !== 'default') {
+        console.log('[CardContent] Setting layout to default for AI content')
+        cardState.value[currentSide.value].layout = 'default'
+      }
+      
+      console.log('[CardContent] Successfully updated card with AI content')
+      emit('update', cardState.value)
+    } catch (error) {
+      console.error('[CardContent] Error updating card with AI content:', error)
+      toast('Failed to update card with AI content', 'error')
+    }
+  },
+  (error: string) => {
+    console.error('[CardContent] AI Generation Error:', error)
+    toast(error, 'error')
+  }
 )
 
 // Update the AI generate button click handler
 const handleAIGenerate = () => {
-  // Validate required form data
-  if (!props.title?.trim()) {
+  console.log('[CardContent] handleAIGenerate called')
+  
+  // Validate required form data with better error messages
+  const title = props.title?.trim()
+  const description = props.description?.trim()
+  const category = props.category?.trim()
+  
+  if (!title) {
+    console.warn('[CardContent] Missing title')
     toast('Please fill in the set title first', 'info')
     return
   }
   
-  if (!props.description?.trim()) {
+  if (!description) {
+    console.warn('[CardContent] Missing description')
     toast('Please fill in the set description first', 'info')
     return
   }
   
-  if (!props.category?.trim()) {
+  if (!category) {
+    console.warn('[CardContent] Missing category')
     toast('Please select a category first', 'info')
+    return
+  }
+  
+  // Validate minimum content requirements
+  if (title.length < 3) {
+    toast('Title must be at least 3 characters long', 'info')
+    return
+  }
+  
+  if (description.length < 10) {
+    toast('Description must be at least 10 characters long', 'info')
     return
   }
 
@@ -191,11 +278,20 @@ const handleAIGenerate = () => {
     .filter(Boolean)
     .join('\n') || ''
 
+  console.log('[CardContent] Starting AI generation:', {
+    side: props.side,
+    title,
+    description,
+    category,
+    otherSideContent: otherSideContent || 'none',
+    currentSideContent: cardState.value[props.side].cells?.map(c => c.content).filter(Boolean).join('\n') || 'none'
+  })
+
   aiGenerate(
     props.side,
-    props.title.trim(),
-    props.description.trim(),
-    props.category.trim(),
+    title,
+    description,
+    category,
     otherSideContent
   )
 }
@@ -218,6 +314,16 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+.front .card-content.is-editing:hover:deep(.card-content-cell) {
+  outline: 1px solid var(--color-muted);
+  border-radius: var(--radius-sm);
+}
+
+.back .card-content.is-editing:hover:deep(.card-content-cell) {
+  outline: 1px solid var(--color-white);
+  border-radius: var(--radius-sm);
+}
+
 .card-controls {
   display: flex;
   gap: var(--space-sm);
@@ -238,6 +344,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-xs);
+  position: relative;
 }
 
 .control-button:hover {
@@ -247,6 +355,29 @@ onUnmounted(() => {
 .control-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.layout-indicator {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-background);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.loading-text {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  font-weight: 500;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* Mobile styles */

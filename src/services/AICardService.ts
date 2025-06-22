@@ -34,7 +34,10 @@ export class AICardService {
     onResult,
     onError
   }: GenerateCardOptions): Promise<void> {
+    console.log('[AICardService] generateCardFace called:', { side, title, description, category, hasOtherSideContent: !!otherSideContent })
+    
     if (this.isGenerating) {
+      console.warn('[AICardService] Already generating, ignoring request')
       onError('Already generating content')
       return
     }
@@ -42,13 +45,26 @@ export class AICardService {
     this.isGenerating = true
     this.generationId = `card-${Date.now()}`
 
+    console.log('[AICardService] Starting generation with ID:', this.generationId)
+
     // Add disconnection handler
     const handleDisconnect = () => {
+      console.warn('[AICardService] Socket disconnected during generation')
       if (this.isGenerating) {
         onError('Connection lost during generation')
         this.resetState()
       }
     }
+
+    // Add fallback timeout to ensure state is always reset
+    const fallbackTimeout = setTimeout(() => {
+      console.warn('[AICardService] Fallback timeout - resetting state')
+      if (this.isGenerating) {
+        aiSocketService.offDisconnect(handleDisconnect)
+        onError('Generation timed out')
+        this.resetState()
+      }
+    }, 90000) // 90 second fallback timeout
 
     try {
       console.log('AICardService - Generating card face:', {
@@ -81,8 +97,11 @@ export class AICardService {
         }
       }
 
+      console.log('[AICardService] Socket connected, proceeding with generation')
+
       // Add timeout for the generation request
       const generationTimeout = setTimeout(() => {
+        console.warn('[AICardService] Generation request timed out')
         if (this.isGenerating) {
           aiSocketService.offDisconnect(handleDisconnect)
           onError('Generation request timed out')
@@ -90,6 +109,8 @@ export class AICardService {
         }
       }, 60000) // 60 second timeout
 
+      console.log('[AICardService] Calling aiSocketService.generateSingleCardFace')
+      
       await aiSocketService.generateSingleCardFace(
         side,
         title,
@@ -100,6 +121,7 @@ export class AICardService {
           onResult: (text: string) => {
             console.log('AICardService - Generation result:', text)
             clearTimeout(generationTimeout)
+            clearTimeout(fallbackTimeout)
             aiSocketService.offDisconnect(handleDisconnect)
             onResult(text)
             this.resetState()
@@ -107,14 +129,18 @@ export class AICardService {
           onError: (err: string) => {
             console.error('AICardService - Generation error:', err)
             clearTimeout(generationTimeout)
+            clearTimeout(fallbackTimeout)
             aiSocketService.offDisconnect(handleDisconnect)
             onError(err)
             this.resetState()
           }
         }
       )
+      
+      console.log('[AICardService] generateSingleCardFace call completed')
     } catch (error) {
       console.error('AICardService - Unexpected error:', error)
+      clearTimeout(fallbackTimeout)
       aiSocketService.offDisconnect(handleDisconnect)
       onError(error instanceof Error ? error.message : 'An unexpected error occurred')
       this.resetState()

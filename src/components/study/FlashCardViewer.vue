@@ -356,6 +356,14 @@ const fetchSet = async () => {
       // Initialize likes state
       await initializeLikes()
     }
+    console.log('Set data:', set.value)
+    console.log('Cards data:', cards.value)
+    console.log('Current index:', currentIndex.value)
+    console.log('Flipped:', flipped.value)
+    console.log('Current flip:', currentFlip.value)
+    console.log('Is prev disabled:', isPrevDisabled.value)
+    console.log('Is next disabled:', isNextDisabled.value)
+    console.log('Progress percent:', progressPercent.value)
   } catch (err) {
     console.error('Error fetching set:', err)
     let message = 'Failed to load flashcard set'

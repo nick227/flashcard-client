@@ -58,6 +58,7 @@ const isShowingToast = ref(false)
 const generationId = ref<string | null>(null)
 const canRetry = ref(false)
 const error = ref<string | null>(null)
+const generatedCards = ref<Card[]>([]) // Store generated cards locally
 
 const progress = ref<GenerationProgress>({
     status: 'preparing',
@@ -82,10 +83,70 @@ const showStockNotification = () => {
     queueToast(stockNotifications[randomIndex], 'info')
 }
 
-// Set up socket status and progress callbacks
+// Add beforeunload handler to warn user about navigation
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (generating.value) {
+        const message = 'AI generation is in progress. Navigating away will lose all generated content. Are you sure you want to leave?'
+        event.preventDefault()
+        event.returnValue = message
+        return message
+    }
+}
+
+// Set up beforeunload handler
 onMounted(() => {
-    // Remove socket setup from here
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    // Check for backup data from previous generation
+    checkForBackupData()
 })
+
+// Check for backup data and offer recovery
+const checkForBackupData = () => {
+    try {
+        const backupData = sessionStorage.getItem('ai_generation_backup')
+        if (backupData) {
+            const backup = JSON.parse(backupData)
+            const backupAge = Date.now() - backup.timestamp
+            const maxAge = 30 * 60 * 1000 // 30 minutes
+            
+            if (backupAge < maxAge && backup.cards && backup.cards.length > 0) {
+                // Offer to restore the backup
+                const message = backup.cancelled 
+                    ? `We found ${backup.cards.length} previously generated cards that were saved before the generation was cancelled. Would you like to restore them? (This will add them to your current set)`
+                    : `We found ${backup.cards.length} previously generated cards that weren't saved. Would you like to restore them? (This will add them to your current set)`
+                
+                const shouldRestore = confirm(message)
+                
+                if (shouldRestore) {
+                    // Restore the cards
+                    backup.cards.forEach((card: Card) => {
+                        emit('add-set', card)
+                    })
+                    
+                    // Show success message
+                    const successMessage = backup.cancelled
+                        ? `Restored ${backup.cards.length} cards from cancelled generation!`
+                        : `Restored ${backup.cards.length} previously generated cards!`
+                    queueToast(successMessage, 'success')
+                    
+                    // Clear the backup
+                    sessionStorage.removeItem('ai_generation_backup')
+                } else {
+                    // User chose not to restore, clear the backup
+                    sessionStorage.removeItem('ai_generation_backup')
+                }
+            } else {
+                // Backup is too old, clear it
+                sessionStorage.removeItem('ai_generation_backup')
+            }
+        }
+    } catch (error) {
+        console.error('Error checking backup data:', error)
+        // Clear corrupted backup
+        sessionStorage.removeItem('ai_generation_backup')
+    }
+}
 
 const queueToast = (message: string, type: ToastType) => {
     toastQueue.value.push({ message, type })
@@ -253,12 +314,6 @@ const generateSet = async () => {
 
 const handleCardGenerated = (card: Card) => {
     console.log('AISetGenerator - Raw generated card:', JSON.stringify(card, null, 2))
-    // Update progress first
-    progress.value = {
-        ...progress.value,
-        cardsGenerated: progress.value.cardsGenerated + 1,
-        currentOperation: `Generated ${progress.value.cardsGenerated + 1} of ${progress.value.totalCards} cards`
-    }
     
     // The card is already in the correct cell-based structure from AISocketService
     // Just ensure layout is set correctly
@@ -275,6 +330,10 @@ const handleCardGenerated = (card: Card) => {
     }
     
     console.log('AISetGenerator - Processed card before emit:', JSON.stringify(cardWithLayout, null, 2))
+    
+    // Store card locally for backup
+    generatedCards.value.push(cardWithLayout)
+    
     // Emit the card to be added to the set immediately
     emit('add-set', cardWithLayout)
     
@@ -289,26 +348,75 @@ const handleComplete = () => {
         ...progress.value,
         status: 'completed'
     }
+    
+    // Clear backup data since generation completed successfully
+    sessionStorage.removeItem('ai_generation_backup')
+    
     // Final completion toast
     queueToast(`Successfully generated ${progress.value.cardsGenerated} cards!`, 'success')
 }
 
 const handleError = (error: string) => {
     console.error('Generation error:', error)
-    queueToast(error, 'error')
-    generating.value = false
-    emit('update:generating', false)
-    canRetry.value = error.includes('connection') || error.includes('timeout')
+    
+    // Check if this is a cancellation
+    const isCancellation = error.includes('cancelled') || error.includes('Cancelled')
+    
+    if (isCancellation) {
+        console.log('Generation was cancelled - this is expected when navigating away')
+        generating.value = false
+        emit('update:generating', false)
+        // Don't show error toast for cancellations
+        // Don't set canRetry for cancellations
+    } else {
+        queueToast(error, 'error')
+        generating.value = false
+        emit('update:generating', false)
+        canRetry.value = error.includes('connection') || error.includes('timeout')
+    }
+    
     progress.value = {
         ...progress.value,
         status: 'failed',
         error
     }
+    
+    // Clear backup data on error (but not on cancellation)
+    if (!isCancellation) {
+        sessionStorage.removeItem('ai_generation_backup')
+    }
 }
 
 // Clean up socket connection when component is unmounted
 onUnmounted(() => {
-    if (generationId.value) {
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    
+    // If generation is still active, save any generated cards immediately
+    if (generating.value && generationId.value) {
+        console.warn('User navigated away during generation - saving generated cards and cancelling backend')
+        
+        // Store generated cards in sessionStorage for potential recovery
+        if (generatedCards.value.length > 0) {
+            try {
+                sessionStorage.setItem('ai_generation_backup', JSON.stringify({
+                    generationId: generationId.value,
+                    cards: generatedCards.value,
+                    timestamp: Date.now(),
+                    title: props.title,
+                    description: props.description,
+                    category: props.category,
+                    cancelled: true // Mark as cancelled since backend will be stopped
+                }))
+                console.log(`Saved ${generatedCards.value.length} generated cards to sessionStorage before cancellation`)
+            } catch (error) {
+                console.error('Failed to save generation backup:', error)
+            }
+        }
+        
+        // Disconnect socket to trigger backend cancellation
+        aiSocketService.disconnect()
+    } else if (generationId.value) {
+        // Only disconnect if generation is complete or failed
         aiSocketService.disconnect()
     }
 })

@@ -52,7 +52,6 @@ class AISocketService {
     private maxReconnectAttempts = 5
     private reconnectDelay = 1000 // Start with 1 second
     private activeGenerationId: string | null = null
-    private eventListeners: Map<string, Set<SocketEventListener>> = new Map()
     private disconnectListeners: Set<() => void> = new Set()
     private currentTitle: string | null = null
     private currentDescription: string | null = null
@@ -152,9 +151,6 @@ class AISocketService {
                 autoConnect: true,
                 multiplex: true
             })
-
-            // Add beforeunload handler
-            window.addEventListener('beforeunload', this.handleBeforeUnload)
 
             this.setupEventListeners()
         } catch (error) {
@@ -298,6 +294,7 @@ class AISocketService {
         this.socket?.emit('startGeneration', {
             title,
             description,
+            category,
             generationId
         }, (error: any) => {
             if (error) {
@@ -315,12 +312,14 @@ class AISocketService {
         if (!this.socket) {
             console.log('Socket not initialized, attempting to initialize...')
             this.initialize()
+            // Return false to indicate we need to wait for connection
             return false
         }
 
         if (!this.isConnected || !this.socket.connected) {
             console.log('Socket not connected, attempting to connect...')
             this.socket.connect()
+            // Return false to indicate we need to wait for connection
             return false
         }
 
@@ -334,19 +333,24 @@ class AISocketService {
         return true
     }
 
-    private setupGenerationListeners(generationId: string, callbacks: GenerationCallbacks) {
-        this.addListener('openaiResponse', (data: { generationId: string, status: 'success' | 'error', message: string, requestId?: string }, callback: (ack: any) => void) => {
-            if (data.generationId === generationId) {
-                this.updateProgress({
-                    status: data.status === 'success' ? 'generating' : 'failed',
-                    currentOperation: data.message,
-                    error: data.status === 'error' ? data.message : undefined
-                })
-                if (typeof callback === 'function') callback({ received: true })
+    /**
+     * Wait for socket connection with timeout
+     */
+    private async waitForConnection(timeoutMs: number = 10000): Promise<boolean> {
+        const startTime = Date.now()
+        
+        while (Date.now() - startTime < timeoutMs) {
+            if (this.isConnected && this.socket?.connected) {
+                return true
             }
-        })
+            await new Promise(resolve => setTimeout(resolve, 100))
+        }
+        
+        return false
+    }
 
-        this.addListener('generationProgress', (data: { generationId: string, message: string, progress: number, totalCards: number }, callback: (ack: any) => void) => {
+    private setupGenerationListeners(generationId: string, callbacks: GenerationCallbacks) {
+        this.addListener('generationProgress', (data: { generationId: string, message: string, progress: number, totalCards: number }) => {
             if (data.generationId === generationId) {
                 this.updateProgress({
                     status: 'generating',
@@ -354,7 +358,6 @@ class AISocketService {
                     cardsGenerated: Math.round((data.progress / 100) * data.totalCards),
                     totalCards: data.totalCards
                 })
-                if (typeof callback === 'function') callback({ received: true })
             }
         })
 
@@ -381,7 +384,7 @@ class AISocketService {
             }
         })
 
-        this.addListener('generationComplete', (data: { generationId: string, totalCards: number }, callback: (ack: any) => void) => {
+        this.addListener('generationComplete', (data: { generationId: string, totalCards: number }) => {
             if (data.generationId === generationId) {
                 this.updateProgress({
                     status: 'completed',
@@ -391,7 +394,27 @@ class AISocketService {
                 })
                 callbacks.onComplete()
                 this.cleanupListeners()
-                if (typeof callback === 'function') callback({ received: true })
+            }
+        })
+
+        this.addListener('generationError', (data: { generationId: string, error: string }) => {
+            if (data.generationId === generationId) {
+                // Check if this is a cancellation (not a real error)
+                const isCancellation = data.error.includes('cancelled') || data.error.includes('Cancelled')
+                
+                this.updateProgress({
+                    status: 'failed', // Keep as failed for UI consistency
+                    error: data.error
+                })
+                
+                if (isCancellation) {
+                    console.log(`Generation ${generationId} was cancelled`)
+                    // Don't call onError for cancellations, just cleanup
+                    this.cleanupListeners()
+                } else {
+                    callbacks.onError(data.error)
+                    this.cleanupListeners()
+                }
             }
         })
     }
@@ -404,11 +427,6 @@ class AISocketService {
 
         console.log(`Adding listener for event: ${event}`)
         
-        if (!this.eventListeners.has(event)) {
-            this.eventListeners.set(event, new Set())
-        }
-        this.eventListeners.get(event)?.add(callback)
-        
         // Remove any existing listeners for this event to prevent duplicates
         this.socket.off(event)
         
@@ -420,31 +438,21 @@ class AISocketService {
     private cleanupListeners() {
         if (!this.socket) return
 
-        this.eventListeners.forEach((callbacks, event) => {
-            callbacks.forEach(callback => {
-                this.socket?.off(event, callback)
-            })
-        })
-        this.eventListeners.clear()
+        // Remove all generation-related event listeners
+        this.socket.off('generationProgress')
+        this.socket.off('cardGenerated')
+        this.socket.off('generationComplete')
+        this.socket.off('generationError')
+        
         this.activeGenerationId = null
     }
 
     public disconnect() {
-        // Remove beforeunload handler
-        window.removeEventListener('beforeunload', this.handleBeforeUnload)
-        
         if (this.socket) {
             this.socket.disconnect()
             this.socket = null
             this.isConnected = false
-            this.eventListeners.clear()
             this.activeGenerationId = null
-        }
-    }
-
-    private handleBeforeUnload = () => {
-        if (this.socket) {
-            this.socket.disconnect()
         }
     }
 
@@ -462,7 +470,7 @@ class AISocketService {
      * @param otherSideContent - The content of the other side (for context)
      * @param callbacks - { onResult, onError }
      */
-    public generateSingleCardFace(
+    public async generateSingleCardFace(
         side: 'front' | 'back',
         title: string,
         description: string,
@@ -470,16 +478,53 @@ class AISocketService {
         otherSideContent: string,
         callbacks: { onResult: (text: string) => void, onError: (err: string) => void }
     ) {
+        console.log('[AISocketService] generateSingleCardFace called:', { side, title, description, category, hasOtherSideContent: !!otherSideContent })
+        
+        // First validate connection
         if (!this.validateConnection()) {
-            callbacks.onError('No connection');
+            console.log('[AISocketService] Connection validation failed, waiting for connection...')
+            
+            // Wait for connection to establish
+            const connected = await this.waitForConnection(15000) // 15 second timeout
+            
+            if (!connected) {
+                console.error('[AISocketService] Failed to establish connection within timeout')
+                callbacks.onError('Could not connect to AI service');
+                return;
+            }
+        }
+        
+        // Double-check socket exists
+        if (!this.socket) {
+            console.error('[AISocketService] Socket is null after connection')
+            callbacks.onError('Connection failed');
             return;
         }
-        this.socket?.emit(
+        
+        console.log('[AISocketService] Emitting generateSingleCardFace event')
+        
+        // Add timeout for socket response
+        const responseTimeout = setTimeout(() => {
+            console.error('[AISocketService] Socket response timeout')
+            callbacks.onError('Request timed out - no response from server');
+        }, 30000); // 30 second timeout
+        
+        this.socket.emit(
             'generateSingleCardFace',
             { side, title, description, category, otherSideContent },
             (response: { text?: string, error?: string }) => {
-                if (response.error) callbacks.onError(response.error);
-                else if (response.text) callbacks.onResult(response.text);
+                clearTimeout(responseTimeout); // Clear timeout on response
+                console.log('[AISocketService] Received response:', response)
+                if (response.error) {
+                    console.error('[AISocketService] Server returned error:', response.error)
+                    callbacks.onError(response.error);
+                } else if (response.text) {
+                    console.log('[AISocketService] Server returned text:', response.text)
+                    callbacks.onResult(response.text);
+                } else {
+                    console.error('[AISocketService] Invalid response format:', response)
+                    callbacks.onError('Invalid response from server');
+                }
             }
         );
     }
