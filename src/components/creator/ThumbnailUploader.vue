@@ -2,8 +2,7 @@
   <div>
     <div class="relative group">
       <div
-        class="w-full rounded-lg overflow-hidden cursor-pointer transition-all duration-200 hover:opacity-90 flex items-center justify-center m-h-[480px]"
-        @click="handleUploadAreaClick"
+        class="w-full rounded-lg transition-all duration-200 hover:opacity-90 flex items-center justify-center m-h-[480px]"
         :class="{ 'opacity-50 cursor-not-allowed': disabled }"
         role="button"
         :aria-label="disabled ? 'Thumbnail upload disabled' : 'Click to upload thumbnail'"
@@ -15,6 +14,7 @@
             :src="thumbnailPreview" 
             alt="Thumbnail" 
             class="w-full m-h-[480px] object-cover"
+            @click="handleUploadAreaClick"
             :class="{ 'opacity-50': isUploading }"
             @error="handleImageError"
           />
@@ -24,7 +24,7 @@
             @select="handleStockImageSelect"
           />
           <!-- AI Generation Loading State -->
-          <div v-if="isGeneratingThumbnail" class="flex items-center justify-center h-full w-full bg-gray-50">
+          <div v-if="isGeneratingThumbnail" class="flex items-center justify-center h-full w-full bg-gray-50 ">
             <div class="p-8 text-center">
               <p class="text-gray-700 font-medium text-lg mb-4">Generating AI Thumbnail</p>
               <div class="relative">

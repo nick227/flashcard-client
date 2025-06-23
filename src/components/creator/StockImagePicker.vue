@@ -3,9 +3,12 @@
         <h2 class="text-lg font-medium mb-2">Stock Images</h2>
         <p class="text-sm text-gray-600 mb-4">Select a stock image to use for your thumbnail</p>
         <div class="stock-images-grid">
-            <div v-for="(image, index) in stockImages" :key="index" class="stock-image-item"
-                @click="selectImage(image.url)" :class="{ 'selected': selectedImage === image.url }">
-                <img :src="image.url" :alt="image.alt" class="stock-image" />
+            <div v-for="(image, index) in stockImages" :key="index" 
+                @click="selectImage(image.url)" class="cursor-pointer" :class="{ 'selected': selectedImage === image.url, 'opacity-50 cursor-not-allowed': isLoading }">
+                <img :src="image.url" :alt="image.alt" class="stock-image" :class="{ 'opacity-50 cursor-not-allowed': isLoading }" />
+            </div>
+            <div class="refresh-button"><i v-if="!isLoading" class="fa-solid fa-refresh text-sm text-gray-500 cursor-pointer" @click="refreshImages" :class="{ 'opacity-50 cursor-not-allowed': isLoading }"></i>
+            <i v-else class="fa-solid fa-spinner fa-spin"></i>
             </div>
         </div>
     </div>
@@ -25,6 +28,7 @@ const emit = defineEmits<{
 }>()
 
 const selectedImage = ref<string | null>(null)
+const isLoading = ref(false)
 
 // Stock images could be moved to a separate config file or API call
 const stockImages = ref<StockImage[]>([])
@@ -37,6 +41,14 @@ onMounted(async () => {
 function selectImage(url: string) {
     selectedImage.value = url
     emit('select', url)
+}
+
+async function refreshImages() {
+    if (isLoading.value) return
+    isLoading.value = true
+    const response = await api.get(apiEndpoints.stockImages)
+    stockImages.value = response.data
+    isLoading.value = false
 }
 </script>
 
@@ -54,6 +66,16 @@ function selectImage(url: string) {
     grid-template-columns: repeat(5, 1fr);
     gap: 0.5rem;
     width: 100%;
+    position: relative;
+}
+
+.refresh-button {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 10;
+    margin-right: 0px;
+    margin-bottom: -30px;
 }
 
 .stock-image-item {
