@@ -159,30 +159,6 @@ function updateBack(card: Card) {
   cursor: pointer; /* Show it's interactive */
 }
 
-/* Add hover effect to indicate swipeability */
-.flashcard-scaffold:hover:not(.editable) {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-/* Show swipeable indicator on hover */
-.flashcard-scaffold:hover:not(.editable)::before {
-  content: '← Swipe →';
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(37, 99, 235, 0.9);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  opacity: 0.9;
-  pointer-events: none;
-  z-index: 10;
-}
-
 /* Remove hover effects in edit mode */
 .flashcard-scaffold.editable {
   cursor: default;
