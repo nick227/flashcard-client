@@ -251,18 +251,10 @@ const {
 } = useCardLikes(Number(props.setId))
 
 const {
-  showGridView,
-  gridCardStates,
-  toggleGridView,
   shuffleCardOrder,
-  handleGridCardFlip,
   showMobileView,
   toggleMobileView
 } = useCardGrid(cards)
-
-// Separate state for grid view
-const gridFlipped = ref(false)
-const gridCurrentFlip = ref(0)
 
 // Wrapper functions with console logs for debugging
 const handleNextWithLog = () => {
