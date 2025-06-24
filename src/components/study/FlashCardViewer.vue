@@ -148,9 +148,6 @@
         <a @click="handleShuffle" class="button-round" href="javascript:void(0)">
           <i class="fa-solid fa-shuffle"></i> Shuffle
         </a>
-        <a @click="toggleGridView" :class="['button-round', { active: showGridView }]" href="javascript:void(0)">
-          <i class="fa-solid fa-table-cells"></i> Grid
-        </a>
         <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)">
           <i class="fa-solid fa-mobile"></i> Mobile
         </a>
@@ -163,12 +160,6 @@
           @show-hint="() => showHintToast(cards[currentIndex]?.hint || '')" 
         />
       </div>
-    </div>
-
-    <!-- Grid View -->
-    <div v-if="showGridView" class="mt-4 w-full">
-      <CardGrid :cards="cards" :grid-card-states="gridCardStates" :flipped="gridFlipped" :current-flip="gridCurrentFlip"
-        @card-flip="handleGridCardFlip" />
     </div>
 
     <!-- Mobile View -->
@@ -190,7 +181,6 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { api, getApiUrl, apiEndpoints } from '@/api'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
 import CardControls from './CardControls.vue'
-import CardGrid from './CardGrid.vue'
 import CardHeader from './CardHeader.vue'
 import CardHint from './CardHint.vue'
 import RelatedSets from './RelatedSets.vue'
@@ -222,6 +212,7 @@ const set = ref<FlashCardSet | null>(null)
 const unauthorized = ref(false)
 const accessDetails = ref<any>(null)
 const error = ref('')
+const isMobile = ref(false)
 
 // Use composables
 const {
@@ -283,14 +274,6 @@ const handlePrevWithLog = () => {
   console.log('🎯 Prev event received from FlashCardScaffold')
   prevCard()
 }
-
-// Reset grid state when toggling views
-watch(showGridView, (newValue) => {
-  if (newValue) {
-    gridFlipped.value = false
-    gridCurrentFlip.value = 0
-  }
-})
 
 function formatPrice(price: number | undefined): string {
   if (!price) return '0.00'
@@ -513,6 +496,7 @@ watch(() => props.setId, async (newId) => {
 
 // Initialize on mount
 onMounted(async () => {
+  isMobile.value = window.innerWidth < 768
   if (route.query.canceled === 'true') {
     toast('Checkout was canceled. You can try again when you\'re ready.', 'info')
     router.replace({ path: route.path })
@@ -554,15 +538,6 @@ const handleShuffle = () => {
   })
 
   currentIndex.value = currentProgress
-
-  // Ensure grid states are synced with safe IDs
-  if (showGridView.value) {
-    gridCardStates.value = newOrder.reduce((acc, card) => {
-      const cardId = getCardId(card)
-      acc[cardId] = gridCardStates.value[cardId] || false
-      return acc
-    }, {} as Record<number, boolean>)
-  }
 }
 
 // Helper function to safely get card ID

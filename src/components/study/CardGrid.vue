@@ -34,7 +34,7 @@ function getCardId(card: Card): number {
 <style scoped>
 .grid-view {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(15%, 1fr));
   gap: 1.5rem;
   width: 100%;
   margin-top: 1rem;
@@ -45,14 +45,12 @@ function getCardId(card: Card): number {
 
 .card {
   width: 100%;
-  min-height: 300px;
-  aspect-ratio: 16/9;
   cursor: pointer;
   transition: transform 0.3s ease;
-}
-
-.card:hover {
-  transform: scale(1.02);
+  cursor: pointer;
+  border: none;
+  border-radius: 0.5rem;
+  aspect-ratio: 16/9;
 }
 
 .card-content {
@@ -66,10 +64,6 @@ function getCardId(card: Card): number {
   .grid-view {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1rem;
-  }
-  
-  .card {
-    min-height: 250px;
   }
   
   .card-face, .formatted-content {

@@ -14,7 +14,6 @@
           <div v-if="getBackImage(card) && isYouTubeUrl(getBackImage(card))" class="youtube-embed" v-html="getYouTubeEmbed(getBackImage(card)!)"></div>
           <div v-if="getBackText(card)" class="panel-text" v-html="getBackText(card)"></div>
         </div>
-        <div v-if="card.hint" class="panel-hint">{{ card.hint }}</div>
       </div>
     </div>
   </div>
