@@ -141,19 +141,11 @@ const onToggleLayout = () => {
   const currentLayout = cardState.value[side].layout
   const cells = cardState.value[side].cells || []
   
-  console.log(`[onToggleLayout] Starting toggle for ${side}:`, {
-    currentLayout,
-    cellCount: cells.length,
-    cells: cells.map(c => ({ type: c.type, hasContent: c.type === 'text' ? !!c.content?.trim() : !!c.mediaUrl }))
-  })
-  
   // Get current content to make intelligent layout decisions
   const textCells = cells.filter(cell => cell.type === 'text' && cell.content?.trim())
   const mediaCells = cells.filter(cell => cell.type === 'media' && cell.mediaUrl)
   const hasText = textCells.length > 0
   const hasMedia = mediaCells.length > 0
-  
-  console.log(`[onToggleLayout] Content analysis:`, { hasText, hasMedia, textCount: textCells.length, mediaCount: mediaCells.length })
   
   // Define the layout cycle
   const layouts: CardLayout[] = ['default', 'two-row', 'two-col']
@@ -162,17 +154,13 @@ const onToggleLayout = () => {
   // Get next layout in cycle
   let nextLayout = layouts[(currentIndex + 1) % layouts.length]
   
-  console.log(`[onToggleLayout] Layout cycle:`, { currentIndex, nextLayout, currentLayout })
-  
   // If we have both text and media, prefer two-row over two-col
   // But still allow cycling through all layouts
   if (hasText && hasMedia && nextLayout === 'two-col' && currentLayout === 'default') {
     // Skip two-col and go directly to two-row when we have both content types
     nextLayout = 'two-row'
-    console.log(`[onToggleLayout] Smart shortcut: skipping two-col, going to two-row`)
   }
   
-  console.log(`[onToggleLayout] Final layout choice:`, nextLayout)
   
   updateLayout(side, nextLayout)
   emit('update', cardState.value)
@@ -187,15 +175,12 @@ const onToggleLayout = () => {
 // Initialize AI with proper callbacks
 const { aiLoading, aiGenerate } = useCardContentAI(
   (message: string) => {
-    console.log('[CardContent] AI Message:', message)
     toast(message, 'info')
   },
   (text: string) => {
-    console.log('[CardContent] AI Generation Result:', text)
     
     // Validate AI response
     if (!text || typeof text !== 'string') {
-      console.error('[CardContent] Invalid AI response:', text)
       toast('Invalid AI response received', 'error')
       return
     }
@@ -217,26 +202,21 @@ const { aiLoading, aiGenerate } = useCardContentAI(
       // Update layout directly without normalizing cells again
       const currentLayout = cardState.value[currentSide.value].layout
       if (currentLayout !== 'default') {
-        console.log('[CardContent] Setting layout to default for AI content')
         cardState.value[currentSide.value].layout = 'default'
       }
       
-      console.log('[CardContent] Successfully updated card with AI content')
       emit('update', cardState.value)
     } catch (error) {
-      console.error('[CardContent] Error updating card with AI content:', error)
       toast('Failed to update card with AI content', 'error')
     }
   },
   (error: string) => {
-    console.error('[CardContent] AI Generation Error:', error)
     toast(error, 'error')
   }
 )
 
 // Update the AI generate button click handler
 const handleAIGenerate = () => {
-  console.log('[CardContent] handleAIGenerate called')
   
   // Validate required form data with better error messages
   const title = props.title?.trim()
@@ -278,15 +258,6 @@ const handleAIGenerate = () => {
     ?.map(cell => cell.content)
     .filter(Boolean)
     .join('\n') || ''
-
-  console.log('[CardContent] Starting AI generation:', {
-    side: props.side,
-    title,
-    description,
-    category,
-    otherSideContent: otherSideContent || 'none',
-    currentSideContent: cardState.value[props.side].cells?.map(c => c.content).filter(Boolean).join('\n') || 'none'
-  })
 
   aiGenerate(
     props.side,

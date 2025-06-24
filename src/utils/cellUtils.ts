@@ -204,15 +204,7 @@ export function normalizeCellsForLayout(
 ): ContentCell[] {
   const expectedCount = LAYOUT_CELL_COUNTS[layout]
   
-  console.log(`[normalizeCellsForLayout] Input:`, { 
-    layout, 
-    expectedCount, 
-    cellCount: cells.length,
-    cells: cells.map(c => ({ type: c.type, hasContent: c.type === 'text' ? !!c.content?.trim() : !!c.mediaUrl }))
-  })
-  
   if (cells.length === expectedCount) {
-    console.log(`[normalizeCellsForLayout] No change needed, returning as-is`)
     return cells
   }
   
@@ -221,11 +213,6 @@ export function normalizeCellsForLayout(
     const mediaCells = cells.filter(cell => cell.type === 'media')
     const textCells = cells.filter(cell => cell.type === 'text')
     
-    console.log(`[normalizeCellsForLayout] Reducing cells:`, { 
-      mediaCount: mediaCells.length, 
-      textCount: textCells.length 
-    })
-    
     if (layout === 'default') {
       // For default layout (1 cell), prioritize content intelligently
       // If we have both text and media, prefer text for default layout
@@ -233,15 +220,12 @@ export function normalizeCellsForLayout(
       if (textCells.length > 0) {
         const mergedText = textCells.map(cell => cell.content).join('\n').trim()
         const result = [createTextCell(mergedText)]
-        console.log(`[normalizeCellsForLayout] Default layout: returning text cell with merged content`)
         return result
       } else if (mediaCells.length > 0) {
         const result = [mediaCells[0]]
-        console.log(`[normalizeCellsForLayout] Default layout: returning media cell`)
         return result
       } else {
         const result = [createEmptyCell()]
-        console.log(`[normalizeCellsForLayout] Default layout: returning empty cell`)
         return result
       }
     } else {
@@ -250,26 +234,21 @@ export function normalizeCellsForLayout(
         // For two-row, put text first, then media
         if (layout === 'two-row') {
           const result = [textCells[0], mediaCells[0]]
-          console.log(`[normalizeCellsForLayout] Two-row layout: text first, then media`)
           return result
         } else {
           // For two-col, put media first, then text
           const result = [mediaCells[0], textCells[0]]
-          console.log(`[normalizeCellsForLayout] Two-col layout: media first, then text`)
           return result
         }
       } else if (mediaCells.length > 0) {
         const result = [mediaCells[0], createEmptyCell()]
-        console.log(`[normalizeCellsForLayout] ${layout} layout: media + empty`)
         return result
       } else if (textCells.length > 0) {
         const mergedText = textCells.map(cell => cell.content).join('\n').trim()
         const result = [createTextCell(mergedText), createEmptyCell()]
-        console.log(`[normalizeCellsForLayout] ${layout} layout: merged text + empty`)
         return result
       } else {
         const result = [createEmptyCell(), createEmptyCell()]
-        console.log(`[normalizeCellsForLayout] ${layout} layout: two empty cells`)
         return result
       }
     }
@@ -279,7 +258,6 @@ export function normalizeCellsForLayout(
       ...cells,
       ...Array(expectedCount - cells.length).fill(null).map(() => createEmptyCell())
     ]
-    console.log(`[normalizeCellsForLayout] Adding ${expectedCount - cells.length} empty cells`)
     return result
   }
 }

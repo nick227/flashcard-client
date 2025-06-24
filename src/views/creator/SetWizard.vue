@@ -385,6 +385,8 @@ onMounted(async () => {
       // Transform cards from setData directly instead of making another API call
       if (setData.cards && Array.isArray(setData.cards)) {
         cards.value = setData.cards.map((card: any) => SetService.transformCard(card))
+        console.log('[SetWizard] cards.value after set:', JSON.stringify(cards.value, null, 2))
+        console.log('[SetWizard] Loaded cards:', cards.value)
       } else {
         cards.value = []
       }

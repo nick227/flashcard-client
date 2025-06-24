@@ -1,6 +1,6 @@
 <template>
   <div class="card-content-layout" :class="[layout, side, { 'mobile': isMobile }]">
-    <div v-for="(cell, index) in cells" :key="`${layout}-${index}-${cell.type}`" class="content-area">
+    <div v-for="(cell, index) in cells" :key="`${layout}-${index}-${cell.type}-${cell.content}`" class="content-area">
       <CardContentCell 
         :cell="cell" 
         :index="index"

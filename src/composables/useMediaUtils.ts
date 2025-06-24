@@ -177,7 +177,7 @@ export function useMediaUtils(): MediaUtils {
         return { type, url: cleanedUrl, isValid: true }
     }
 
-    const generateMediaHtml = (media: MediaResult, isEditing: boolean = false): string => {
+    const generateMediaHtml = (media: MediaResult, isEditing?: boolean): string => {
         if (!media.isValid) {
             return media.url || ''
         }
@@ -291,7 +291,7 @@ export function useMediaUtils(): MediaUtils {
     }
     
     const detectAndRenderMedia = (text: string, isEditing: boolean = false): string => {
-        
+        console.log('[detectAndRenderMedia] input:', { text, isEditing })
         if (!text?.trim()) {
             return ''
         }
@@ -321,6 +321,7 @@ export function useMediaUtils(): MediaUtils {
         }
         
         result += cleanedText.slice(lastIndex)
+        console.log('[detectAndRenderMedia] output:', result)
         return result
     }
 

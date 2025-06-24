@@ -8,19 +8,25 @@
     :key="resizeKey"
   >
     <template v-if="cell.type === 'text'">
-      <div 
-        ref="contentRef"
+      <div v-if="isEditing"
         class="text-content"
         :style="computedStyle"
-        :contenteditable="isEditing"
-        :aria-label="isEditing ? 'Editable text content' : 'Text content'"
-        :tabindex="isEditing ? 0 : -1"
-        @input="handleTextInput"
+        contenteditable="true"
+        ref="contentRef"
+        :aria-label="'Editable text content'"
+        :tabindex="0"
+        @input="handleInput"
         @paste="handlePaste"
-        @keydown="handleKeyDown"
         @blur="handleBlur"
         @focus="handleFocus"
         @click="handleClick"
+      ></div>
+      <div v-else
+        class="text-content"
+        :style="computedStyle"
+        :aria-label="'Text content'"
+        tabindex="-1"
+        v-html="viewModeContent"
       ></div>
     </template>
     <template v-else-if="cell.type === 'media'">
@@ -137,15 +143,144 @@ const computedStyle = computed(() => {
   }
 })
 
-// Handle text input
-const handleTextInput = (event: Event) => {
-  const target = event.target as HTMLElement
-  const content = target.textContent || ''
-  // Only emit on input, don't watch for reactive updates during editing
-  if (props.index !== undefined) {
-    emit('update', props.index, { content })
+// Computed for view mode processed content
+const viewModeContent = computed(() => {
+  return detectAndRenderMedia(props.cell.content, false)
+})
+
+function setContentEditableText(content: string) {
+  if (contentRef.value) {
+    contentRef.value.textContent = content || ''
+    measureAndSetContainerSize()
   }
 }
+
+function handleInput() {
+  if (!contentRef.value) return
+  // Get raw text
+  const raw = contentRef.value.innerText
+  // Emit raw text to parent
+  if (props.index !== undefined) {
+    emit('update', props.index, { content: raw })
+  }
+  // Recalculate font size
+  measureAndSetContainerSize()
+}
+
+function handlePaste(event: ClipboardEvent) {
+  event.preventDefault()
+  const text = event.clipboardData?.getData('text/plain') || ''
+  document.execCommand('insertText', false, text)
+  // After paste, handle input as usual
+  nextTick(() => handleInput())
+}
+
+function handleBlur() {
+  if (!contentRef.value) return
+  const raw = contentRef.value.innerText
+  if (props.index !== undefined) {
+    emit('update', props.index, { content: raw })
+  }
+  // Optionally, you could trigger a preview/render of embeds here
+  // For now, just keep the text as is; view mode will show embeds
+}
+
+// Remove updateContainerSize and setTimeout logic
+// Add a simple measurement function
+const measureAndSetContainerSize = async () => {
+  await nextTick()
+  if (contentRef.value && contentRef.value.offsetParent !== null) {
+    const rect = contentRef.value.getBoundingClientRect()
+    if (rect.width > 0 && rect.height > 0) {
+      containerSize.value = { width: rect.width, height: rect.height }
+    }
+  }
+}
+
+// Initial measurement
+onMounted(() => {
+  if (props.isEditing && props.cell.type === 'text') {
+    setContentEditableText(props.cell.content || '')
+  }
+  measureAndSetContainerSize()
+})
+
+// Watch for changes in editing mode
+watch(() => props.isEditing, (isEditing) => {
+  if (isEditing && props.cell.type === 'text') {
+    setContentEditableText(props.cell.content || '')
+  }
+})
+
+// Watch for changes in cell content - ONLY when NOT editing
+watch(() => props.cell.content, (newContent, oldContent) => {
+  if (!props.isEditing && newContent !== oldContent) {
+    setContentEditableText(newContent || '')
+  }
+}, { flush: 'post' })
+
+// Watch for changes in container size
+watch(() => reactiveContainerSize.value, () => {
+  // Handle size changes if needed
+})
+
+// Watch for changes in cell prop
+watch(() => props.cell, () => {
+}, { immediate: true, deep: true })
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  cleanupEventListeners()
+  window.removeEventListener('resize', handleResize)
+  // Delete all cache keys used by this component
+  usedCacheKeys.forEach(deleteFontSizeCacheKey)
+})
+
+// Refactor enterEditMode to always set content after mount or when cell.content changes in edit mode
+const setEditContent = async () => {
+  await nextTick()
+  const element = contentRef.value
+  if (element) {
+    try {
+      if (props.cell.content && props.cell.content.trim()) {
+        const processedContent = detectAndRenderMedia(props.cell.content, true)
+        element.innerHTML = processedContent
+      } else {
+        element.textContent = ''
+      }
+    } catch (error) {
+      element.textContent = props.cell.content || ''
+    }
+    measureAndSetContainerSize()
+  }
+}
+
+// Watch for changes in edit mode or content
+watch([
+  () => props.isEditing,
+  () => props.cell.content
+], ([isEditing]) => {
+  if (props.cell.type === 'text' && isEditing) {
+    setEditContent()
+  }
+})
+
+const { 
+  cleanupEventListeners 
+} = useCardContentEvents(contentRef, {
+  isEditable: computed(() => props.isEditing).value,
+  showMediaControls: computed(() => props.isEditing || props.showMediaControls).value,
+  index: props.index,
+  onTextInput: (index, content) => {
+    emit('update', index, { content })
+  },
+  onMediaClose: (index, content) => {
+    emit('update', index, { content })
+  }
+})
 
 // Handle click for both normal media and embedded media
 const handleClick = (event: MouseEvent) => {
@@ -170,179 +305,6 @@ const handleFocus = () => {
     contentRef.value.focus()
   }
 }
-
-// Handle blur to sync with parent
-const handleBlur = () => {
-  if (contentRef.value && props.cell.type === 'text' && props.index !== undefined) {
-    // Check if we have embeds in the content
-    const hasEmbeds = contentRef.value.querySelector('.media-container, iframe, img')
-    
-    if (hasEmbeds) {
-      // If we have embeds, extract the original URL from the embed
-      const mediaContainer = contentRef.value.querySelector('.media-container')
-      if (mediaContainer) {
-        const mediaUrl = mediaContainer.getAttribute('data-media-url') || 
-                        mediaContainer.querySelector('[data-media-url]')?.getAttribute('data-media-url')
-        
-        if (mediaUrl) {
-          emit('update', props.index, { content: mediaUrl })
-        } else {
-          // Fallback: preserve the original content
-        }
-      }
-    } else {
-      // If no embeds, use textContent as normal
-      const content = contentRef.value.textContent || ''
-      emit('update', props.index, { content })
-    }
-  }
-}
-
-// Remove updateContainerSize and setTimeout logic
-// Add a simple measurement function
-const measureAndSetContainerSize = async () => {
-  await nextTick()
-  if (contentRef.value && contentRef.value.offsetParent !== null) {
-    const rect = contentRef.value.getBoundingClientRect()
-    if (rect.width > 0 && rect.height > 0) {
-      containerSize.value = { width: rect.width, height: rect.height }
-    }
-  }
-}
-
-// Initial measurement
-onMounted(measureAndSetContainerSize)
-
-// Initialize event handlers
-const { 
-  /* handleMediaClose, */ 
-  handlePaste, 
-  handleKeyDown, 
-  cleanupEventListeners 
-} = useCardContentEvents(contentRef, {
-  isEditable: computed(() => props.isEditing).value,
-  showMediaControls: computed(() => props.isEditing || props.showMediaControls).value,
-  index: props.index,
-  onTextInput: (index, content) => {
-    emit('update', index, { content })
-  },
-  onMediaClose: (index, content) => {
-    emit('update', index, { content })
-  }
-})
-
-// Watch for changes in editing mode
-watch(() => props.isEditing, (isEditing) => {
-  if (isEditing) {
-    enterEditMode()
-  } else {
-    exitEditMode()
-  }
-})
-
-// Watch for changes in cell content - ONLY when NOT editing
-watch(() => props.cell.content, (newContent, oldContent) => {
-  console.log('[watch] cell.content changed', { newContent, oldContent, isEditing: props.isEditing });
-  if (!props.isEditing && newContent !== oldContent) {
-    updateContent();
-  }
-}, { flush: 'post' })
-
-// Watch for changes in container size
-watch(() => reactiveContainerSize.value, () => {
-  // Handle size changes if needed
-})
-
-onMounted(async () => {
-  await nextTick();
-  updateContent();
-  window.addEventListener('resize', handleResize)
-})
-
-onUnmounted(() => {
-  cleanupEventListeners()
-  window.removeEventListener('resize', handleResize)
-  // Delete all cache keys used by this component
-  usedCacheKeys.forEach(deleteFontSizeCacheKey)
-})
-
-// Pure JS mode switching functions
-const enterEditMode = () => {
-  const element = contentRef.value
-  if (element) {
-    try {
-      // In edit mode, we want to show embeds for URLs but preserve raw data
-      // Use detectAndRenderMedia to find and render URLs within the content
-      if (props.cell.content && props.cell.content.trim()) {
-        const processedContent = detectAndRenderMedia(props.cell.content, true)
-        element.innerHTML = processedContent
-      } else {
-        // For empty content, just set empty text
-        element.textContent = ''
-      }
-    } catch (error) {
-      element.textContent = props.cell.content || ''
-    }
-  }
-}
-
-const exitEditMode = () => {
-  const element = contentRef.value
-  if (element) {
-    try {
-      // Process content through useMediaUtils for view mode
-      const processedContent = detectAndRenderMedia(props.cell.content, false)
-      // Restore with processed embeds
-      element.innerHTML = processedContent
-    } catch (error) {
-      // Fallback to plain text if processing fails
-      element.textContent = props.cell.content || ''
-    }
-  }
-}
-
-// Handle content changes from parent - ONLY when NOT editing
-const updateContent = () => {
-  if (props.isEditing) {
-    console.log('[updateContent] Skipped because isEditing is true');
-    return;
-  }
-  if (contentRef.value) {
-    try {
-      const processedContent = detectAndRenderMedia(props.cell.content, false);
-      console.log('[updateContent] Setting innerHTML:', processedContent);
-      contentRef.value.innerHTML = processedContent;
-      // Log size before nextTick
-      if (contentRef.value) {
-        const rect = contentRef.value.getBoundingClientRect();
-        console.log('[updateContent] Size before nextTick:', { width: rect.width, height: rect.height });
-      }
-      // Measure after content is set and after nextTick
-      nextTick(() => {
-        if (contentRef.value && contentRef.value.offsetParent !== null) {
-          const rect = contentRef.value.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            containerSize.value = { width: rect.width, height: rect.height };
-            console.log('[updateContent] Size after nextTick:', containerSize.value);
-          }
-          // Also log after a short delay to compare
-          setTimeout(() => {
-            if (contentRef.value) {
-              const delayedRect = contentRef.value.getBoundingClientRect();
-              console.log('[updateContent] Size after 100ms:', { width: delayedRect.width, height: delayedRect.height });
-            }
-          }, 3300);
-        }
-      });
-    } catch (error) {
-      contentRef.value.textContent = props.cell.content || '';
-    }
-  } else {
-    console.log('[updateContent] contentRef.value is null');
-  }
-}
-
-console.log('[CardContentCell] cell:', props.cell);
 
 function handleResize() {
   clearFontSizeCache()
