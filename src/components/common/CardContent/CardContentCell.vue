@@ -5,12 +5,12 @@
     ref="containerRef"
     role="region"
     :aria-label="cell.type === 'text' ? 'Text content' : 'Media content'"
+    :key="resizeKey"
   >
     <template v-if="cell.type === 'text'">
       <div 
-        :key="`cell-${index}-text`"
         ref="contentRef"
-        class="text-content" 
+        class="text-content"
         :style="computedStyle"
         :contenteditable="isEditing"
         :aria-label="isEditing ? 'Editable text content' : 'Text content'"
@@ -60,6 +60,7 @@ import type { ContentCell } from '@/types/card'
 import { useCardContent } from '@/composables/useCardContent'
 import { useCardContentEvents } from '@/composables/useCardContentEvents'
 import { useMediaUtils } from '@/composables/useMediaUtils'
+import { clearFontSizeCache, deleteFontSizeCacheKey } from '@/composables/useDynamicFontSize'
 
 const props = withDefaults(defineProps<{
   cell: ContentCell
@@ -67,6 +68,9 @@ const props = withDefaults(defineProps<{
   isMobile?: boolean
   isEditing?: boolean
   showMediaControls?: boolean
+  side?: string // 'front' or 'back'
+  cardId?: number | string // Card ID
+  layout?: string // Added for layout prop
 }>(), {
   isMobile: false,
   showMediaControls: false
@@ -80,6 +84,10 @@ const emit = defineEmits<{
 const contentRef = ref<HTMLElement | null>(null)
 const containerRef = ref<HTMLElement | null>(null)
 const containerSize = ref({ width: 0, height: 0 })
+const resizeKey = ref(0)
+
+// Track all cache keys used during this component's lifetime
+const usedCacheKeys = new Set<string>()
 
 // Make cell reactive
 const reactiveCell = computed(() => props.cell)
@@ -90,12 +98,20 @@ const reactiveContainerSize = computed(() => {
   return size
 })
 
+// Create a stable cache key for font size based on card id and side
+const cacheKey = props.cardId ? `card-${props.cardId}-${props.side || 'front'}` : undefined
+
 // Create reactive options for useCardContent
 const cardContentOptions = computed(() => {
   const size = reactiveContainerSize.value
+  // Compose the full cache key including text content
+  const text = props.cell && props.cell.type === 'text' ? props.cell.content || '' : ''
+  const fullCacheKey = cacheKey ? `${cacheKey}-${text}` : undefined
+  if (fullCacheKey) usedCacheKeys.add(fullCacheKey)
   return {
     width: size.width,
-    height: size.height
+    height: size.height,
+    cacheKey: fullCacheKey,
   }
 })
 
@@ -111,24 +127,13 @@ const {
 // Computed style for reactive updates
 const computedStyle = computed(() => {
   if (!props.cell || props.cell.type !== 'text') {
-    return { fontSize: '1rem', lineHeight: '1.5' }
+    return { fontSize: '1rem' }
   }
   
-  const size = reactiveContainerSize.value
-  if (size.width === 0 || size.height === 0) {
-    return { fontSize: '1rem', lineHeight: '1.5' }
-  }
-  
-  // Use fixed font size for URLs
-  const isUrl = props.cell.content.startsWith('http')
-  const fontSize = isUrl ? '1rem' : textStyle.value.fontSize
+  const fontSize = textStyle.value.fontSize
   
   return {
-    fontSize,
-    lineHeight: '1.5',
-    minHeight: props.isEditing ? '100px' : undefined,
-    '--container-width': `${size.width}px`,
-    '--container-height': `${size.height}px`
+    fontSize
   }
 })
 
@@ -193,31 +198,26 @@ const handleBlur = () => {
   }
 }
 
-// Update container size when it changes
-const updateContainerSize = () => {
-  // Measure the inner text-content div for more accurate font sizing
-  const elementToMeasure = contentRef.value || containerRef.value
-  
-  if (elementToMeasure) {
-    const rect = elementToMeasure.getBoundingClientRect()
-    const newSize = {
-      width: Math.max(0, rect.width),
-      height: Math.max(0, rect.height)
-    }
-    
-    // Only update if we have valid dimensions
-    if (newSize.width > 0 && newSize.height > 0) {      
-      containerSize.value = newSize
+// Remove updateContainerSize and setTimeout logic
+// Add a simple measurement function
+const measureAndSetContainerSize = async () => {
+  await nextTick()
+  if (contentRef.value && contentRef.value.offsetParent !== null) {
+    const rect = contentRef.value.getBoundingClientRect()
+    if (rect.width > 0 && rect.height > 0) {
+      containerSize.value = { width: rect.width, height: rect.height }
     }
   }
 }
+
+// Initial measurement
+onMounted(measureAndSetContainerSize)
 
 // Initialize event handlers
 const { 
   /* handleMediaClose, */ 
   handlePaste, 
   handleKeyDown, 
-  setupEventListeners, 
   cleanupEventListeners 
 } = useCardContentEvents(contentRef, {
   isEditable: computed(() => props.isEditing).value,
@@ -231,57 +231,6 @@ const {
   }
 })
 
-// Initialize on mount
-onMounted(() => {
-  if (contentRef.value && props.cell.type === 'text') {
-    // Mode-aware content initialization
-    // The watcher for isEditing will handle subsequent mode changes.
-    // This handles the initial state correctly.
-    if (props.isEditing) {
-      enterEditMode();
-    } else {
-      updateContent();
-    }
-    
-    nextTick(() => {
-      setupEventListeners()
-    })
-  }
-})
-
-// Set up ResizeObserver with debounce - moved outside onMounted for better timing
-let resizeTimeout: number | null = null
-const resizeObserver = new ResizeObserver(() => {
-  if (resizeTimeout) {
-    window.clearTimeout(resizeTimeout)
-  }
-  resizeTimeout = window.setTimeout(() => {
-    updateContainerSize()
-  }, 100)
-})
-
-// Watch for when contentRef becomes available
-watch(() => contentRef.value, (newContentRef) => {
-  if (newContentRef && props.cell.type === 'text') {
-    // Observe the text-content div for more accurate measurements
-    const elementToObserve = newContentRef || containerRef.value
-    if (elementToObserve) {
-      resizeObserver.observe(elementToObserve)
-      // Set initial size immediately
-      updateContainerSize()
-    }
-  }
-}, { immediate: true })
-
-// Cleanup on unmount
-onUnmounted(() => {
-  if (resizeTimeout) {
-    window.clearTimeout(resizeTimeout)
-  }
-  resizeObserver.disconnect()
-  cleanupEventListeners()
-})
-
 // Watch for changes in editing mode
 watch(() => props.isEditing, (isEditing) => {
   if (isEditing) {
@@ -293,19 +242,8 @@ watch(() => props.isEditing, (isEditing) => {
 
 // Watch for changes in cell content - ONLY when NOT editing
 watch(() => props.cell.content, (newContent, oldContent) => {
-  // If editing, only update the DOM if the prop change is coming from an external
-  // source (like AI generation), which we detect by checking if the new prop
-  // value is different from the current DOM content.
-  // This prevents cursor jumps during normal typing.
-  if (props.isEditing) {
-    if (contentRef.value && newContent !== contentRef.value.textContent) {
-      enterEditMode(); // Use enterEditMode to set the new content
-    }
-    return;
-  }
-  
-  // If not editing, and content changes, update the DOM.
-  if (newContent !== oldContent) {
+  console.log('[watch] cell.content changed', { newContent, oldContent, isEditing: props.isEditing });
+  if (!props.isEditing && newContent !== oldContent) {
     updateContent();
   }
 }, { flush: 'post' })
@@ -315,8 +253,17 @@ watch(() => reactiveContainerSize.value, () => {
   // Handle size changes if needed
 })
 
+onMounted(async () => {
+  await nextTick();
+  updateContent();
+  window.addEventListener('resize', handleResize)
+})
+
 onUnmounted(() => {
   cleanupEventListeners()
+  window.removeEventListener('resize', handleResize)
+  // Delete all cache keys used by this component
+  usedCacheKeys.forEach(deleteFontSizeCacheKey)
 })
 
 // Pure JS mode switching functions
@@ -356,22 +303,51 @@ const exitEditMode = () => {
 
 // Handle content changes from parent - ONLY when NOT editing
 const updateContent = () => {
-  // Don't update if user is editing
   if (props.isEditing) {
-    return
+    console.log('[updateContent] Skipped because isEditing is true');
+    return;
   }
-  
   if (contentRef.value) {
     try {
-      // Always use detectAndRenderMedia for view mode to ensure URLs are properly embedded
-      const processedContent = detectAndRenderMedia(props.cell.content, false)
-      contentRef.value.innerHTML = processedContent
-      
+      const processedContent = detectAndRenderMedia(props.cell.content, false);
+      console.log('[updateContent] Setting innerHTML:', processedContent);
+      contentRef.value.innerHTML = processedContent;
+      // Log size before nextTick
+      if (contentRef.value) {
+        const rect = contentRef.value.getBoundingClientRect();
+        console.log('[updateContent] Size before nextTick:', { width: rect.width, height: rect.height });
+      }
+      // Measure after content is set and after nextTick
+      nextTick(() => {
+        if (contentRef.value && contentRef.value.offsetParent !== null) {
+          const rect = contentRef.value.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            containerSize.value = { width: rect.width, height: rect.height };
+            console.log('[updateContent] Size after nextTick:', containerSize.value);
+          }
+          // Also log after a short delay to compare
+          setTimeout(() => {
+            if (contentRef.value) {
+              const delayedRect = contentRef.value.getBoundingClientRect();
+              console.log('[updateContent] Size after 100ms:', { width: delayedRect.width, height: delayedRect.height });
+            }
+          }, 3300);
+        }
+      });
     } catch (error) {
-      // Fallback to plain text
-      contentRef.value.textContent = props.cell.content || ''
+      contentRef.value.textContent = props.cell.content || '';
     }
+  } else {
+    console.log('[updateContent] contentRef.value is null');
   }
+}
+
+console.log('[CardContentCell] cell:', props.cell);
+
+function handleResize() {
+  clearFontSizeCache()
+  // This will force a re-render of the card content cell
+  resizeKey.value++
 }
 </script>
 
@@ -404,7 +380,7 @@ const updateContent = () => {
   justify-content: center;
   text-align: center;
   cursor: text;
-  line-height: 1.5;
+  line-height: 1.25;
   min-height: 100px;
   position: absolute;
   overflow: visible;

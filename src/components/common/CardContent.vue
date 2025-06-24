@@ -6,6 +6,7 @@
       :cells="cardState[side].cells"
       :is-mobile="isMobile"
       :is-editing="isEditing"
+      :card-id="card.id"
       @update="handleCellUpdate"
       @remove="handleCellRemove"
     />

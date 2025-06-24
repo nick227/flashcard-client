@@ -28,7 +28,6 @@ export function useViewHistory(setId: number) {
     // Initialize history when component mounts
     const initializeHistory = async () => {
         if (!user.value?.id) {
-            console.log('No user ID available, skipping history initialization')
             return
         }
 
@@ -41,13 +40,11 @@ export function useViewHistory(setId: number) {
             if (response.data) {
                 history.value = response.data
                 lastUpdatedCards.value = response.data.numCardsViewed || 0
-                console.log('Found existing history:', response.data)
                 return
             }
         } catch (getErr: any) {
             // Handle 404 specifically
             if (getErr.response?.status === 404) {
-                console.log('No existing history found, creating new one')
                 try {
                     const createResponse = await api.post('/history', { 
                         set_id: setId,
@@ -57,16 +54,13 @@ export function useViewHistory(setId: number) {
                     if (createResponse.data) {
                         history.value = createResponse.data
                         lastUpdatedCards.value = 0
-                        console.log('Created new history:', createResponse.data)
                         return
                     }
                 } catch (createErr: any) {
-                    console.error('Error creating new history:', createErr)
                     error.value = createErr.response?.data?.error || 'Failed to create history'
                     // Don't throw, just log the error and continue
                 }
             } else {
-                console.error('Error fetching history:', getErr)
                 error.value = getErr.response?.data?.error || 'Failed to fetch history'
                 // Don't throw, just log the error and continue
             }
@@ -78,24 +72,13 @@ export function useViewHistory(setId: number) {
     // Debounced update for cards viewed
     const debouncedUpdateCards = debounce(async (numCards: number) => {
         if (!history.value || !user.value?.id) {
-            console.log('Skipping update - no history or user:', { 
-                hasHistory: !!history.value, 
-                hasUser: !!user.value?.id 
-            })
             return
         }
 
         // Skip update if number hasn't changed
         if (numCards === lastUpdatedCards.value) {
-            console.log('Skipping update - number unchanged:', numCards)
             return
         }
-
-        console.log('Updating cards viewed in history:', {
-            historyId: history.value.id,
-            numCards,
-            lastUpdated: lastUpdatedCards.value
-        })
 
         try {
             // Update the progress
@@ -105,10 +88,8 @@ export function useViewHistory(setId: number) {
             if (response.data) {
                 history.value = response.data
                 lastUpdatedCards.value = numCards
-                console.log('Successfully updated history:', history.value)
             }
         } catch (err: any) {
-            console.error('Error updating cards viewed:', err)
             error.value = err.response?.data?.error || 'Failed to update progress'
         } finally {
             loading.value = false

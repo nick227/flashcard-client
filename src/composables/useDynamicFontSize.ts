@@ -1,122 +1,54 @@
+// Simple, robust dynamic font size composable
+// Scales font size based on text length and container size, with caching
+
 interface FontSizeOptions {
   width?: number
   height?: number
+  cacheKey?: string
+  debug?: boolean
 }
 
 interface TextStyle {
   fontSize: string
 }
 
-interface FontSizeConfig {
-  minFontSize: number
-  maxFontSize: number
-  minChars: number
-  maxChars: number
-  minContainerSize: number
-  maxContainerSize: number
-  sizeMultiplier: number
-  minAspectRatio: number
-  maxAspectRatio: number
-  minAspectMultiplier: number
-  minSizeMultiplier: number
-  logScaleFactor: number
-}
+// In-memory cache for font size calculations
+const fontSizeCache = new Map<string, string>()
 
-// Single configuration for all platforms
-const FONT_CONFIG: FontSizeConfig = {
-  minFontSize: 0.9,
-  maxFontSize: 4,
-  minChars: 20,
-  maxChars: 140,
-  minContainerSize: 500,
-  maxContainerSize: 300000,
-  sizeMultiplier: 1.5,
-  minAspectRatio: 0.1,
-  maxAspectRatio: 10.0,
-  minAspectMultiplier: 0.25,
-  minSizeMultiplier: 0.5,
-  logScaleFactor: 0.3
-}
-
-function calculateFontSize(text: string, options: FontSizeOptions = {}, config: FontSizeConfig): number {
-  if (!text) {
-    return config.maxFontSize
-  }
-
-  const { width = 0, height = 0 } = options
-  const length = text.trim().length
-  const area = width * height
-  const aspectRatio = width && height ? width / height : 1
-
-  // Base font size from character count with minChars consideration
-  let baseFontSize: number
-  if (length <= config.minChars) {
-    baseFontSize = config.maxFontSize
-  } else if (length >= config.maxChars) {
-    baseFontSize = config.minFontSize
-  } else {
-    // Normalize length between minChars and maxChars
-    const normalizedLength = (length - config.minChars) / (config.maxChars - config.minChars)
-    const scale = 1 - (normalizedLength * normalizedLength) // Quadratic scaling
-    baseFontSize = config.minFontSize + (config.maxFontSize - config.minFontSize) * scale
-  }
-
-  // For very short text (≤ minChars), skip container scaling to ensure maxFontSize
-  if (length <= config.minChars) {
-    return baseFontSize // Return exactly maxFontSize (4rem) for short text
-  }
-
-  // Container size multiplier (only applied to longer text)
-  let sizeMultiplier = 1.0
-  if (area > 0) {
-    // Logarithmic area scaling for more natural visual behavior
-    const logArea = Math.log(area)
-    const logMinArea = Math.log(config.minContainerSize)
-    const logMaxArea = Math.log(config.maxContainerSize)
-    const normalizedArea = Math.min(
-      Math.max((logArea - logMinArea) / (logMaxArea - logMinArea), 0),
-      1
-    )
-    
-    
-    // Aspect ratio adjustment with minimum bound
-    let aspectMultiplier = 1.0
-    if (aspectRatio < config.minAspectRatio) {
-      aspectMultiplier = Math.max(
-        Math.pow(aspectRatio / config.minAspectRatio, 0.5),
-        config.minAspectMultiplier
-      )
-    } else if (aspectRatio > config.maxAspectRatio) {
-      aspectMultiplier = Math.max(
-        Math.pow(config.maxAspectRatio / aspectRatio, 0.5),
-        config.minAspectMultiplier
-      )
-    }
-    
-    // Combine area and aspect ratio effects with logarithmic scaling
-    const areaEffect = 1.0 - (config.sizeMultiplier * Math.pow(normalizedArea, config.logScaleFactor))
-    sizeMultiplier = areaEffect * aspectMultiplier
-    
-    // Ensure minimum multiplier for extreme cases
-    sizeMultiplier = Math.max(sizeMultiplier, config.minSizeMultiplier)
-  }
-
-  let fontSize = baseFontSize * sizeMultiplier
-  
-  // Ensure font size stays within bounds
-  const finalFontSize = Math.max(config.minFontSize, Math.min(config.maxFontSize, fontSize))
-  
-  return finalFontSize
+// Main scaling function: adjusts font size by text length and container area
+function simpleFontSize(text: string, width = 0, height = 0): number {
+  if (!text || width === 0 || height === 0) return 1.5;
+  const base = 2.5;
+  const lengthFactor = Math.max(0.6, 1 - (text.length / 100)); // Shrink for long text
+  const area = width * height;
+  const areaFactor = Math.max(0.8, Math.min(2, Math.sqrt(area) / 200)); // Grow for big containers
+  return Math.max(1, Math.min(base * lengthFactor * areaFactor, 4)); // Clamp to 1-4rem
 }
 
 export function useDynamicFontSize() {
   const getTextStyle = (text: string, options: FontSizeOptions = {}): TextStyle => {
-    
-    const fontSize = calculateFontSize(text, options, FONT_CONFIG)
-    const result = { fontSize: `${fontSize.toFixed(2)}rem` }
-    
-    return result
-  }
-  
-  return { getTextStyle }
+    const { width = 0, height = 0, cacheKey, debug = false } = options;
+    const cacheKeyWithText = cacheKey ? `${cacheKey}-${text}` : undefined;
+    if (cacheKeyWithText && fontSizeCache.has(cacheKeyWithText)) {
+      if (debug) console.log('[FontSize] Cache hit:', cacheKeyWithText, fontSizeCache.get(cacheKeyWithText));
+      return { fontSize: fontSizeCache.get(cacheKeyWithText)! };
+    }
+    const fontSizeNum = simpleFontSize(text, width, height);
+    const fontSize = `${fontSizeNum.toFixed(2)}rem`;
+    if (cacheKeyWithText) fontSizeCache.set(cacheKeyWithText, fontSize);
+    if (debug) {
+      console.log('[FontSize] Calculated:', { text, width, height, fontSize });
+    }
+    return { fontSize };
+  };
+  return { getTextStyle };
 }
+
+export function clearFontSizeCache() {
+  fontSizeCache.clear();
+}
+
+export function deleteFontSizeCacheKey(key: string) {
+  fontSizeCache.delete(key)
+}
+

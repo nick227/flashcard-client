@@ -29,8 +29,9 @@
             <span class="text-xs text-gray-500 font-medium uppercase tracking-wider">Categories</span>
           </div>
         </div>
+      </div>
         
-        <div v-if="newestUser" @click="viewEducator(newestUser.name)" class="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors border border-gray-200 min-w-[200px] hover:bg-gray-50">
+        <div v-if="newestUser" @click="viewEducator(newestUser.name)" class="flex items-center gap-3 p-3 rounded-lg">
           <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-blue-600">
             <img v-if="newestUser.image" :src="newestUser.image" :alt="newestUser.name" loading="lazy" class="w-full h-full object-cover" />
             <div v-else class="w-full h-full flex items-center justify-center text-base bg-gray-100">
@@ -38,11 +39,10 @@
             </div>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded mb-1 uppercase tracking-wider w-fit">Newest</div>
+            <div class="bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded mb-1 uppercase tracking-wider w-fit">New Member</div>
             <div class="text-sm font-semibold text-gray-900 truncate">{{ newestUser.name }}</div>
           </div>
         </div>
-      </div>
 
       <!-- Categories Section -->
       <div class="bg-white rounded-xl p-6 border border-gray-200">

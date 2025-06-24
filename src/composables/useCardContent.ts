@@ -5,6 +5,12 @@ import { useDynamicFontSize } from './useDynamicFontSize'
 interface CardContentOptions {
   width?: number
   height?: number
+  debug?: boolean
+  cardIndex?: number
+  layout?: string
+  parentWidth?: number
+  parentHeight?: number
+  cacheKey?: string
 }
 
 interface TextStyle {
@@ -29,23 +35,11 @@ export function useCardContent(
     
     return getTextStyle(content, {
       width: currentOptions.width,
-      height: currentOptions.height
+      height: currentOptions.height,
+      debug: currentOptions.debug,
+      cacheKey: currentOptions.cacheKey
     })
   })
-
-  // Create a computed property for formatted content
-  const formattedContent = computed(() => {
-    const currentCell = cell.value
-    if (!currentCell || currentCell.type !== 'text') {
-      return ''
-    }
-    return currentCell.content || ''
-  })
-
-  const isImage = (url: string): boolean => {
-    if (!url) return false
-    return /\.(jpg|jpeg|png|gif|webp)$/i.test(url)
-  }
 
   const handleImageError = (event: Event) => {
     const img = event.target as HTMLImageElement
@@ -56,8 +50,6 @@ export function useCardContent(
 
   return {
     textStyle,
-    formattedContent,
-    isImage,
     handleImageError
   }
 } 

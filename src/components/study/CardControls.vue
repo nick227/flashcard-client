@@ -48,34 +48,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
-
-const props = defineProps<{
-  currentIndex: number
-  totalCards: number
-  isPrevDisabled: boolean
-  isNextDisabled: boolean
-  progressPercent: number
-  showExit?: boolean
-  mode: 'view' | 'edit' | 'preview'
-}>()
-
-// Debug prop changes
-watch(() => props.showExit, (newVal) => {
-  console.log('showExit changed:', newVal)
-}, { immediate: true })
-
 const exitFullscreen = () => {
   document.exitFullscreen()
 }
 
-// Debug mounted state
-onMounted(() => {
-  console.log('CardControls mounted:', { 
-    mode: props.mode,
-    isFullscreen: document.fullscreenElement !== null 
-  })
-})
+defineProps<{
+  isPrevDisabled: boolean
+  isNextDisabled: boolean
+  progressPercent: number
+  currentIndex: number
+  totalCards: number
+  showExit?: boolean
+}>()
 
 defineEmits<{
   (e: 'prev'): void

@@ -205,6 +205,7 @@ import CardRiverMobile from './CardRiverMobile.vue'
 import { useCardViewer } from '@/composables/useCardViewer'
 import { useCardControls } from '@/composables/useCardControls'
 import { createCellsFromContent } from '@/utils/cellUtils'
+import { loadStripe } from '@stripe/stripe-js'
 
 const props = defineProps<{
   setId: number | string
@@ -442,9 +443,6 @@ const downloadSet = async () => {
     toast('Failed to download flashcards', 'error')
   }
 }
-
-// Stripe
-import { loadStripe } from '@stripe/stripe-js'
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 

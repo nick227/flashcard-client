@@ -7,6 +7,9 @@
         :is-mobile="isMobile"
         :is-editing="isEditing"
         :show-media-controls="isEditing"
+        :side="side"
+        :card-id="cardId"
+        :layout="layout"
         @update="(i, updates) => $emit('update', i, updates)"
         @remove="(i) => $emit('remove', i)"
       />
@@ -24,6 +27,7 @@ defineProps<{
   cells?: ContentCell[]
   isMobile?: boolean
   isEditing?: boolean
+  cardId?: number | string
 }>()
 
 defineEmits<{
