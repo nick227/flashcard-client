@@ -134,7 +134,7 @@ const viewEducator = (id: string) => {
 }
 
 const viewCategory = (categoryName: string) => {
-  router.push(`/browse?category=${encodeURIComponent(categoryName)}`)
+  router.push(`/browse/${encodeURIComponent(categoryName)}`)
 }
 
 const handleImageError = (event: Event) => {
