@@ -1,5 +1,6 @@
 <template>
   <div class="card-content" :class="{ 'is-editing': isEditing }">
+    <span v-if="isEditing" class="text-xs text-muted text-center mb-2">{{ side }}</span>
     <CardContentLayout
       :layout="cardState[side].layout"
       :side="side"
@@ -320,6 +321,12 @@ onUnmounted(() => {
   
   .control-button {
     flex: 1 1 calc(50% - var(--space-sm));
+  }
+}
+
+@media (max-width: 768px) {
+  .card-content {
+    min-height: 460px;
   }
 }
 </style> 

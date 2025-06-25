@@ -10,16 +10,22 @@
     <template v-if="cell.type === 'text'">
       <div v-if="isEditing"
         class="text-content"
+        :class="side === 'front' ? 'front' : 'back'"
         :style="computedStyle"
         contenteditable="true"
         ref="contentRef"
         :aria-label="'Editable text content'"
         :tabindex="0"
+        inputmode="text"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="true"
         @input="handleInput"
         @paste="handlePaste"
         @blur="handleBlur"
         @focus="handleFocus"
         @click="handleClick"
+        :data-placeholder="side === 'front' ? 'Front side' : 'Back side'"
       ></div>
       <div v-else
         class="text-content"
@@ -157,8 +163,11 @@ const viewModeContent = computed(() => {
 
 function setContentEditableText(content: string) {
   if (contentRef.value) {
-    contentRef.value.textContent = content || ''
-    measureAndSetContainerSize()
+    // Only set content if not focused (prevents keyboard close on mobile)
+    if (document.activeElement !== contentRef.value) {
+      contentRef.value.textContent = content || ''
+      measureAndSetContainerSize()
+    }
   }
 }
 
@@ -290,7 +299,10 @@ const {
 const handleClick = (event: MouseEvent) => {
   if (props.isEditing && contentRef.value) {
     event.stopPropagation()
-    contentRef.value.focus()
+    // Only focus if not already focused
+    if (document.activeElement !== contentRef.value) {
+      contentRef.value.focus()
+    }
   }
 }
 
@@ -306,14 +318,19 @@ const handleMediaClose = (event: MouseEvent) => {
 // Handle focus to ensure contenteditable is working
 const handleFocus = () => {
   if (contentRef.value && props.isEditing) {
-    contentRef.value.focus()
+    // Only focus if not already focused
+    if (document.activeElement !== contentRef.value) {
+      contentRef.value.focus()
+    }
   }
 }
 
 function handleResize() {
   clearFontSizeCache()
-  // This will force a re-render of the card content cell
-  resizeKey.value++
+  // Only update resizeKey if not editing (prevents DOM replacement while typing)
+  if (!props.isEditing) {
+    resizeKey.value++
+  }
 }
 </script>
 
@@ -349,20 +366,39 @@ function handleResize() {
   line-height: 1.25;
   min-height: 100px;
   position: absolute;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   border: 1px solid transparent;
+  /* Faux placeholder styles */
+  position: relative;
 }
 
-.text-content[contenteditable="true"] {
-  outline: none;
-  border-radius: var(--radius-md);
-  transition: border-color 0.2s ease;
-  cursor: text;
+.set-view .text-content {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
-.text-content[contenteditable="true"]:focus {
-  border-radius: var(--radius-sm);
+.text-content:empty:before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.text-content:focus:before {
+  opacity: 0.4;
+}
+
+/* Correct selectors for contenteditable faux placeholder */
+.text-content.front:empty:before {
+  color: var(--color-primary);
+}
+.text-content.back:empty:before {
+  color: var(--color-secondary);
 }
 
 .media-container {
