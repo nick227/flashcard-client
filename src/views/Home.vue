@@ -13,7 +13,7 @@
 
       <!-- All Sets Grid -->
       <section class="section">
-        <h2 class="mb-8 text-2xl font-bold text-center">Popular Sets</h2>
+        <h2 class="mb-8 text-2xl font-bold text-center">Newest Sets</h2>
         <div v-if="loading" class="text-gray-500 text-center">Loading sets...</div>
         <div v-else class="cards-grid">
           <SetPreviewCard
@@ -70,7 +70,7 @@ const fetchSets = async () => {
     
     // Find a featured set or use the first one
     if (sets.value.length > 0) {
-      const set = sets.value[0]
+      const set = sets.value[Math.floor(Math.random() * sets.value.length)]
       // Ensure all required properties are present
       featuredSet.value = {
         ...set,
