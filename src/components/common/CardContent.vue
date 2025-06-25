@@ -32,12 +32,12 @@
 </template>
 
 <script setup lang="ts">
-import type { Card, CardSide, CardLayout, ContentCell } from '@/types/card'
+import type { Card, CardSide, ContentCell } from '@/types/card'
 import CardContentLayout from './CardContent/CardContentLayout.vue'
 import { useCardContentState } from './CardContent/CardContentState'
 import { useCardContentAI } from './CardContent/CardContentAI'
 import { useToaster } from '@/composables/useToaster'
-import { ref, nextTick, onUnmounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
 
 const props = defineProps<{
   card: Card
@@ -58,7 +58,7 @@ const emit = defineEmits<{
 }>()
 
 const { toast } = useToaster()
-const { cardState, currentSide, updateLayout, addCell, updateCell, removeCell, replaceCells } = useCardContentState(props)
+const { cardState, currentSide, addCell, updateCell, removeCell, replaceCells } = useCardContentState(props)
 
 // File input reference
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -130,42 +130,6 @@ const handleFileSelected = (event: Event) => {
   }
   
   emit('update', cardState.value)
-}
-
-const onToggleLayout = () => {
-  const side = currentSide.value
-  const currentLayout = cardState.value[side].layout
-  const cells = cardState.value[side].cells || []
-  
-  // Get current content to make intelligent layout decisions
-  const textCells = cells.filter(cell => cell.type === 'text' && cell.content?.trim())
-  const mediaCells = cells.filter(cell => cell.type === 'media' && cell.mediaUrl)
-  const hasText = textCells.length > 0
-  const hasMedia = mediaCells.length > 0
-  
-  // Define the layout cycle
-  const layouts: CardLayout[] = ['default', 'two-row', 'two-col']
-  const currentIndex = layouts.indexOf(currentLayout)
-  
-  // Get next layout in cycle
-  let nextLayout = layouts[(currentIndex + 1) % layouts.length]
-  
-  // If we have both text and media, prefer two-row over two-col
-  // But still allow cycling through all layouts
-  if (hasText && hasMedia && nextLayout === 'two-col' && currentLayout === 'default') {
-    // Skip two-col and go directly to two-row when we have both content types
-    nextLayout = 'two-row'
-  }
-  
-  
-  updateLayout(side, nextLayout)
-  emit('update', cardState.value)
-  
-  // Wait for next tick to ensure layout has updated
-  nextTick(() => {
-    // Trigger resize event to force container size recalculation
-    window.dispatchEvent(new Event('resize'))
-  })
 }
 
 // Initialize AI with proper callbacks

@@ -125,7 +125,7 @@ const cardContentOptions = computed(() => {
 })
 
 // Initialize card content utilities
-const { textStyle, handleImageError } = useCardContent(reactiveCell, cardContentOptions)
+const { handleImageError } = useCardContent(reactiveCell, cardContentOptions)
 const { 
   detectAndRenderMedia,
   detectMediaType,
