@@ -126,7 +126,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(userData: { name: string; email: string; password: string }) {
+  async function register(userData: { name: string; email: string; password: string, role_id: number, bio?: string }) {
     if (!isBrowser) return
     loading.value = true
     error.value = null

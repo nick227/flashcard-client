@@ -132,7 +132,8 @@ const getYouTubeEmbed = (url: string): string => {
   min-height: 420px;
 }
 .panel-face {
-  width: 100%;
+  width: calc(100% - 2rem);
+  margin: 0 auto;
   min-height: 400px;
   border-radius: 1rem;
   box-shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08);

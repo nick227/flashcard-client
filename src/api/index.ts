@@ -151,7 +151,7 @@ export const authApi = {
     }
   },
 
-  async register(userData: { name: string; email: string; password: string }) {
+  async register(userData: { name: string; email: string; password: string; role_id: number; bio?: string }) {
     try {
       const response = await api.post(apiEndpoints.auth.register, userData)
       return response.data
@@ -160,7 +160,7 @@ export const authApi = {
         if (error.response?.status === 409) {
           throw new Error('Email already registered')
         }
-        throw new Error(error.response?.data?.message || 'Registration failed')
+        throw new Error(error.response?.data?.error || 'Registration failed')
       }
       throw error
     }

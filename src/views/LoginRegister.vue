@@ -1,34 +1,37 @@
 <template>
-  <div class="flex flex-col items-center justify-start pb-16">
-    <div class="container flex flex-col items-center w-full flex-1 justify-start">
-      <div class="flex flex-colpt-44 pb-4 max-w-[460px]">
-        <div class="flex flex-col items-center w-full">
-          <h1 class="font-bold mb-2 site-title">Flashcard Academy</h1>
-          <p class="mb-6 text-gray-600">{{ mode === 'login' ? 'Existing Members' : 'New Users' }}</p>
-          <AuthToggle :mode="mode" @update:mode="mode = $event" />
-          <AuthForm :mode="mode" @submit="onSubmit" :loading="loading">
-            <template #description>
-              <div v-if="mode === 'login'" class="text-blue-700 text-center text-base mb-2">
-                {{ randomIntroText }}
-              </div>
-              <div v-else class="text-green-700 text-center text-base mb-2">
-                {{ randomIntroText }}
-              </div>
-            </template>
-            <template #error>
-              <div v-if="error" class="text-red-600 text-sm mb-2 text-center">{{ error }}</div>
-            </template>
-          </AuthForm>
-          
-          <!--
-          <div class="divider my-6 flex items-center w-full">
-            <div class="flex-1 h-px bg-gray-200"></div>
-            <span class="mx-4 text-gray-400 text-sm">or</span>
-            <div class="flex-1 h-px bg-gray-200"></div>
+  <div>
+    <Toaster :toasts="toasts" @remove="remove" />
+    <div class="flex flex-col items-center justify-start pb-16">
+      <div class="container flex flex-col items-center w-full flex-1 justify-start">
+        <div class="flex flex-colpt-44 pb-4 max-w-[460px]">
+          <div class="flex flex-col items-center w-full">
+            <h1 class="font-bold mb-2 site-title">Flashcard Academy</h1>
+            <p class="mb-6 text-gray-600">{{ mode === 'login' ? 'Existing Members' : 'New Users' }}</p>
+            <AuthToggle :mode="mode" @update:mode="mode = $event" />
+            <AuthForm :mode="mode" @submit="onSubmit" :loading="loading">
+              <template #description>
+                <div v-if="mode === 'login'" class="text-blue-700 text-center text-base mb-2">
+                  {{ randomIntroText }}
+                </div>
+                <div v-else class="text-green-700 text-center text-base mb-2">
+                  {{ randomIntroText }}
+                </div>
+              </template>
+              <template #error>
+                <div v-if="error" class="text-red-600 text-sm mb-2 text-center">{{ error }}</div>
+              </template>
+            </AuthForm>
+            
+            <!--
+            <div class="divider my-6 flex items-center w-full">
+              <div class="flex-1 h-px bg-gray-200"></div>
+              <span class="mx-4 text-gray-400 text-sm">or</span>
+              <div class="flex-1 h-px bg-gray-200"></div>
+            </div>
+            <GoogleLogin /> 
+            -->
+            
           </div>
-          <GoogleLogin /> 
-          -->
-          
         </div>
       </div>
     </div>
@@ -41,6 +44,8 @@ import AuthToggle from '@/components/auth/AuthToggle.vue'
 import AuthForm from '@/components/auth/AuthForm.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
+import Toaster from '@/components/common/Toaster.vue'
+import { useToaster } from '@/composables/useToaster'
 
 const STORAGE_KEY = 'auth_view_mode'
 type AuthMode = 'login' | 'register'
@@ -55,6 +60,7 @@ const error = ref('')
 const loading = ref(false)
 const auth = useAuthStore()
 const router = useRouter()
+const { toast, toasts, remove } = useToaster()
 
 // Load saved mode from localStorage on mount
 onMounted(() => {
@@ -91,7 +97,9 @@ const onSubmit = async (formData: { email: string; password: string; name?: stri
     }
   } catch (err: any) {
     console.error('Auth error:', err)
-    error.value = err.response?.data?.error || err.message || 'Authentication failed'
+    const msg = err.response?.data?.error || err.message || 'Authentication failed'
+    error.value = msg
+    toast(msg, 'error')
   } finally {
     loading.value = false
   }
@@ -119,11 +127,14 @@ const handleRegister = async (formData: { email: string; password: string; name?
     await auth.register({
       name: formData.name || '',
       email: formData.email,
-      password: formData.password
+      password: formData.password,
+      role_id: 1,
+      bio: formData.bio || ''
     })
     router.push('/')
-  } catch (error) {
-    console.error('Registration failed:', error)
+  } catch (error: any) {
+    const msg = error.response?.data?.error || error.message || 'Registration failed'
+    toast(msg || 'Registration failed', 'error')
   }
 }
 

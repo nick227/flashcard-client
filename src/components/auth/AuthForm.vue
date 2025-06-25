@@ -1,5 +1,8 @@
 <template>
   <form class="auth-form w-full flex flex-col gap-4 w-full" @submit.prevent="onSubmit">
+    <div v-if="formError" class="text-red-600 bg-red-50 border border-red-200 rounded px-4 py-2 mb-2 text-center">
+      <i class="fas fa-exclamation-circle mr-2"></i>{{ formError }}
+    </div>
     <slot name="description"></slot>
     <slot name="error"></slot>
     <div v-if="mode === 'register'" class="relative">
@@ -38,14 +41,9 @@
         v-model="bio"
         class="input"
         placeholder="Tell us about yourself"
-        required
-        minlength="1"
-        maxlength="500"
+        minlength="0"
         rows="3"
       ></textarea>
-      <div class="text-gray-500 text-sm mt-1">
-        {{ bio.length }}/500 characters
-      </div>
     </div>
     <input
       v-model="email"
@@ -81,7 +79,7 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, computed } from 'vue'
-import axios from 'axios'
+import { api } from '@/api'
 
 const props = defineProps<{ mode: 'login' | 'register' }>()
 const emit = defineEmits(['submit'])
@@ -93,6 +91,7 @@ const nameError = ref('')
 const checkingName = ref(false)
 const bio = ref('')
 let nameCheckTimeout: number | null = null
+const formError = ref('')
 
 // Form validation state
 const isFormValid = computed(() => {
@@ -100,7 +99,6 @@ const isFormValid = computed(() => {
     return name.value.trim().length >= 2 && 
            !nameError.value && 
            !checkingName.value &&
-           bio.value.length >= 10 &&
            email.value.includes('@') &&
            password.value.length >= 6
   }
@@ -120,9 +118,8 @@ async function checkNameExists(value: string) {
   }
   checkingName.value = true;
   try {
-    // Ensure we're using the correct API URL
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const res = await axios.get(`${apiUrl}/users/name-exists?name=${encodeURIComponent(value)}`);
+    // Use the standard api object and endpoint
+    const res = await api.get(`users/name-exists`, { params: { name: value } });
     if (res.data.exists) {
       nameError.value = 'This name is already taken';
       return false;
@@ -143,7 +140,6 @@ function validateName() {
   nameError.value = ''
   
   if (value.length < 2) {
-    nameError.value = 'Name must be at least 2 characters'
     return false
   }
   if (value.length > 50) {
@@ -167,11 +163,12 @@ async function onNameInput() {
     }
     nameCheckTimeout = window.setTimeout(async () => {
       await checkNameExists(name.value.trim())
-    }, 300)
+    }, 1300)
   }
 }
 
 async function onSubmit() {
+  formError.value = ''
   if (props.mode === 'register') {
     if (!validateName()) {
       return;
@@ -182,13 +179,17 @@ async function onSubmit() {
       return;
     }
   }
-  
-  emit('submit', { 
-    name: name.value.trim(),
-    email: email.value, 
-    password: password.value,
-    bio: bio.value
-  });
+  try {
+    emit('submit', { 
+      name: name.value.trim(),
+      email: email.value, 
+      password: password.value,
+      bio: bio.value,
+      role_id: 1 // Default role for new users
+    });
+  } catch (err: any) {
+    formError.value = err?.message || 'An error occurred. Please try again.'
+  }
 }
 </script>
 
