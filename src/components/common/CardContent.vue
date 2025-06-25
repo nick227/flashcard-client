@@ -11,10 +11,6 @@
       @remove="handleCellRemove"
     />
     <div v-if="isEditing" class="card-controls">
-      <button class="control-button" @click="onToggleLayout" :title="`Current: ${cardState[currentSide].layout}. Click to cycle layouts`">
-        <i class="fas fa-th-large"></i>
-        <span class="layout-indicator">{{ cardState[currentSide].layout }}</span>
-      </button>
       <button class="control-button" @click="handleAddImage" title="Add Image">
         <i class="fas fa-image"></i>
       </button>

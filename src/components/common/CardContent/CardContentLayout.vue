@@ -122,4 +122,9 @@ defineEmits<{
 .mobile.two-row .content-area {
   min-height: 60px;
 }
+@media (max-width: 768px) {
+  .card-content-layout {
+    padding: var(--space-sm);
+  }
+}
 </style> 

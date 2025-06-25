@@ -58,7 +58,8 @@ async function refreshImages() {
     padding: 1rem;
     border-top: 1px solid var(--color-border);
     z-index: 10;
-    width: 100%;
+    width: calc(100% - 2rem);
+    margin: 0 auto;
 }
 
 .stock-images-grid {

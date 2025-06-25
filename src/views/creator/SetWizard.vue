@@ -15,8 +15,6 @@
           @update:description="description = $event" @update:category="category = $event"
           @update:tags="setTags = $event" @update:price="setPrice = $event" @update:thumbnail="handleThumbnailUpdate" />
         <div class="flex flex-wrap items-center gap-6 mb-8">
-          <!-- View Toggle -->
-          <ViewToggle v-model="viewMode" />
           <div class="flex flex-wrap items-center gap-2 mt-4 mb-4">
             <!-- Reverse Cards Button -->
             <button title="Reverse Card Order" class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600"
@@ -65,7 +63,6 @@ import { useRoute } from 'vue-router'
 import type { Card, CardLayout } from '@/types/card'
 import ImportBar from '@/components/creator/ImportBar.vue'
 import SetInfoForm from '@/components/creator/SetInfoForm.vue'
-import ViewToggle from '@/components/creator/ViewToggle.vue'
 import CardCountIndicator from '@/components/creator/CardCountIndicator.vue'
 import AddCardButton from '@/components/creator/AddCardButton.vue'
 import AISetGenerator from '@/components/creator/AISetGenerator.vue'

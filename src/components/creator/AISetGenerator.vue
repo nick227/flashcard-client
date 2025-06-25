@@ -517,6 +517,16 @@ onUnmounted(() => {
   animation: ai-progress-indeterminate 20s linear infinite;
   box-shadow: 0 0 8px 0 #4f8cff33;
 }
+@media (max-width: 768px) {
+  .generation-status, button, button span {
+    width: 100%;
+    margin: 0 auto;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
 @keyframes ai-progress-indeterminate {
   0% { margin-left: -30vw; }
   100% { margin-left: 100vw; }

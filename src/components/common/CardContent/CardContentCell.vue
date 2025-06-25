@@ -67,6 +67,7 @@ import { useCardContent } from '@/composables/useCardContent'
 import { useCardContentEvents } from '@/composables/useCardContentEvents'
 import { useMediaUtils } from '@/composables/useMediaUtils'
 import { clearFontSizeCache, deleteFontSizeCacheKey } from '@/composables/useDynamicFontSize'
+import { useDynamicFontSize } from '@/composables/useDynamicFontSize'
 
 const props = withDefaults(defineProps<{
   cell: ContentCell
@@ -104,6 +105,8 @@ const reactiveContainerSize = computed(() => {
   return size
 })
 
+const liveContent = ref(props.cell.content || '')
+
 // Create a stable cache key for font size based on card id and side
 const cacheKey = props.cardId ? `card-${props.cardId}-${props.side || 'front'}` : undefined
 
@@ -130,17 +133,21 @@ const {
   isImageUrl
 } = useMediaUtils()
 
+const { getTextStyle } = useDynamicFontSize()
+
 // Computed style for reactive updates
 const computedStyle = computed(() => {
   if (!props.cell || props.cell.type !== 'text') {
     return { fontSize: '1rem' }
   }
-  
-  const fontSize = textStyle.value.fontSize
-  
-  return {
-    fontSize
-  }
+  // Use liveContent for font size calculation in edit mode
+  const text = props.isEditing ? liveContent.value : props.cell.content || ''
+  const fontSize = getTextStyle(text, {
+    width: containerSize.value.width,
+    height: containerSize.value.height,
+    cacheKey: cacheKey ? `${cacheKey}-${text}` : undefined
+  }).fontSize
+  return { fontSize }
 })
 
 // Computed for view mode processed content
@@ -157,13 +164,7 @@ function setContentEditableText(content: string) {
 
 function handleInput() {
   if (!contentRef.value) return
-  // Get raw text
-  const raw = contentRef.value.innerText
-  // Emit raw text to parent
-  if (props.index !== undefined) {
-    emit('update', props.index, { content: raw })
-  }
-  // Recalculate font size
+  liveContent.value = contentRef.value.innerText
   measureAndSetContainerSize()
 }
 
@@ -200,7 +201,8 @@ const measureAndSetContainerSize = async () => {
 // Initial measurement
 onMounted(() => {
   if (props.isEditing && props.cell.type === 'text') {
-    setContentEditableText(props.cell.content || '')
+    liveContent.value = props.cell.content || ''
+    setContentEditableText(liveContent.value)
   }
   measureAndSetContainerSize()
 })
@@ -208,14 +210,16 @@ onMounted(() => {
 // Watch for changes in editing mode
 watch(() => props.isEditing, (isEditing) => {
   if (isEditing && props.cell.type === 'text') {
-    setContentEditableText(props.cell.content || '')
+    liveContent.value = props.cell.content || ''
+    setContentEditableText(liveContent.value)
   }
 })
 
 // Watch for changes in cell content - ONLY when NOT editing
 watch(() => props.cell.content, (newContent, oldContent) => {
   if (!props.isEditing && newContent !== oldContent) {
-    setContentEditableText(newContent || '')
+    liveContent.value = newContent || ''
+    setContentEditableText(liveContent.value)
   }
 }, { flush: 'post' })
 
@@ -345,7 +349,8 @@ function handleResize() {
   line-height: 1.25;
   min-height: 100px;
   position: absolute;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid transparent;
 }
 

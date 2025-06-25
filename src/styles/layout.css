@@ -52,3 +52,7 @@
 .mb-sm {
     margin-bottom: var(--space-sm);
 }
+
+.hidden {
+    display: none;
+}
