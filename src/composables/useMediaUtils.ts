@@ -27,7 +27,6 @@ interface MediaResult {
 interface MediaUtils {
     // Core media operations
     processContent: (content: string, isEditing: boolean) => string
-    removeEmbed: (content: string, elementOrEmbedId: HTMLElement | string) => string
     detectAndRenderMedia: (text: string, isEditing?: boolean) => string
     detectMediaType: (url: string) => MediaResult
     generateMediaHtml: (media: MediaResult, isEditing?: boolean) => string
@@ -189,7 +188,7 @@ export function useMediaUtils(): MediaUtils {
             timestamp: Date.now()
         })
 
-        const closeButton = isEditing ? `<button class="media-close" data-media-type="${media.type}" data-media-url="${media.url}" data-embed-id="${embedId}"><i class="fas fa-times"></i></button>` : ''
+        const closeButton = isEditing ? `<button class="media-close" data-media-type="${media.type}" data-url="${media.url}" data-embed-id="${embedId}"><i class="fas fa-times"></i></button>` : ''
 
         if (media.type === 'youtube') {
             return `<div class="media-container youtube-embed" data-embed-id="${embedId}">
@@ -260,38 +259,7 @@ export function useMediaUtils(): MediaUtils {
         return trimmedContent
     }
     
-    const removeEmbed = (content: string, elementOrEmbedId: HTMLElement | string): string => {
-        const embedId = typeof elementOrEmbedId === 'string' 
-            ? elementOrEmbedId 
-            : elementOrEmbedId.getAttribute('data-embed-id') || undefined
-            
-        if (!embedId) {
-            return content
-        }
-        
-        const reference = mediaReferences.get(embedId)
-        
-        if (!reference) {
-            return content
-        }
-        
-        mediaReferences.delete(embedId)
-        
-        // Instead of removing all occurrences of the URL, we need to be more precise
-        // Look for the specific embed HTML that contains this embedId
-        const embedRegex = new RegExp(`<div[^>]*data-embed-id="${embedId}"[^>]*>.*?</div>`, 'gs')
-        let result = content.replace(embedRegex, '')
-        
-        // If no embed HTML found, try removing just the URL (fallback)
-        if (result === content) {
-            result = content.replace(reference.originalUrl, '').trim()
-        }
-        
-        return result
-    }
-    
     const detectAndRenderMedia = (text: string, isEditing: boolean = false): string => {
-        console.log('[detectAndRenderMedia] input:', { text, isEditing })
         if (!text?.trim()) {
             return ''
         }
@@ -321,13 +289,11 @@ export function useMediaUtils(): MediaUtils {
         }
         
         result += cleanedText.slice(lastIndex)
-        console.log('[detectAndRenderMedia] output:', result)
         return result
     }
 
     return {
         processContent,
-        removeEmbed,
         detectAndRenderMedia,
         detectMediaType,
         generateMediaHtml,

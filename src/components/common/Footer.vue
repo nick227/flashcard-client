@@ -15,7 +15,7 @@
                         <span class="logo-text">FlashCard Academy</span>
                     </router-link>
                     <p class="brand-description">
-                        Transform your learning journey with our interactive flashcard platform. Join thousands of educators and learners creating, sharing, and mastering knowledge together.
+                        We like to make flashcards.
                     </p>
                 </div>
 
@@ -46,10 +46,6 @@
                 <div class="footer-links">
                     <h3>Site</h3>
                     <div class="links-list">
-                        <a href="/sets/226" class="link-item">
-                            <i class="fas fa-compass"></i>
-                            <span>Set of the Day</span>
-                        </a>
                         <a href="/browse" class="link-item">
                             <i class="fas fa-compass"></i>
                             <span>Discover Sets</span>
@@ -173,7 +169,8 @@ const formatTimeAgo = (date: string) => {
 }
 
 .footer-content {
-    @apply w-full px-4 py-8;
+    padding: 0 1rem;
+    width: calc(100% - 2rem);
     max-width: var(--container-max-width);
     margin: 0 auto;
 }
@@ -211,7 +208,7 @@ const formatTimeAgo = (date: string) => {
 }
 
 .brand-description {
-    @apply text-gray-600 text-sm leading-relaxed max-w-xl;
+    @apply text-gray-600 text-sm leading-relaxed w-full;
 }
 
 .footer-nav-grid {
@@ -330,7 +327,7 @@ const formatTimeAgo = (date: string) => {
 
 @media (max-width: 768px) {
     .latest-sets, .stats-section, .footer-nav-grid, .footer-connect {
-        width: 90%;
+        width: 100%;
     }
 }
 </style>

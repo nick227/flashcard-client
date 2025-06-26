@@ -283,12 +283,6 @@ function updateBack(card: Card) {
   max-height: 33% !important;
 }
 
-/* Add focus styles for better accessibility */
-.flashcard-scaffold:focus {
-  outline: 2px solid #2563eb;
-  outline-offset: 2px;
-}
-
 /* Update highlight animation to use primary blue */
 @keyframes highlight {
   0% { background-color: rgba(37, 99, 235, 0.2); }

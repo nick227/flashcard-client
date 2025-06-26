@@ -2,7 +2,6 @@ import type { Card, CardLayout } from '@/types/card'
 import type { Set, SetCreate, SetUpdate } from '@/types/set'
 import { VALIDATION_LIMITS } from '@/constants/validation'
 import { api } from '@/api'
-import { createCellsFromSide } from '@/utils/cellUtils'
 
 export class SetService {
   static createEmptySet(): Set {
@@ -130,11 +129,13 @@ export class SetService {
       description: card.description || '',
       front: {
         layout: (card.front?.layout || 'default') as CardLayout,
-        cells: createCellsFromSide(card.front || {})
+        content: card.front?.text || '',
+        mediaUrl: card.front?.imageUrl || '',
       },
       back: {
         layout: (card.back?.layout || 'default') as CardLayout,
-        cells: createCellsFromSide(card.back || {})
+        content: card.back?.text || '',
+        mediaUrl: card.back?.imageUrl || '',
       },
       hint: card.hint || null,
       createdAt: new Date(card.createdAt),

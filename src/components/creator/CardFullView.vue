@@ -1,5 +1,8 @@
 <template>
   <div class="card-full-view bg-gray-50 rounded-xl p-6 mb-4" :class="{ 'card-success': !isBlank }">
+    <div class="drag-handle w-full py-4 bg-gray-100 flex items-center justify-center cursor-move">
+      <i class="fa-solid fa-grip-lines fa-lg text-gray-400"></i>
+    </div>
     <!-- Top action buttons: Delete and Preview toggle -->
     <div class="flex justify-between items-center mb-3">
       <button class="button button-danger button-icon text-xs px-3 py-1" @click="onRequestDelete">
@@ -12,8 +15,8 @@
     <div class="cards-container">
       <!-- Edit mode: show editable front/back fields -->
       <CardEditor
-        v-if="!previewMode"
-        :card="localCard"
+        v-show="!previewMode"
+        :card="props.card"
         :title="props.title || ''"
         :description="props.description || ''"
         :category="props.category || ''"
@@ -21,9 +24,9 @@
         @update="onEditCard"
       />
       <!-- Preview mode: show card scaffold component -->
-      <div v-else class="card-preview">
+      <div v-show="previewMode" class="card-preview">
         <FlashCardScaffold
-          :card="localCard"
+          :card="props.card"
           :flipped="flipped"
           mode="preview"
           :title="props.title || ''"
@@ -43,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import type { Card } from '@/types/card'
 import CardEditor from '@/components/creator/CardEditor.vue'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
@@ -58,13 +61,12 @@ const props = defineProps<{
   title?: string
   description?: string
   category?: string
-  onImageFile?: (data: { file: File, side: 'front' | 'back', cellIndex: number }) => void
+  onImageFile?: (data: { file: File, side: 'front' | 'back' }) => void
 }>()
 
 const emit = defineEmits(['update', 'delete', 'request-delete'])
 
-// Local state
-const localCard = ref({ ...props.card })
+// Remove localCard, use props.card directly
 const previewMode = ref(false)
 const flipped = ref(false)
 const touchedFront = ref(false)
@@ -72,22 +74,12 @@ const touchedBack = ref(false)
 
 // Computed
 const isBlank = computed(() => {
-  return (!localCard.value.front.text && !localCard.value.front.imageUrl) || 
-         (!localCard.value.back.text && !localCard.value.back.imageUrl)
+  return (!props.card.front.content && !props.card.front.mediaUrl) || 
+         (!props.card.back.content && !props.card.back.mediaUrl)
 })
 
-// Watch for card changes
-watch(() => props.card, (newCard) => {
-  localCard.value = { ...newCard }
-}, { deep: true })
-
 function onEditCard(updatedCard: Card) {
-  localCard.value = { ...updatedCard }
-  emitUpdate()
-}
-
-const emitUpdate = () => {
-  emit('update', { ...localCard.value })
+  emit('update', { ...updatedCard })
 }
 
 const handleFlip = () => {
@@ -95,7 +87,7 @@ const handleFlip = () => {
 }
 
 const onRequestDelete = () => {
-  emit('request-delete', localCard.value.id)
+  emit('request-delete', props.card.id)
 }
 </script>
 
@@ -197,5 +189,12 @@ const onRequestDelete = () => {
 
 .mt-2 {
   margin-top: 0.5rem;
+}
+
+.card-preview {
+  min-height: 420px;
+  max-width: 640px;
+  margin: 0 auto;
+  overflow: hidden;
 }
 </style>

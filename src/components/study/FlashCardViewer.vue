@@ -194,7 +194,6 @@ import Toaster from '@/components/common/Toaster.vue'
 import CardRiverMobile from './CardRiverMobile.vue'
 import { useCardViewer } from '@/composables/useCardViewer'
 import { useCardControls } from '@/composables/useCardControls'
-import { createCellsFromContent } from '@/utils/cellUtils'
 import { loadStripe } from '@stripe/stripe-js'
 
 const props = defineProps<{
@@ -302,11 +301,13 @@ function transformCard(card: RawCard, setData: any): Card {
     description: setData.description || '',
     front: {
       layout: card.front.layout || 'default' as CardLayout,
-      cells: createCellsFromContent(card.front.text, card.front.imageUrl, card.front.layout)
+      content: card.front.text || '',
+      mediaUrl: card.front.imageUrl || null
     },
     back: {
       layout: card.back.layout || 'default' as CardLayout,
-      cells: createCellsFromContent(card.back.text, card.back.imageUrl, card.back.layout)
+      content: card.back.text || '',
+      mediaUrl: card.back.imageUrl || null
     },
     hint: card.hint || null,
     createdAt: card.createdAt || new Date().toISOString(),
@@ -384,11 +385,11 @@ const downloadSet = async () => {
       }
 
       return [
-        formatField(card.front.cells?.[0]?.content),
-        formatField(card.back.cells?.[0]?.content),
+        formatField(card.front.content),
+        formatField(card.back.content),
         formatField(card.hint),
-        formatField(card.front.cells?.[1]?.mediaUrl),
-        formatField(card.back.cells?.[1]?.mediaUrl),
+        formatField(card.front.mediaUrl),
+        formatField(card.back.mediaUrl),
         formatField(card.front.layout),
         formatField(card.back.layout)
       ]

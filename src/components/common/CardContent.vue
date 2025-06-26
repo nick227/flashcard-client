@@ -4,12 +4,11 @@
     <CardContentLayout
       :layout="cardState[side].layout"
       :side="side"
-      :cells="cardState[side].cells"
+      :content="cardState[side].content"
+      :mediaUrl="cardState[side].mediaUrl"
       :is-mobile="isMobile"
       :is-editing="isEditing"
-      :card-id="card.id"
-      @update="handleCellUpdate"
-      @remove="handleCellRemove"
+      @update="handleContentUpdate"
     />
     <div v-if="isEditing" class="card-controls">
       <button class="control-button" @click="handleAddImage" title="Add Image">
@@ -33,12 +32,12 @@
 </template>
 
 <script setup lang="ts">
-import type { Card, CardSide, ContentCell } from '@/types/card'
+import type { Card, CardSide } from '@/types/card'
 import CardContentLayout from './CardContent/CardContentLayout.vue'
-import { useCardContentState } from './CardContent/CardContentState'
 import { useCardContentAI } from './CardContent/CardContentAI'
 import { useToaster } from '@/composables/useToaster'
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, watch } from 'vue'
+import { useImageCompression } from '@/composables/useImageCompression'
 
 const props = defineProps<{
   card: Card
@@ -48,89 +47,86 @@ const props = defineProps<{
   title?: string
   description?: string
   category?: string
-  onImageFile?: (data: { file: File, side: CardSide, cellIndex: number }) => void
+  onImageFile?: (data: { file: File, side: CardSide }) => void
 }>()
 
 const emit = defineEmits<{
   (e: 'update', card: Card): void
   (e: 'edit-start'): void
   (e: 'edit-end'): void
-  (e: 'image-file', data: { file: File, side: CardSide, cellIndex: number }): void
+  (e: 'image-file', data: { file: File, side: CardSide }): void
 }>()
 
 const { toast } = useToaster()
-const { cardState, currentSide, addCell, updateCell, removeCell, replaceCells } = useCardContentState(props)
+const cardState = ref({ ...props.card })
+
+// Sync cardState with props.card when it changes
+watch(
+  () => props.card,
+  (newCard) => {
+    cardState.value = { ...newCard }
+  },
+  { deep: true, immediate: true }
+)
 
 // File input reference
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const blobUrls = ref<Set<string>>(new Set()) // Track all blob URLs for cleanup
 
-const handleCellUpdate = (index: number, updates: Partial<ContentCell>) => {
-  updateCell(currentSide.value, index, updates)
-  emit('update', cardState.value)
-}
+const { compressImage } = useImageCompression()
 
-const handleCellRemove = (index: number) => {
-  removeCell(currentSide.value, index)
-  emit('update', cardState.value)
+const handleContentUpdate = (updates: { content?: string; mediaUrl?: string | null }) => {
+  console.log('[CardContent] handleContentUpdate called:', { updates, before: { ...cardState.value[props.side] } })
+  Object.assign(cardState.value[props.side], updates)
+  cardState.value = { ...cardState.value } // trigger reactivity
+  console.log('[CardContent] handleContentUpdate after assign:', { after: { ...cardState.value[props.side] } })
+  emit('update', { ...cardState.value })   // emit a new object
 }
 
 const handleAddImage = () => {
-  // Directly trigger file input
   fileInputRef.value?.click()
 }
 
-const handleFileSelected = (event: Event) => {
+const handleFileSelected = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  
-  if (!file) return
-  
+  if (!file) {
+    console.warn('[handleFileSelected] No file selected')
+    return
+  }
+
   // Reset the input so the same file can be selected again
   target.value = ''
-  
+
+  // Compress the image before preview/storage
+  let compressedFile = file
+  try {
+    const result = await compressImage(file)
+    compressedFile = result.file
+  } catch (err) {
+    toast('Image compression failed. Using original file.', 'error')
+    console.warn('[handleFileSelected] Compression failed, using original file')
+  }
+
   // Create blob URL for preview
-  const blobUrl = URL.createObjectURL(file)
-  blobUrls.value.add(blobUrl) // Track for cleanup
+  const blobUrl = URL.createObjectURL(compressedFile)
 
-  const cells = cardState.value[currentSide.value].cells || []
-  
-  // Find the first empty text cell to replace
-  const emptyCellIndex = cells.findIndex(cell => cell.type === 'text' && !cell.content?.trim())
-
-  let targetCellIndex = -1
-
-  if (emptyCellIndex !== -1) {
-    // If an empty cell is found, update it
-    targetCellIndex = emptyCellIndex
-    updateCell(currentSide.value, targetCellIndex, { type: 'media', mediaUrl: blobUrl, content: '' })
-  } else {
-    // If no empty cells, add a new one and get its index
-    addCell(currentSide.value, 'media', true)
-    // Get the updated cells array to find the new cell index
-    const updatedCells = cardState.value[currentSide.value].cells || []
-    targetCellIndex = updatedCells.length - 1
-    updateCell(currentSide.value, targetCellIndex, { mediaUrl: blobUrl })
+  // Clean up previous blob URL for this side
+  const prevUrl = cardState.value[props.side].mediaUrl
+  if (prevUrl && prevUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(prevUrl)
   }
+  cardState.value[props.side].mediaUrl = blobUrl
 
-  if (targetCellIndex !== -1) {
-    // Emit file data to parent for later upload
+  // Convert compressed file to base64 and emit/store for localStorage
+  const reader = new FileReader()
+  reader.onload = () => {
     emit('image-file', {
-      file: file,
-      side: props.side,
-      cellIndex: targetCellIndex
+      file: compressedFile,
+      side: props.side
     })
-    
-    if (props.onImageFile) {
-      props.onImageFile({
-        file: file,
-        side: props.side,
-        cellIndex: targetCellIndex
-      })
-    }
   }
-  
-  emit('update', cardState.value)
+  reader.readAsDataURL(compressedFile)
 }
 
 // Initialize AI with proper callbacks
@@ -153,17 +149,14 @@ const { aiLoading, aiGenerate } = useCardContentAI(
     }
     
     try {
-      // Create a new text cell with the AI-generated content
-      const newCell = { type: 'text' as const, content: text.trim() }
-      
       // Replace all existing cells with the new AI-generated content
-      replaceCells(currentSide.value, [newCell])
+      cardState.value[props.side].content = text.trim()
       
       // Set layout to 'default' for text-only content
       // Update layout directly without normalizing cells again
-      const currentLayout = cardState.value[currentSide.value].layout
+      const currentLayout = cardState.value[props.side].layout
       if (currentLayout !== 'default') {
-        cardState.value[currentSide.value].layout = 'default'
+        cardState.value[props.side].layout = 'default'
       }
       
       emit('update', cardState.value)
@@ -215,10 +208,7 @@ const handleAIGenerate = () => {
 
   // Get content from the other side for context
   const otherSide = props.side === 'front' ? 'back' : 'front'
-  const otherSideContent = cardState.value[otherSide].cells
-    ?.map(cell => cell.content)
-    .filter(Boolean)
-    .join('\n') || ''
+  const otherSideContent = cardState.value[otherSide].content || ''
 
   aiGenerate(
     props.side,
@@ -245,16 +235,6 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.front .card-content.is-editing:hover:deep(.card-content-cell) {
-  outline: 1px solid var(--color-muted);
-  border-radius: var(--radius-sm);
-}
-
-.back .card-content.is-editing:hover:deep(.card-content-cell) {
-  outline: 1px solid var(--color-white);
-  border-radius: var(--radius-sm);
 }
 
 .card-controls {

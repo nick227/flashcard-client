@@ -25,27 +25,24 @@ import type { Card } from '@/types/card'
 defineProps<{ cards: Card[] }>()
 
 const getFrontText = (card: Card): string | undefined => {
-  const textContent = card.front?.cells?.find(cell => cell.type === 'text')?.content || undefined
-  return textContent ? processTextContent(textContent) : undefined
+  return card.front?.content ? processTextContent(card.front.content) : undefined
 }
 
 const getFrontImage = (card: Card): string | undefined => {
-  return card.front?.cells?.find(cell => cell.type === 'media')?.mediaUrl || undefined
+  return card.front?.mediaUrl || undefined
 }
 
 const getBackText = (card: Card): string | undefined => {
-  const textContent = card.back?.cells?.find(cell => cell.type === 'text')?.content || undefined
-  return textContent ? processTextContent(textContent) : undefined
+  return card.back?.content ? processTextContent(card.back.content) : undefined
 }
 
 const getBackImage = (card: Card): string | undefined => {
-  return card.back?.cells?.find(cell => cell.type === 'media')?.mediaUrl || undefined
+  return card.back?.mediaUrl || undefined
 }
 
 // Simple YouTube URL detection and iframe generation
 const processTextContent = (content: string): string => {
   if (!content) return ''
-  
   // Check if content is a YouTube URL
   const youtubeId = extractYouTubeId(content)
   if (youtubeId) {
@@ -62,7 +59,6 @@ const processTextContent = (content: string): string => {
       ></iframe>
     </div>`
   }
-  
   // Return original content if not a YouTube URL
   return content
 }
@@ -70,20 +66,17 @@ const processTextContent = (content: string): string => {
 const extractYouTubeId = (url: string): string | null => {
   const cleanedUrl = url.replace(/\s+/g, '').trim()
   if (!cleanedUrl) return null
-  
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
     /youtube\.com\/watch\?.*&v=([a-zA-Z0-9_-]{11})/,
     /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/
   ]
-  
   for (const pattern of patterns) {
     const match = cleanedUrl.match(pattern)
     if (match?.[1] && /^[a-zA-Z0-9_-]{11}$/.test(match[1])) {
       return match[1]
     }
   }
-  
   return null
 }
 

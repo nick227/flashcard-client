@@ -107,8 +107,8 @@ const props = defineProps<{
     likes?: number
     cards?: Array<{
       id: number
-      front: string | { text: string; imageUrl: string | null; layout: string }
-      back: string | { text: string; imageUrl: string | null; layout: string }
+      front: { content: string; mediaUrl: string | null; layout: string }
+      back: { content: string; mediaUrl: string | null; layout: string }
       hint?: string | null
       front_image?: string | null
       back_image?: string | null

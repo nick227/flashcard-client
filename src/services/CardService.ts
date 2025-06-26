@@ -1,13 +1,12 @@
 import type { Card, CardLayout } from '@/types/card'
 import { VALIDATION_LIMITS } from '@/constants/validation'
-import { migrateToNewFormat } from '@/utils/cardMigration'
-import { createEmptyCell, cellHasContent } from '@/utils/cellUtils'
 
 const DEFAULT_LAYOUT: CardLayout = 'default'
 
 const createEmptyCardSide = () => ({
   layout: DEFAULT_LAYOUT,
-  cells: [createEmptyCell()]
+  content: '',
+  mediaUrl: null
 })
 
 export class CardService {
@@ -38,11 +37,9 @@ export class CardService {
 
     const hasBlankCard = cards.some(card => {
       // Check front content
-      const frontHasContent = card.front.cells?.some(cellHasContent) || false
-
+      const frontHasContent = (card.front.content && card.front.content.trim().length > 0) || (card.front.mediaUrl && card.front.mediaUrl.trim().length > 0)
       // Check back content
-      const backHasContent = card.back.cells?.some(cellHasContent) || false
-
+      const backHasContent = (card.back.content && card.back.content.trim().length > 0) || (card.back.mediaUrl && card.back.mediaUrl.trim().length > 0)
       return !frontHasContent || !backHasContent
     })
 
@@ -50,9 +47,9 @@ export class CardService {
       return { isValid: false, error: 'All cards must have content in both front and back.' }
     }
 
-    const hasLongContent = cards.some(card => 
-      card.front.cells?.some(cell => cell.content && cell.content.length > VALIDATION_LIMITS.CARD.MAX_CHARS) || 
-      card.back.cells?.some(cell => cell.content && cell.content.length > VALIDATION_LIMITS.CARD.MAX_CHARS) ||
+    const hasLongContent = cards.some(card =>
+      (card.front.content && card.front.content.length > VALIDATION_LIMITS.CARD.MAX_CHARS) ||
+      (card.back.content && card.back.content.length > VALIDATION_LIMITS.CARD.MAX_CHARS) ||
       (card.hint && card.hint.length > VALIDATION_LIMITS.CARD.MAX_CHARS) || false
     )
     if (hasLongContent) {
@@ -72,9 +69,5 @@ export class CardService {
 
   static reorderCards(newOrder: Card[]): Card[] {
     return newOrder
-  }
-
-  static migrateCard(oldCard: any): Card {
-    return migrateToNewFormat(oldCard)
   }
 } 

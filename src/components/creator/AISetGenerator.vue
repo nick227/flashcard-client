@@ -29,7 +29,6 @@ import { ref, onUnmounted, onMounted } from 'vue'
 import { useToaster } from '@/composables/useToaster'
 import type { Card } from '@/types/card'
 import { aiSocketService } from '@/services/AISocketService'
-import { determineOptimalLayout } from '@/utils/cellUtils'
 
 type GenerationProgress = {
     status: 'preparing' | 'generating' | 'completed' | 'failed'
@@ -315,42 +314,20 @@ const generateSet = async () => {
 
 const handleCardGenerated = (card: Card) => {
     console.log('AISetGenerator - Raw generated card:', JSON.stringify(card, null, 2))
-    
-    // Determine optimal layout based on content for each side
-    const frontLayout = determineOptimalLayout(
-        card.front.cells?.[0]?.content, // text from first cell
-        card.front.cells?.[1]?.mediaUrl || card.front.cells?.[0]?.mediaUrl, // image from any cell
-        card.front.layout
-    )
-    
-    const backLayout = determineOptimalLayout(
-        card.back.cells?.[0]?.content, // text from first cell
-        card.back.cells?.[1]?.mediaUrl || card.back.cells?.[0]?.mediaUrl, // image from any cell
-        card.back.layout
-    )
-    
-    // Apply the determined layouts
+    // No need to determine layout, just use what is provided or default
     const cardWithLayout = {
         ...card,
         front: {
             ...card.front,
-            layout: frontLayout
+            layout: card.front.layout || 'default'
         },
         back: {
             ...card.back,
-            layout: backLayout
+            layout: card.back.layout || 'default'
         }
     }
-    
-    console.log('AISetGenerator - Processed card with smart layout:', JSON.stringify(cardWithLayout, null, 2))
-    
-    // Store card locally for backup
     generatedCards.value.push(cardWithLayout)
-    
-    // Emit the card to be added to the set immediately
     emit('add-set', cardWithLayout)
-    
-    // Show toast for each card
     queueToast(`Generated card ${progress.value.cardsGenerated} of ${progress.value.totalCards}`, 'info')
 }
 

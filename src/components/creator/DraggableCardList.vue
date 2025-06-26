@@ -4,7 +4,6 @@
       v-model="localCards"
       :disabled="isEditing"
       item-key="id"
-      handle=".drag-handle"
       @start="drag = true"
       @end="drag = false"
       @update:model-value="onUpdateOrder"

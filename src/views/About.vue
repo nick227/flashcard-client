@@ -20,38 +20,10 @@
             </div>
         </section>
 
-        <!-- Team Section -->
-        <section class="team-section">
-            <h2>Meet Our Team</h2>
-            <div class="team-grid">
-                <div class="team-member">
-                    <div class="member-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <h3>Nick</h3>
-                    <p>Founder</p>
-                </div>
-                <div class="team-member">
-                    <div class="member-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <h3>Jake</h3>
-                    <p>Content</p>
-                </div>
-                <div class="team-member">
-                    <div class="member-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <h3>Mike</h3>
-                    <p>Marketing</p>
-                </div>
-            </div>
-        </section>
-
         <!-- CTA Section -->
         <section class="cta-section">
             <h2>Ready to Start Learning?</h2>
-            <p>Join thousands of learners who are already improving their knowledge with FlashCard Academy.</p>
+            <p>This website is a work in progress. Please check back soon for more features.</p>
             <router-link to="/browse" class="cta-button">
                 Explore Sets
                 <i class="fas fa-arrow-right"></i>

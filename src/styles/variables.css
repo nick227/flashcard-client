@@ -2,6 +2,7 @@
     /* Color Palette */
     --color-primary: #2563eb;
     --color-primary-hover: #1d4ed8;
+    --color-lightgray: lightgray;
     --color-accent: #4ca319;
     --color-bg: #f8fafc;
     --color-surface: #fff;

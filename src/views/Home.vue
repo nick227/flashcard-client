@@ -29,7 +29,7 @@
       <section class="section text-center">
         <h2 class="text-2xl font-bold mb-4">Ready to start your learning journey?</h2>
         <p class="mb-6 text-lg opacity-80 max-w-2xl mx-auto">Sign up for free and get instant access to hundreds of flash card sets, or create your own to help others learn.</p>
-        <button @click="router.push('/creator')" class="button button-accent text-lg px-10 py-4">Get Started</button>
+        <a href="/browse" class="button button-accent text-lg px-10 py-4">Get Started</a>
       </section>
     </div>
   </div>
@@ -37,7 +37,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import HomeHero from '@/components/sections/HomeHero.vue'
 import SetPreviewCard from '@/components/cards/SetPreviewCard.vue'
 import FeaturedSet from '@/components/home/FeaturedSet.vue'
@@ -45,7 +44,6 @@ import SiteLandingPage from '@/components/home/SiteLandingPage.vue'
 import type { Set } from '@/types/set'
 import { api } from '@/api'
 
-const router = useRouter()
 const sets = ref<Set[]>([])
 const loading = ref(true)
 const featuredSet = ref<Set | null>(null)

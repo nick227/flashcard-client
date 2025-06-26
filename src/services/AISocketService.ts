@@ -1,7 +1,6 @@
 import { io, Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/auth'
 import type { Card, CardLayout } from '@/types/card'
-import { createCellsFromContent } from '@/utils/cellUtils'
 
 interface GenerationCallbacks {
     onCardGenerated: (card: Card) => void
@@ -20,17 +19,19 @@ interface GenerationProgress {
 }
 
 // Helper function to transform old card structure to new cell-based structure
-function transformCardToCellStructure(oldCard: any): Card {
+function mapAICardToFlatModel(oldCard: any): Card {
     return {
         id: oldCard.id || Date.now() + Math.random(),
         title: oldCard.title || '',
         description: oldCard.description || '',
         front: {
-            cells: createCellsFromContent(oldCard.front?.text || '', oldCard.front?.imageUrl || null, oldCard.front?.layout),
+            content: oldCard.front?.text || '',
+            mediaUrl: oldCard.front?.imageUrl || null,
             layout: (oldCard.front?.layout || 'default') as CardLayout
         },
         back: {
-            cells: createCellsFromContent(oldCard.back?.text || '', oldCard.back?.imageUrl || null, oldCard.back?.layout),
+            content: oldCard.back?.text || '',
+            mediaUrl: oldCard.back?.imageUrl || null,
             layout: (oldCard.back?.layout || 'default') as CardLayout
         },
         hint: oldCard.hint || undefined,
@@ -364,14 +365,12 @@ class AISocketService {
         this.addListener('cardGenerated', (data: { generationId: string, card: any, progress: number, totalCards: number }) => {
             if (data.generationId === generationId) {
                 console.log('Received card data:', data.card)
-                const card: Card = transformCardToCellStructure(data.card)
+                const card: Card = mapAICardToFlatModel(data.card)
                 console.log('Transformed card to cell structure:', {
-                    frontCells: card.front.cells?.length || 0,
-                    backCells: card.back.cells?.length || 0,
-                    frontText: card.front.cells?.find(c => c.type === 'text')?.content || 'none',
-                    frontMedia: card.front.cells?.find(c => c.type === 'media')?.mediaUrl || 'none',
-                    backText: card.back.cells?.find(c => c.type === 'text')?.content || 'none',
-                    backMedia: card.back.cells?.find(c => c.type === 'media')?.mediaUrl || 'none'
+                    frontContent: card.front.content || 'none',
+                    frontMediaUrl: card.front.mediaUrl || 'none',
+                    backContent: card.back.content || 'none',
+                    backMediaUrl: card.back.mediaUrl || 'none'
                 })
                 
                 this.updateProgress({

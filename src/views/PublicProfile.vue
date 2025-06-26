@@ -134,7 +134,7 @@ const fetchSets = async () => {
     }
     
     sets.value = items.map((set: any) => {
-      const mappedSet = {
+      const mappedSet: any = {
         id: set.id,
         title: set.title,
         description: set.description,
@@ -146,7 +146,7 @@ const fetchSets = async () => {
         tags: Array.isArray(set.tags) ? set.tags.map((tag: any) => typeof tag === 'string' ? tag : tag.name).filter(Boolean) : [],
         createdAt: set.createdAt || set.created_at,
         updatedAt: set.updatedAt || set.updated_at,
-        cardsCount: set.cards?.length || 0,
+        cardsCount: Array.isArray(set.cards) ? set.cards.length : 0,
         type: set.type || 'public',
         isPublic: true,
         isPurchased: false,
@@ -155,17 +155,31 @@ const fetchSets = async () => {
         views: set.views || 0,
         likes: set.likes || 0,
         educatorId: set.educatorId || educator.value?.id,
-        educatorImage: set.educatorImage || educator.value?.image || undefined,
-        cards: set.cards?.map((card: any) => ({
+        educatorImage: set.educatorImage || educator.value?.image || undefined
+      }
+      if (Array.isArray(set.cards)) {
+        mappedSet.cards = set.cards.map((card: any) => ({
           id: card.id,
-          front: card.front,
-          back: card.back,
-          hint: card.hint || null,
-          front_image: card.front_image,
-          back_image: card.back_image,
-          layout_front: card.layout_front,
-          layout_back: card.layout_back
-        })) || []
+          front: typeof card.front === 'object'
+            ? card.front
+            : {
+                content: card.front ?? '',
+                mediaUrl: card.front_image ?? null,
+                layout: card.layout_front ?? 'default'
+              },
+          back: typeof card.back === 'object'
+            ? card.back
+            : {
+                content: card.back ?? '',
+                mediaUrl: card.back_image ?? null,
+                layout: card.layout_back ?? 'default'
+              },
+          hint: card.hint ?? null,
+          front_image: card.front_image ?? null,
+          back_image: card.back_image ?? null,
+          layout_front: card.layout_front ?? undefined,
+          layout_back: card.layout_back ?? undefined
+        }))
       }
       console.log('Mapped set:', mappedSet)
       return mappedSet

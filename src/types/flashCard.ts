@@ -1,9 +1,20 @@
 export interface FlashCard {
   id: number
-  setId: number
-  front: string
-  back: string
-  hint?: string | undefined
+  front: {
+    content: string
+    mediaUrl: string | null
+    layout: string
+  }
+  back: {
+    content: string
+    mediaUrl: string | null
+    layout: string
+  }
+  hint?: string | null
+  front_image?: string | null
+  back_image?: string | null
+  layout_front?: string
+  layout_back?: string
 }
 
 export interface FlashCardDraft {

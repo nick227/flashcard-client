@@ -1,39 +1,32 @@
 <template>
   <div class="card-content-layout" :class="[layout, side, { 'mobile': isMobile }]">
-    <div v-for="(cell, index) in cells" :key="`${layout}-${index}-${cell.type}-${cell.content}`" class="content-area">
-      <CardContentCell 
-        :cell="cell" 
-        :index="index"
-        :is-mobile="isMobile"
-        :is-editing="isEditing"
-        :show-media-controls="isEditing"
-        :side="side"
-        :card-id="cardId"
-        :layout="layout"
-        @update="(i, updates) => $emit('update', i, updates)"
-        @remove="(i) => $emit('remove', i)"
-      />
-    </div>
+    <CardContentCell
+      :content="content"
+      :mediaUrl="mediaUrl"
+      :isEditing="isEditing"
+      :side="side"
+      :showMediaControls="isEditing"
+      @update="updates => $emit('update', updates)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { CardLayout, CardSide, ContentCell } from '@/types/card'
 import CardContentCell from './CardContentCell.vue'
+import { withDefaults } from 'vue'
 
-defineProps<{
-  layout: CardLayout
-  side: CardSide
-  cells?: ContentCell[]
+withDefaults(defineProps<{
+  layout: string
+  side: 'front' | 'back'
+  content: string
+  mediaUrl: string | null
   isMobile?: boolean
   isEditing?: boolean
-  cardId?: number | string
-}>()
+}>(), {
+  isEditing: false
+})
 
-defineEmits<{
-  (e: 'update', index: number, updates: Partial<ContentCell>): void
-  (e: 'remove', index: number): void
-}>()
+defineEmits(['update'])
 </script>
 
 <style scoped>

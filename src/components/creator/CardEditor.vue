@@ -48,7 +48,7 @@ const props = defineProps<{
   title?: string
   description?: string
   category?: string
-  onImageFile?: (data: { file: File, side: 'front' | 'back', cellIndex: number }) => void
+  onImageFile?: (data: { file: File, side: 'front' | 'back' }) => void
 }>()
 
 const emit = defineEmits<{
@@ -94,6 +94,8 @@ const onHintUpdate = () => {
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
+  outline: 1px solid var(--color-lightgray);
+  padding-top: 0.5rem;
 }
 
 .hint-section {

@@ -1,335 +1,208 @@
 <template>
-  <div 
-    class="card-content-cell" 
-    :class="{ 'is-editing': isEditing }" 
-    ref="containerRef"
-    role="region"
-    :aria-label="cell.type === 'text' ? 'Text content' : 'Media content'"
-    :key="resizeKey"
-  >
-    <template v-if="cell.type === 'text'">
-      <div v-if="isEditing"
-        class="text-content"
-        :class="side === 'front' ? 'front' : 'back'"
-        :style="computedStyle"
-        contenteditable="true"
-        ref="contentRef"
-        :aria-label="'Editable text content'"
-        :tabindex="0"
-        inputmode="text"
-        autocomplete="off"
-        autocorrect="off"
-        spellcheck="true"
-        @input="handleInput"
-        @paste="handlePaste"
-        @blur="handleBlur"
-        @focus="handleFocus"
-        @click="handleClick"
-        :data-placeholder="side === 'front' ? 'Front side' : 'Back side'"
-      ></div>
-      <div v-else
-        class="text-content"
-        :style="computedStyle"
-        :aria-label="'Text content'"
-        tabindex="-1"
-        v-html="viewModeContent"
-      ></div>
-    </template>
-    <template v-else-if="cell.type === 'media'">
-      <div 
-        :key="`cell-${index}-media`"
-        class="media-container"
-        role="img"
-        :aria-label="cell.mediaUrl ? 'Media content' : 'Empty media container'"
-      >
-        <img 
-          v-if="cell.mediaUrl && isImageUrl(cell.mediaUrl)" 
-          :src="cell.mediaUrl" 
-          alt="Media content"
-          loading="lazy"
-          @error="handleImageError"
-        />
-        <div 
-          v-else-if="cell.mediaUrl" 
-          v-html="generateMediaHtml(detectMediaType(cell.mediaUrl), isEditing)"
-        ></div>
-        <button 
-          v-if="showMediaControls"
-          class="media-close" 
-          @click="handleMediaClose"
-          aria-label="Remove media"
-        >
+  <div class="card-content-cell">
+    <template v-if="isEditing">
+      <!-- Show both if both are set -->
+      <template v-if="content && mediaUrl">
+        <div class="text-content half-height" :style="computedStyle" contenteditable="true" ref="contentRef" :data-placeholder="side === 'front' ? 'Front side' : 'Back side'" @input="handleInput" @blur="handleBlur" @focus="handleFocus" @paste="handlePaste" @click="handleClick" @keydown="handleKeyDown"></div>
+        <div class="media-container half-height">
+          <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
+          <button class="media-close" @click="handleMediaRemove" aria-label="Remove media">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <template v-for="embed in embeddedMedia" :key="embed.url">
+          <MediaEmbed :url="embed.type === 'youtube' ? embed.embedUrl : embed.url" :type="embed.type" @remove="handleEmbedRemove(embed.url)" />
+        </template>
+      </template>
+      <!-- Only content -->
+      <template v-else-if="content">
+        <div class="text-content full-height" :style="computedStyle" contenteditable="true" ref="contentRef" :data-placeholder="side === 'front' ? 'Front side' : 'Back side'" @input="handleInput" @blur="handleBlur" @focus="handleFocus" @paste="handlePaste" @click="handleClick" @keydown="handleKeyDown"></div>
+        <template v-for="embed in embeddedMedia" :key="embed.url">
+          <MediaEmbed :url="embed.type === 'youtube' ? embed.embedUrl : embed.url" :type="embed.type" @remove="handleEmbedRemove(embed.url)" />
+        </template>
+      </template>
+      <!-- Only mediaUrl -->
+      <div v-else-if="mediaUrl" class="media-container full-height">
+        <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
+        <button class="media-close" @click="handleMediaRemove" aria-label="Remove media">
           <i class="fas fa-times"></i>
         </button>
+      </div>
+      <!-- Neither: just show contenteditable -->
+      <div v-else class="text-content full-height" :style="computedStyle" contenteditable="true" ref="contentRef" :data-placeholder="side === 'front' ? 'Front side' : 'Back side'" @input="handleInput" @blur="handleBlur" @focus="handleFocus" @paste="handlePaste" @click="handleClick" @keydown="handleKeyDown"></div>
+    </template>
+    <template v-else>
+      <!-- Show both if both are set -->
+      <template v-if="content && mediaUrl">
+        <div class="text-content half-height" :style="computedStyle" v-html="viewModeContent"></div>
+        <div class="media-container half-height">
+          <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
+        </div>
+      </template>
+      <!-- Only content -->
+      <div v-else-if="content" class="text-content full-height" :style="computedStyle" v-html="viewModeContent"></div>
+      <!-- Only mediaUrl -->
+      <div v-else-if="mediaUrl" class="media-container full-height">
+        <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
       </div>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
-import type { ContentCell } from '@/types/card'
-import { useCardContent } from '@/composables/useCardContent'
-import { useCardContentEvents } from '@/composables/useCardContentEvents'
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
 import { useMediaUtils } from '@/composables/useMediaUtils'
-import { clearFontSizeCache, deleteFontSizeCacheKey } from '@/composables/useDynamicFontSize'
 import { useDynamicFontSize } from '@/composables/useDynamicFontSize'
+import MediaEmbed from './MediaEmbed.vue'
 
 const props = withDefaults(defineProps<{
-  cell: ContentCell
-  index?: number
-  isMobile?: boolean
-  isEditing?: boolean
+  content: string
+  mediaUrl: string | null
+  isEditing: boolean
+  side: 'front' | 'back'
   showMediaControls?: boolean
-  side?: string // 'front' or 'back'
-  cardId?: number | string // Card ID
-  layout?: string // Added for layout prop
 }>(), {
-  isMobile: false,
   showMediaControls: false
 })
 
-const emit = defineEmits<{
-  (e: 'update', index: number, updates: Partial<ContentCell>): void
-  (e: 'remove', index: number): void
-}>()
+const emit = defineEmits(['update'])
 
 const contentRef = ref<HTMLElement | null>(null)
-const containerRef = ref<HTMLElement | null>(null)
 const containerSize = ref({ width: 0, height: 0 })
-const resizeKey = ref(0)
 
-// Track all cache keys used during this component's lifetime
-const usedCacheKeys = new Set<string>()
-
-// Make cell reactive
-const reactiveCell = computed(() => props.cell)
-
-// Make container size reactive
-const reactiveContainerSize = computed(() => {
-  const size = containerSize.value
-  return size
-})
-
-const liveContent = ref(props.cell.content || '')
-
-// Create a stable cache key for font size based on card id and side
-const cacheKey = props.cardId ? `card-${props.cardId}-${props.side || 'front'}` : undefined
-
-// Create reactive options for useCardContent
-const cardContentOptions = computed(() => {
-  const size = reactiveContainerSize.value
-  // Compose the full cache key including text content
-  const text = props.cell && props.cell.type === 'text' ? props.cell.content || '' : ''
-  const fullCacheKey = cacheKey ? `${cacheKey}-${text}` : undefined
-  if (fullCacheKey) usedCacheKeys.add(fullCacheKey)
-  return {
-    width: size.width,
-    height: size.height,
-    cacheKey: fullCacheKey,
-  }
-})
-
-// Initialize card content utilities
-const { handleImageError } = useCardContent(reactiveCell, cardContentOptions)
-const { 
-  detectAndRenderMedia,
-  detectMediaType,
-  generateMediaHtml,
-  isImageUrl
-} = useMediaUtils()
-
+const { detectAndRenderMedia, detectMediaType } = useMediaUtils()
 const { getTextStyle } = useDynamicFontSize()
 
-// Computed style for reactive updates
 const computedStyle = computed(() => {
-  if (!props.cell || props.cell.type !== 'text') {
-    return { fontSize: '1rem' }
-  }
-  // Use liveContent for font size calculation in edit mode
-  const text = props.isEditing ? liveContent.value : props.cell.content || ''
+  const text = props.isEditing ? (contentRef.value ? contentRef.value.innerText : props.content || '') : props.content || ''
   const fontSize = getTextStyle(text, {
     width: containerSize.value.width,
-    height: containerSize.value.height,
-    cacheKey: cacheKey ? `${cacheKey}-${text}` : undefined
+    height: containerSize.value.height
   }).fontSize
   return { fontSize }
 })
 
-// Computed for view mode processed content
-const viewModeContent = computed(() => {
-  return detectAndRenderMedia(props.cell.content, false)
+// --- Embedded Media Parsing ---
+function extractEmbeddableMedia(content: string) {
+  const urls = (content.match(/https?:\/\/[^\s<>"]+/g) || [])
+  const embeds: { url: string, type: 'youtube' | 'image', embedUrl: string }[] = []
+  for (const url of urls) {
+    const media = detectMediaType(url)
+    if (media.type === 'youtube' && media.embedUrl) {
+      embeds.push({ url, type: 'youtube', embedUrl: media.embedUrl })
+    } else if (media.type === 'image') {
+      embeds.push({ url, type: 'image', embedUrl: url })
+    }
+  }
+  return embeds
+}
+
+const embeddedMedia = computed(() => extractEmbeddableMedia(props.content))
+
+const viewModeContent = computed(() => detectAndRenderMedia(props.content, false))
+
+function handleInput() {
+  if (!contentRef.value) return
+  const raw = contentRef.value.innerText
+  emit('update', { content: raw })
+  measureAndSetContainerSize()
+}
+
+function handleMediaRemove(event: MouseEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+  emit('update', { mediaUrl: null })
+}
+
+function handleEmbedRemove(url: string) {
+  // Remove the URL from the content and emit
+  const newContent = (props.content || '').replace(url, '').replace(/\s{2,}/g, ' ').trim()
+  emit('update', { content: newContent })
+}
+
+function measureAndSetContainerSize() {
+  nextTick(() => {
+    if (contentRef.value && contentRef.value.offsetParent !== null) {
+      const rect = contentRef.value.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        containerSize.value = { width: rect.width, height: rect.height }
+      }
+    }
+  })
+}
+
+onMounted(() => {
+  if (props.isEditing && contentRef.value && contentRef.value.innerText !== props.content) {
+    contentRef.value.innerText = props.content || ''
+  }
+  measureAndSetContainerSize()
 })
 
-function setContentEditableText(content: string) {
-  if (contentRef.value) {
-    // Only set content if not focused (prevents keyboard close on mobile)
+watch(() => props.mediaUrl, () => {
+  if (props.isEditing && contentRef.value) {
+    nextTick(() => {
+      if (contentRef.value && contentRef.value.innerText !== props.content) {
+        contentRef.value.innerText = props.content || ''
+      }
+    })
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
+
+function handleResize() {
+  if (!props.isEditing) {
+    // If you use resizeKey or similar, update here
+  }
+}
+
+const handleClick = (event: MouseEvent) => {
+  if (props.isEditing && contentRef.value) {
+    event.stopPropagation()
     if (document.activeElement !== contentRef.value) {
-      contentRef.value.textContent = content || ''
-      measureAndSetContainerSize()
+      contentRef.value.focus()
     }
   }
 }
 
-function handleInput() {
-  if (!contentRef.value) return
-  liveContent.value = contentRef.value.innerText
-  measureAndSetContainerSize()
+const handleFocus = () => {
+  if (contentRef.value && props.isEditing) {
+    if (document.activeElement !== contentRef.value) {
+      contentRef.value.focus()
+    }
+  }
 }
 
 function handlePaste(event: ClipboardEvent) {
   event.preventDefault()
   const text = event.clipboardData?.getData('text/plain') || ''
   document.execCommand('insertText', false, text)
-  // After paste, handle input as usual
-  nextTick(() => handleInput())
+  nextTick(() => {
+    handleInput()
+  })
 }
 
 function handleBlur() {
+  // No longer need to emit here, as we emit on every input
+}
+
+function handleKeyDown(event: KeyboardEvent) {
   if (!contentRef.value) return
-  const raw = contentRef.value.innerText
-  if (props.index !== undefined) {
-    emit('update', props.index, { content: raw })
-  }
-  // Optionally, you could trigger a preview/render of embeds here
-  // For now, just keep the text as is; view mode will show embeds
-}
-
-// Remove updateContainerSize and setTimeout logic
-// Add a simple measurement function
-const measureAndSetContainerSize = async () => {
-  await nextTick()
-  if (contentRef.value && contentRef.value.offsetParent !== null) {
-    const rect = contentRef.value.getBoundingClientRect()
-    if (rect.width > 0 && rect.height > 0) {
-      containerSize.value = { width: rect.width, height: rect.height }
+  // Only trigger if both text and media are visible
+  if (props.content && props.mediaUrl) {
+    const isBackspaceOrDelete = event.key === 'Backspace' || event.key === 'Delete'
+    // If the text is empty after the key event, hide the text area
+    if (isBackspaceOrDelete) {
+      // Use setTimeout to wait for the DOM update after the key event
+      setTimeout(() => {
+        const text = contentRef.value?.innerText || ''
+        if (text.trim() === '') {
+          emit('update', { content: '' })
+        }
+      }, 0)
     }
-  }
-}
-
-// Initial measurement
-onMounted(() => {
-  if (props.isEditing && props.cell.type === 'text') {
-    liveContent.value = props.cell.content || ''
-    setContentEditableText(liveContent.value)
-  }
-  measureAndSetContainerSize()
-})
-
-// Watch for changes in editing mode
-watch(() => props.isEditing, (isEditing) => {
-  if (isEditing && props.cell.type === 'text') {
-    liveContent.value = props.cell.content || ''
-    setContentEditableText(liveContent.value)
-  }
-})
-
-// Watch for changes in cell content - ONLY when NOT editing
-watch(() => props.cell.content, (newContent, oldContent) => {
-  if (!props.isEditing && newContent !== oldContent) {
-    liveContent.value = newContent || ''
-    setContentEditableText(liveContent.value)
-  }
-}, { flush: 'post' })
-
-// Watch for changes in container size
-watch(() => reactiveContainerSize.value, () => {
-  // Handle size changes if needed
-})
-
-// Watch for changes in cell prop
-watch(() => props.cell, () => {
-}, { immediate: true, deep: true })
-
-onMounted(() => {
-  window.addEventListener('resize', handleResize)
-})
-
-onUnmounted(() => {
-  cleanupEventListeners()
-  window.removeEventListener('resize', handleResize)
-  // Delete all cache keys used by this component
-  usedCacheKeys.forEach(deleteFontSizeCacheKey)
-})
-
-// Refactor enterEditMode to always set content after mount or when cell.content changes in edit mode
-const setEditContent = async () => {
-  await nextTick()
-  const element = contentRef.value
-  if (element) {
-    try {
-      if (props.cell.content && props.cell.content.trim()) {
-        const processedContent = detectAndRenderMedia(props.cell.content, true)
-        element.innerHTML = processedContent
-      } else {
-        element.textContent = ''
-      }
-    } catch (error) {
-      element.textContent = props.cell.content || ''
-    }
-    measureAndSetContainerSize()
-  }
-}
-
-// Watch for changes in edit mode or content
-watch([
-  () => props.isEditing,
-  () => props.cell.content
-], ([isEditing]) => {
-  if (props.cell.type === 'text' && isEditing) {
-    setEditContent()
-  }
-})
-
-const { 
-  cleanupEventListeners 
-} = useCardContentEvents(contentRef, {
-  isEditable: computed(() => props.isEditing).value,
-  showMediaControls: computed(() => props.isEditing || props.showMediaControls).value,
-  index: props.index,
-  onTextInput: (index, content) => {
-    emit('update', index, { content })
-  },
-  onMediaClose: (index, content) => {
-    emit('update', index, { content })
-  }
-})
-
-// Handle click for both normal media and embedded media
-const handleClick = (event: MouseEvent) => {
-  if (props.isEditing && contentRef.value) {
-    event.stopPropagation()
-    // Only focus if not already focused
-    if (document.activeElement !== contentRef.value) {
-      contentRef.value.focus()
-    }
-  }
-}
-
-// For media cells, emit remove event
-const handleMediaClose = (event: MouseEvent) => {
-  if (props.cell.type === 'media' && props.index !== undefined) {
-    event.preventDefault()
-    event.stopPropagation()
-    emit('remove', props.index)
-  }
-}
-
-// Handle focus to ensure contenteditable is working
-const handleFocus = () => {
-  if (contentRef.value && props.isEditing) {
-    // Only focus if not already focused
-    if (document.activeElement !== contentRef.value) {
-      contentRef.value.focus()
-    }
-  }
-}
-
-function handleResize() {
-  clearFontSizeCache()
-  // Only update resizeKey if not editing (prevents DOM replacement while typing)
-  if (!props.isEditing) {
-    resizeKey.value++
   }
 }
 </script>
@@ -340,22 +213,12 @@ function handleResize() {
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  gap: 0;
   position: relative;
-}
-
-.text-content > div {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
 }
 
 .text-content {
   width: 100%;
-  height: 100%;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   display: flex;
@@ -364,52 +227,41 @@ function handleResize() {
   text-align: center;
   cursor: text;
   line-height: 1.25;
-  min-height: 100px;
-  position: absolute;
-  overflow: hidden;
-  border: 1px solid transparent;
-  /* Faux placeholder styles */
   position: relative;
+  border-radius: var(--radius-lg);  
+  border: 1px solid transparent;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
-.set-view .text-content {
-  overflow-x: hidden;
-  overflow-y: auto;
+.text-content.full-height {
+  height: 100%;
+  min-height: 100px;
 }
-
-.text-content:empty:before {
-  content: attr(data-placeholder);
-  color: #aaa;
-  pointer-events: none;
-  position: absolute;
-  left: 0;
-  right: 0;
-  text-align: center;
-  opacity: 0.7;
-  font-style: italic;
-}
-
-.text-content:focus:before {
-  opacity: 0.4;
-}
-
-/* Correct selectors for contenteditable faux placeholder */
-.text-content.front:empty:before {
-  color: var(--color-primary);
-}
-.text-content.back:empty:before {
-  color: var(--color-secondary);
+.text-content.half-height {
+  height: 50%;
+  min-height: 50px;
 }
 
 .media-container {
   width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
   overflow: hidden;
   position: relative;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.media-container.full-height {
+  height: 100%;
+  min-height: 100px;
+}
+.media-container.half-height {
+  height: 50%;
+  min-height: 50px;
 }
 
 .media-container img,
@@ -455,7 +307,6 @@ function handleResize() {
   font-size: 0.75rem;
 }
 
-/* Add styles for embedded media */
 .youtube-embed {
   position: relative;
   width: 100%;
@@ -479,5 +330,12 @@ function handleResize() {
 
 .embedded-link:hover {
   text-decoration: underline;
+}
+
+.live-preview {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  z-index: 2;
 }
 </style> 

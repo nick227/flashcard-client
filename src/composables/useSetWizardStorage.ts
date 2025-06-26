@@ -27,6 +27,28 @@ export interface SavedProgress {
   submitted?: boolean  // Track if this progress was successfully submitted
 }
 
+// --- Normalization helper ---
+function normalizeCard(card: any): Card {
+  return {
+    ...card,
+    front: {
+      content: card.front?.content ?? '',
+      mediaUrl: card.front?.mediaUrl ?? null,
+      layout: card.front?.layout ?? 'default'
+    },
+    back: {
+      content: card.back?.content ?? '',
+      mediaUrl: card.back?.mediaUrl ?? null,
+      layout: card.back?.layout ?? 'default'
+    },
+    hint: card.hint ?? null,
+    front_image: card.front_image ?? null,
+    back_image: card.back_image ?? null,
+    layout_front: card.layout_front ?? undefined,
+    layout_back: card.layout_back ?? undefined
+  }
+}
+
 export function useSetWizardStorage() {
   const savedProgress = ref<SavedProgress | null>(null)
 
@@ -36,22 +58,9 @@ export function useSetWizardStorage() {
       const processedProgress = {
         ...progress,
         submitted: false, // Mark as work-in-progress
-        cards: progress.cards.map(card => ({
-          ...card,
-          front: {
-            ...card.front,
-            text: card.front.text || '',
-            imageUrl: card.front.imageUrl || null,
-            layout: card.front.layout || 'two-row'
-          },
-          back: {
-            ...card.back,
-            text: card.back.text || '',
-            imageUrl: card.back.imageUrl || null,
-            layout: card.back.layout || 'two-row'
-          }
-        }))
+        cards: progress.cards.map(normalizeCard)
       }
+      // Log only the cards array for debugging
       localStorage.setItem(SET_WIZARD_PROGRESS_KEY, JSON.stringify(processedProgress))
       savedProgress.value = processedProgress
     } catch (error) {
@@ -97,6 +106,9 @@ export function useSetWizardStorage() {
     if (stored) {
       try {
         const progress = JSON.parse(stored) as SavedProgress
+        // Normalize cards on load
+        progress.cards = (progress.cards || []).map(normalizeCard)
+        // Log only the cards array for debugging
         savedProgress.value = progress
         return progress
       } catch (error) {

@@ -1,8 +1,9 @@
 import { ref } from 'vue'
 import { useToaster } from './useToaster'
 import { SetService } from '@/services/SetService'
-import { processCellsToLegacyFormat } from '@/utils/cellUtils'
 import type { Card } from '@/types/card'
+import { cachedApi } from '@/services/CachedApiService'
+import { cacheService } from '@/plugins/cache'
 
 interface SetSubmissionData {
   title: string
@@ -81,31 +82,35 @@ class SetFormDataBuilder implements FormDataBuilder {
     });
 
     const cardsData = data.cards.map((card, index) => {
-      const frontProcessed = processCellsToLegacyFormat(card.front.cells || [])
-      const backProcessed = processCellsToLegacyFormat(card.back.cells || [])
-
       console.log(`[FormDataBuilder] Processing card ${index}:`, {
-        hasFrontText: !!frontProcessed.text,
-        hasFrontImage: !!frontProcessed.imageUrl,
-        hasBackText: !!backProcessed.text,
-        hasBackImage: !!backProcessed.imageUrl
+        hasFrontContent: !!card.front.content,
+        hasFrontMedia: !!card.front.mediaUrl,
+        hasBackContent: !!card.back.content,
+        hasBackMedia: !!card.back.mediaUrl
       });
 
-      // Handle pending image files for blob URLs
-      this.attachPendingImageFiles(frontProcessed, card.front.cells || [], 'front', data.pendingImageFiles)
-      this.attachPendingImageFiles(backProcessed, card.back.cells || [], 'back', data.pendingImageFiles)
+      // If you need to attach pending image files for blob URLs, do it here for mediaUrl only
+      // (Assume mediaUrl is a blob URL if it starts with 'blob:')
+      let frontImageFile = null
+      let backImageFile = null
+      if (card.front.mediaUrl && card.front.mediaUrl.startsWith('blob:')) {
+        frontImageFile = data.pendingImageFiles.get(`front_${index}`) || null
+      }
+      if (card.back.mediaUrl && card.back.mediaUrl.startsWith('blob:')) {
+        backImageFile = data.pendingImageFiles.get(`back_${index}`) || null
+      }
 
       return {
         front: {
-          text: frontProcessed.text,
-          imageUrl: frontProcessed.imageUrl,
-          imageFile: frontProcessed.imageFile,
+          text: card.front.content,
+          imageUrl: card.front.mediaUrl,
+          imageFile: frontImageFile,
           layout: card.front.layout || 'default'
         },
         back: {
-          text: backProcessed.text,
-          imageUrl: backProcessed.imageUrl,
-          imageFile: backProcessed.imageFile,
+          text: card.back.content,
+          imageUrl: card.back.mediaUrl,
+          imageFile: backImageFile,
           layout: card.back.layout || 'default'
         },
         hint: card.hint || null
@@ -132,15 +137,15 @@ class SetFormDataBuilder implements FormDataBuilder {
     })
 
     // Remove imageFile from cards data before JSON serialization
-    const cardsDataForJson = cardsData.map(card => ({
+    const cardsDataForJson = data.cards.map(card => ({
       front: {
-        text: card.front.text,
-        imageUrl: card.front.imageUrl,
+        text: card.front.content,
+        imageUrl: card.front.mediaUrl,
         layout: card.front.layout
       },
       back: {
-        text: card.back.text,
-        imageUrl: card.back.imageUrl,
+        text: card.back.content,
+        imageUrl: card.back.mediaUrl,
         layout: card.back.layout
       },
       hint: card.hint
@@ -148,29 +153,28 @@ class SetFormDataBuilder implements FormDataBuilder {
 
     console.log('[FormDataBuilder] Adding cards JSON to FormData:', {
       cardsCount: cardsDataForJson.length,
-      cardsWithImages: cardsDataForJson.filter(card => 
+      cardsWithMedia: cardsDataForJson.filter(card => 
         (card.front.imageUrl) || (card.back.imageUrl)
       ).length
     });
 
     formData.append('cards', JSON.stringify(cardsDataForJson))
   }
+}
 
-  private attachPendingImageFiles(
-    processed: any, 
-    cells: any[], 
-    side: 'front' | 'back', 
-    pendingImageFiles: Map<string, File>
-  ): void {
-    if (processed.imageFile === null && cells) {
-      const mediaCell = cells.find(cell => cell.type === 'media' && cell.mediaUrl?.startsWith('blob:'))
-      if (mediaCell) {
-        const cellIndex = cells.indexOf(mediaCell)
-        const key = `${side}_${cellIndex}`
-        processed.imageFile = pendingImageFiles.get(key) || null
-      }
-    }
-  }
+const reloadCacheBySetId = async (setId: number) => {
+  const singleSetKey = `/api/sets/${setId}{}`
+  const listKey = '/api/sets?page=1&limit=10'
+  // Log before
+  const beforeSingle = await cacheService.get(singleSetKey)
+  const beforeList = await cacheService.get(listKey)
+  console.log('[reloadCacheBySetId] BEFORE invalidation:', { singleSetKey, beforeSingle, listKey, beforeList })
+  await cachedApi.invalidateCache(singleSetKey)
+  await cacheService.deleteByPrefix('/api/sets')
+  // Log after
+  const afterSingle = await cacheService.get(singleSetKey)
+  const afterList = await cacheService.get(listKey)
+  console.log('[reloadCacheBySetId] AFTER invalidation:', { singleSetKey, afterSingle, listKey, afterList })
 }
 
 export function useSetSubmission() {
@@ -231,6 +235,7 @@ export function useSetSubmission() {
       
       if (setId) {
         await SetService.updateSet(setId, formData)
+        await reloadCacheBySetId(setId)
         toast('Set updated successfully', 'success')
         return setId
       } else {

@@ -19,8 +19,8 @@ export function useSetForm() {
   const hasBlankCard = computed(() => {
     return cards.value.some(card => {
       // Check if any cell in front or back is empty
-      const frontHasContent = card.front.cells?.some(cell => cell.content?.trim()) || false
-      const backHasContent = card.back.cells?.some(cell => cell.content?.trim()) || false
+      const frontHasContent = card.front.content?.trim() || false
+      const backHasContent = card.back.content?.trim() || false
       return !frontHasContent || !backHasContent
     })
   })
@@ -28,8 +28,8 @@ export function useSetForm() {
   const hasLongContent = computed(() => {
     return cards.value.some(card => {
       // Check text length in front and back
-      const frontHasLongContent = card.front?.text?.length && card.front.text.length > 500 || false
-      const backHasLongContent = card.back?.text?.length && card.back.text.length > 500 || false
+      const frontHasLongContent = card.front?.content?.length && card.front.content.length > 500 || false
+      const backHasLongContent = card.back?.content?.length && card.back.content.length > 500 || false
       return frontHasLongContent || backHasLongContent
     })
   })
@@ -72,7 +72,7 @@ export function useSetForm() {
   }
 
   const updateOrder = (newOrder: Card[]) => {
-    cards.value = newOrder
+    cards.value = [...newOrder]
     cardsTouched.value = true
   }
 

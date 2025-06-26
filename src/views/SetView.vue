@@ -6,7 +6,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
 
@@ -14,10 +14,5 @@ const route = useRoute()
 const setId = computed(() => {
   const id = Number(route.params.setId)
   return id
-})
-
-// Watch for changes to setId
-watch(setId, (newId) => {
-  console.log('SetView - setId changed:', newId)
 })
 </script> 

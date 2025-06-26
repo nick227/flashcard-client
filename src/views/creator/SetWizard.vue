@@ -41,11 +41,11 @@
         </div>
         <div>
           <DraggableCardList v-if="viewMode === 'grid'" :cards="cards" :cardComponent="CardTile" layout="grid"
-            @update-order="onUpdateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
+            @update-order="updateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
             @request-delete="onRequestDelete" />
           <DraggableCardList v-else :cards="cards" :cardComponent="CardFullView" layout="list"
             :cardProps="{ mode: 'single', autoFocus: false, autoFocusId: cards.length ? cards[0].id : null, title: title, description: description, category: selectedCategoryName, onImageFile }"
-            @update-order="onUpdateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
+            @update-order="updateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
             @request-delete="onRequestDelete" />
         </div>
       </div>
@@ -78,7 +78,6 @@ import { useHistory, type HistoryState } from '@/composables/useHistory.ts'
 import { parseFlashCardCsv, type ParsedCard } from '@/utils/csv.ts'
 import { fetchCategories, fetchTags } from '@/api/index'
 import { SetService } from '@/services/SetService'
-import { createCellsFromContent } from '@/utils/cellUtils'
 import { useSetSubmission } from '@/composables/useSetSubmission'
 import { useFormValidation } from '@/composables/useFormValidation'
 
@@ -333,7 +332,7 @@ onMounted(async () => {
           // Create blob URL for preview
           const blobUrl = URL.createObjectURL(file)
           
-          // Update the corresponding card cell with the blob URL
+          // Update the corresponding card side's mediaUrl directly
           const [side, cellIndexStr] = key.split('_')
           const cellIndex = parseInt(cellIndexStr)
           
@@ -341,8 +340,8 @@ onMounted(async () => {
             const card = cards.value[cellIndex]
             const sideData = side === 'front' ? card.front : card.back
             
-            if (sideData.cells && sideData.cells[cellIndex]) {
-              sideData.cells[cellIndex].mediaUrl = blobUrl
+            if (sideData.mediaUrl) {
+              sideData.mediaUrl = blobUrl
             }
           }
         } catch (error) {
@@ -382,8 +381,6 @@ onMounted(async () => {
       // Transform cards from setData directly instead of making another API call
       if (setData.cards && Array.isArray(setData.cards)) {
         cards.value = setData.cards.map((card: any) => SetService.transformCard(card))
-        console.log('[SetWizard] cards.value after set:', JSON.stringify(cards.value, null, 2))
-        console.log('[SetWizard] Loaded cards:', cards.value)
       } else {
         cards.value = []
       }
@@ -401,10 +398,6 @@ function onAddCard() {
   takeSnapshot()
 }
 
-function onUpdateOrder(newOrder: Card[]) {
-  updateOrder(newOrder)
-}
-
 function onDeleteCard(index: number) {
   deleteCard(index)
   takeSnapshot()
@@ -415,7 +408,6 @@ function onEditCard(updatedCard: Card) {
   if (index !== -1) {
     cards.value[index] = updatedCard
     cardsTouched.value = true
-    
     // Force save progress after card update
     saveProgress({
       title: title.value,
@@ -431,43 +423,38 @@ function onEditCard(updatedCard: Card) {
 }
 
 // Handle image file events from CardContent components
-function onImageFile(data: { file: File, side: 'front' | 'back', cellIndex: number }) {
+function onImageFile(data: { file: File, side: 'front' | 'back', cellIndex: number, base64: string }) {
   const key = `${data.side}_${data.cellIndex}`
   pendingImageFiles.value.set(key, data.file)
-  
-  // Convert file to base64 and save to localStorage
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const base64Data = e.target?.result as string
-    const currentProgress = {
-      title: title.value,
-      description: description.value,
-      categoryId: category.value,
-      tags: setTags.value,
-      price: setPrice.value,
-      thumbnail: setThumbnail.value,
-      cards: cards.value,
-      cardImageFiles: {
-        [key]: {
-          data: base64Data,
-          type: data.file.type,
-          name: data.file.name
-        }
+
+  // Store base64 in localStorage for persistence
+  const currentProgress = {
+    title: title.value,
+    description: description.value,
+    categoryId: category.value,
+    tags: setTags.value,
+    price: setPrice.value,
+    thumbnail: setThumbnail.value,
+    cards: cards.value,
+    cardImageFiles: {
+      [key]: {
+        data: data.base64,
+        type: data.file.type,
+        name: data.file.name
       }
     }
-    
-    // Merge with existing card image files
-    const existingProgress = loadProgress()
-    if (existingProgress?.cardImageFiles) {
-      currentProgress.cardImageFiles = {
-        ...existingProgress.cardImageFiles,
-        ...currentProgress.cardImageFiles
-      }
-    }
-    
-    saveProgress(currentProgress)
   }
-  reader.readAsDataURL(data.file)
+
+  // Merge with existing card image files
+  const existingProgress = loadProgress()
+  if (existingProgress?.cardImageFiles) {
+    currentProgress.cardImageFiles = {
+      ...existingProgress.cardImageFiles,
+      ...currentProgress.cardImageFiles
+    }
+  }
+
+  saveProgress(currentProgress)
 }
 
 function onRequestDelete(cardId: number) {
@@ -555,14 +542,8 @@ async function onImportCsv(file: File) {
         id: Date.now() + Math.random(),
         title: '',
         description: '',
-        front: {
-          layout: (card.frontLayout || 'default') as CardLayout,
-          cells: createCellsFromContent(card.front || '', card.frontImage || null, (card.frontLayout || 'default') as CardLayout)
-        },
-        back: {
-          layout: (card.backLayout || 'default') as CardLayout,
-          cells: createCellsFromContent(card.back || '', card.backImage || null, (card.backLayout || 'default') as CardLayout)
-        },
+        front: { layout: (card.frontLayout || 'default') as CardLayout, content: card.front || '', mediaUrl: card.frontImage || null },
+        back: { layout: (card.backLayout || 'default') as CardLayout, content: card.back || '', mediaUrl: card.backImage || null },
         hint: card.hint || undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -589,7 +570,7 @@ function onAddSet(newCards: Card | Card[]) {
 }
 
 // Initialize composables
-const { isSubmitting, submitSet, navigateToSet } = useSetSubmission()
+const { isSubmitting, submitSet } = useSetSubmission()
 
 // Create reactive form data for validation
 const formDataForValidation = computed(() => ({
@@ -613,6 +594,12 @@ async function onSubmit() {
   }
 
   try {
+    console.log('Submitting set:', {
+      title: title.value,
+      cards: cards.value.map(card => card.id),
+      cardsFull: cards.value
+    });
+
     const submissionData = {
       title: title.value,
       description: description.value,
@@ -625,12 +612,15 @@ async function onSubmit() {
       pendingImageFiles: pendingImageFiles.value
     }
 
-    const newSetId = await submitSet(submissionData, setId.value)
+    await submitSet(submissionData, setId.value)
     
     // Mark as submitted and clear progress after successful submission
     markAsSubmitted()
     clearProgress()
-    navigateToSet(newSetId)
+    clearCardImageFilesFromStorage()
+    //1 second delay
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    //navigateToSet(newSetId)
   } catch (error: unknown) {
     toast('Error saving set: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error')
   }
@@ -655,6 +645,15 @@ watch(
   },
   { deep: true }
 )
+
+// After successful set submission, clear cardImageFiles from localStorage
+function clearCardImageFilesFromStorage() {
+  const progress = loadProgress()
+  if (progress) {
+    progress.cardImageFiles = {}
+    saveProgress(progress)
+  }
+}
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
