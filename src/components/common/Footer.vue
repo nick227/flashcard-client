@@ -1,5 +1,5 @@
 <template>
-    <footer class="footer mt-8">
+    <footer class="footer mt-8 pt-8">
         <div class="footer-content">
             <!-- Main Footer Grid -->
             <div class="footer-grid">
