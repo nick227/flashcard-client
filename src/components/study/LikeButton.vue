@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
 import { useCardLikes } from '@/composables/useCardLikes'
-import { onMounted, watch } from 'vue'
+import { onMounted } from 'vue'
 
 const props = defineProps<{
   setId: number
@@ -23,8 +23,8 @@ const {
 
 const handleLike = async () => {
   try {
-    const result = await toggleLike()
-        // Force refresh the user like state
+    await toggleLike()
+    // Force refresh the user like state
     await fetchUserLikeForSet()
     // Then update the total likes
     await fetchSetLikes()
@@ -36,11 +36,11 @@ const handleLike = async () => {
 // Initialize likes state on mount
 onMounted(async () => {
   try {
-        const [userLikeResult, likesResult] = await Promise.all([
+    await Promise.all([
       fetchUserLikeForSet(),
       fetchSetLikes()
     ])
-          } catch (err) {
+  } catch (err) {
     console.error('Error initializing likes:', err)
   }
 })

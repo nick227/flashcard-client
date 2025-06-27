@@ -14,7 +14,6 @@ interface GenerateCardOptions {
 export class AICardService {
   private static instance: AICardService
   private isGenerating: boolean = false
-  private generationId: string | null = null
 
   private constructor() { }
 
@@ -42,8 +41,6 @@ export class AICardService {
     }
 
     this.isGenerating = true
-    this.generationId = `card-${Date.now()}`
-
 
     // Add disconnection handler
     const handleDisconnect = () => {
@@ -134,7 +131,6 @@ export class AICardService {
 
   private resetState() {
     this.isGenerating = false
-    this.generationId = null
   }
 
   // Add cleanup method for component unmount

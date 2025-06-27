@@ -103,7 +103,6 @@ class AISocketService {
 
         const auth = useAuthStore()
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-        const isDev = import.meta.env.DEV
 
         // Ensure we have a JWT before connecting
         if (!auth.jwt) {

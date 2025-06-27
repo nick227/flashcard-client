@@ -358,7 +358,7 @@ onMounted(async () => {
       fetchTags()
     ])
     categories.value = categoriesData
-    availableTags.value = tagsData
+    availableTags.value = tagsData.map(tag => tag.name)
   } catch (error) {
     toast('Error loading categories and tags: ' + error, 'error')
   }

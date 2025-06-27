@@ -114,16 +114,9 @@ class SetFormDataBuilder implements FormDataBuilder {
 
 const reloadCacheBySetId = async (setId: number) => {
   const singleSetKey = `/api/sets/${setId}{}`
-  const listKey = '/api/sets?page=1&limit=10'
-  // Log before
-  const beforeSingle = await cacheService.get(singleSetKey)
-  const beforeList = await cacheService.get(listKey)
-    await cachedApi.invalidateCache(singleSetKey)
+  await cachedApi.invalidateCache(singleSetKey)
   await cacheService.deleteByPrefix('/api/sets')
-  // Log after
-  const afterSingle = await cacheService.get(singleSetKey)
-  const afterList = await cacheService.get(listKey)
-  }
+}
 
 export function useSetSubmission() {
   const { toast } = useToaster()
