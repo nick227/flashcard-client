@@ -21,7 +21,6 @@ export function useCardLikes(setId: number) {
   }
 
   const fetchUserLikeForSet = async () => {
-    // Skip if user is not authenticated
     if (!auth.user) {
       userLiked.value = false
       return
@@ -29,7 +28,21 @@ export function useCardLikes(setId: number) {
 
     try {
       const response = await api.get(apiEndpoints.sets.userLikes(setId))
-      userLiked.value = response.data.liked || false
+      const data = response.data
+
+      if (typeof data === 'object' && data !== null) {
+        if ('liked' in data) {
+          userLiked.value = !!data.liked
+        } else if (Array.isArray(data)) {
+          userLiked.value = data.length > 0
+        } else if ('id' in data && 'user_id' in data && 'set_id' in data) {
+          userLiked.value = true
+        } else {
+          userLiked.value = false
+        }
+      } else {
+        userLiked.value = false
+      }
     } catch (error) {
       console.error('Error fetching user like:', error)
       userLiked.value = false

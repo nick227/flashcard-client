@@ -1,13 +1,21 @@
 {
     "headers": [{
-        "source": "/assets/(.*)\\.js",
-        "headers": [{
-            "key": "Content-Type",
-            "value": "application/javascript"
-        }]
-    }],
+            "source": "/assets/(.*)\\.js",
+            "headers": [{
+                "key": "Content-Type",
+                "value": "application/javascript"
+            }]
+        },
+        {
+            "source": "/(.*)\\.js",
+            "headers": [{
+                "key": "Content-Type",
+                "value": "application/javascript"
+            }]
+        }
+    ],
     "rewrites": [{
-        "source": "/((?!api/|assets/).*)",
+        "source": "/((?!api/|assets/|.*\\.(js|css|png|jpg|jpeg|svg|ico|webp|json|txt|woff2?|ttf|map)$).*)",
         "destination": "/index.html"
     }]
 }
