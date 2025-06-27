@@ -21,16 +21,10 @@ const {
   fetchSetLikes
 } = useCardLikes(props.setId)
 
-// Debug watch to see state changes
-watch(userLiked, (newValue) => {
-  console.log('userLiked changed:', newValue)
-})
-
 const handleLike = async () => {
   try {
     const result = await toggleLike()
-    console.log('Toggle result:', result)
-    // Force refresh the user like state
+        // Force refresh the user like state
     await fetchUserLikeForSet()
     // Then update the total likes
     await fetchSetLikes()
@@ -42,14 +36,11 @@ const handleLike = async () => {
 // Initialize likes state on mount
 onMounted(async () => {
   try {
-    console.log('Initializing likes state...')
-    const [userLikeResult, likesResult] = await Promise.all([
+        const [userLikeResult, likesResult] = await Promise.all([
       fetchUserLikeForSet(),
       fetchSetLikes()
     ])
-    console.log('Initial user like state:', userLikeResult)
-    console.log('Initial likes count:', likesResult)
-  } catch (err) {
+          } catch (err) {
     console.error('Error initializing likes:', err)
   }
 })

@@ -75,7 +75,6 @@ async function callback(response: any) {
       // Test if we can at least decode the credential
       toast('Google login successful! Decoding credential...', 'success')
       
-      console.log('Sending data to backend...');
       // Call our backend to handle Google auth
       const authResponse = await axios.post('/auth/google', {
         googleId: userData.sub,
@@ -86,7 +85,6 @@ async function callback(response: any) {
       console.log('Backend response:', authResponse.data);
 
       // Set user with our JWT
-      console.log('Setting user data...');
       setUser(authResponse.data.user, authResponse.data.token)
       toast('Login successful!', 'success')
     } catch (error: any) {

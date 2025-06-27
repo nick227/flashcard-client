@@ -139,6 +139,7 @@ import { api } from '@/api'
 import { useToaster } from '@/composables/useToaster'
 import { AxiosError } from 'axios'
 import StockImagePicker from '@/components/creator/StockImagePicker.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
   title: string,
@@ -230,41 +231,45 @@ async function handleThumbnailChange(event: Event) {
 
 // Generate thumbnail
 async function generateThumbnail() {
-    isGeneratingThumbnail.value = true
-    thumbnailError.value = null
-    imageLoadError.value = false
+  const authStore = useAuthStore()
+  const token = authStore.jwt // or localStorage.getItem('jwt')
 
-    try {
-        console.log('ThumbnailUploader.generateThumbnail - Generating thumbnail for:', {
-            title: props.title,
-            description: props.description
-        })
+  isGeneratingThumbnail.value = true
+  thumbnailError.value = null
+  imageLoadError.value = false
 
-        const response = await api.post('/thumbnail/generate', {
-            title: props.title,
-            description: props.description
-        })
+  try {
 
-        console.log('ThumbnailUploader.generateThumbnail - Response:', response.data)
-
-        if (response.data.url) {
-            thumbnailPreview.value = response.data.url
-            console.log('ThumbnailUploader.generateThumbnail - Emitting URL:', response.data.url)
-            emit('update:thumbnail', response.data.url)
-            toast('Thumbnail generated successfully', 'success')
-        } else {
-            throw new Error('No thumbnail URL received')
+    const response = await api.post(
+      '/thumbnail/generate',
+      {
+        title: props.title,
+        description: props.description
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-    } catch (error) {
-        console.error('Thumbnail generation error:', error)
-        const errorMessage = error instanceof AxiosError 
-            ? error.response?.data?.message || 'Failed to generate thumbnail'
-            : 'Failed to generate thumbnail'
-        thumbnailError.value = errorMessage
-        toast(errorMessage, 'error')
-    } finally {
-        isGeneratingThumbnail.value = false
+      }
+    )
+
+    if (response.data.url) {
+      thumbnailPreview.value = response.data.url
+      emit('update:thumbnail', response.data.url)
+      toast('Thumbnail generated successfully', 'success')
+    } else {
+      throw new Error('No thumbnail URL received')
     }
+  } catch (error) {
+    console.error('Thumbnail generation error:', error)
+    const errorMessage = error instanceof AxiosError 
+      ? error.response?.data?.message || 'Failed to generate thumbnail'
+      : 'Failed to generate thumbnail'
+    thumbnailError.value = errorMessage
+    toast(errorMessage, 'error')
+  } finally {
+    isGeneratingThumbnail.value = false
+  }
 }
 
 // Format file size for display
@@ -318,7 +323,6 @@ function handleUploadAreaClick(event: Event) {
 
 // Add stock image handler
 function handleStockImageSelect(url: string) {
-  console.log('Stock image selected:', url)
   thumbnailPreview.value = url
   thumbnailFile.value = null // Clear any uploaded file
   emit('update:thumbnail', url)

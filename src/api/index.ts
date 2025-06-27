@@ -23,8 +23,6 @@ class ApiConfig {
     // Remove trailing slash if present
     this.baseUrl = this.baseUrl.replace(/\/$/, '')
 
-    console.log('API Base URL:', this.baseUrl)
-
     // Create axios instance with better error handling
     this.api = axios.create({
       baseURL: `${this.baseUrl}/api/`,
@@ -57,6 +55,16 @@ class ApiConfig {
         return Promise.reject(error)
       }
     )
+
+    // Add global JWT header
+    this.api.interceptors.request.use(config => {
+      const token = localStorage.getItem('jwt');
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
   }
 
   public static getInstance(): ApiConfig {

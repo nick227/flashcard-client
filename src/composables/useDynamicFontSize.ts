@@ -1,6 +1,9 @@
-// Simple, robust dynamic font size composable
-// Scales font size based on text length and container size, with caching
+// useDynamicFontSize composable
+// Scales font size based on text length and container size, with caching and sensible defaults
 
+// =========================
+// Types & Interfaces
+// =========================
 interface FontSizeOptions {
   width?: number
   height?: number
@@ -12,43 +15,108 @@ interface TextStyle {
   fontSize: string
 }
 
-// In-memory cache for font size calculations
+// =========================
+// Constants
+// =========================
+const minChars = 10;
+const maxChars = 180;
+const minFontSize = 1;
+const maxFontSize = 4;
+const baseArea = 400 * 400;
+
+// =========================
+// Font Size Cache
+// =========================
 const fontSizeCache = new Map<string, string>()
 
-// Main scaling function: adjusts font size by text length and container area
-function simpleFontSize(text: string, width = 0, height = 0): number {
-  if (!text || width === 0 || height === 0) return 1.5;
-  const base = 2.5;
-  const lengthFactor = Math.max(0.6, 1 - (text.length / 100)); // Shrink for long text
-  const area = width * height;
-  const areaFactor = Math.max(0.8, Math.min(2, Math.sqrt(area) / 200)); // Grow for big containers
-  return Math.max(1, Math.min(base * lengthFactor * areaFactor, 4)); // Clamp to 1-4rem
+function getFontSizeCache(key: string): string | undefined {
+  return fontSizeCache.get(key);
 }
-
-export function useDynamicFontSize() {
-  const getTextStyle = (text: string, options: FontSizeOptions = {}): TextStyle => {
-    const { width = 0, height = 0, cacheKey, debug = false } = options;
-    const cacheKeyWithText = cacheKey ? `${cacheKey}-${text}` : undefined;
-    if (cacheKeyWithText && fontSizeCache.has(cacheKeyWithText)) {
-      if (debug) console.log('[FontSize] Cache hit:', cacheKeyWithText, fontSizeCache.get(cacheKeyWithText));
-      return { fontSize: fontSizeCache.get(cacheKeyWithText)! };
-    }
-    const fontSizeNum = simpleFontSize(text, width, height);
-    const fontSize = `${fontSizeNum.toFixed(2)}rem`;
-    if (cacheKeyWithText) fontSizeCache.set(cacheKeyWithText, fontSize);
-    if (debug) {
-      console.log('[FontSize] Calculated:', { text, width, height, fontSize });
-    }
-    return { fontSize };
-  };
-  return { getTextStyle };
+function setFontSizeCache(key: string, value: string) {
+  fontSizeCache.set(key, value);
 }
-
 export function clearFontSizeCache() {
   fontSizeCache.clear();
 }
-
 export function deleteFontSizeCacheKey(key: string) {
   fontSizeCache.delete(key)
+}
+
+// =========================
+// SRP Helper Functions
+// =========================
+function charBasedFontSize(text: string): number {
+  const len = text.length;
+  if (len <= minChars) return maxFontSize;
+  if (len >= maxChars) return minFontSize;
+  const t = (len - minChars) / (maxChars - minChars);
+  return maxFontSize + t * (minFontSize - maxFontSize);
+}
+
+function areaScaleFactor(width: number, height: number): number {
+  const area = width * height;
+  return Math.max(0.7, Math.min(1.5, Math.sqrt(area) / Math.sqrt(baseArea)));
+}
+
+function clampFontSize(fontSize: number): number {
+  return Math.max(minFontSize, Math.min(fontSize, maxFontSize));
+}
+
+// =========================
+// Main Font Size Calculation
+// =========================
+function tunedFontSize(
+  text: string,
+  width = 0,
+  height = 0,
+  debug = false
+): number {
+  if (!text || width === 0 || height === 0) return minFontSize;
+  const charFont = charBasedFontSize(text);
+  const areaFactor = areaScaleFactor(width, height);
+  let finalFontSize = charFont * areaFactor;
+  finalFontSize = clampFontSize(finalFontSize);
+
+  if (debug) {
+    // eslint-disable-next-line no-console
+    console.log('[useDynamicFontSize]', {
+      text, len: text.length, width, height, minChars, maxChars, minFontSize, maxFontSize, baseArea,
+      charFont, areaFactor, finalFontSize
+    });
+  }
+
+  return finalFontSize;
+}
+
+// =========================
+// Composable/Public API
+// =========================
+export function useDynamicFontSize() {
+  const getTextStyle = (text: string, options: FontSizeOptions = {}): TextStyle => {
+    const {
+      width = 0,
+      height = 0,
+      cacheKey,
+      debug = false
+    } = options;
+    // Compose a cache key from all relevant params
+    const cacheKeyWithParams = cacheKey
+      ? `${cacheKey}-${text}-${width}x${height}`
+      : undefined;
+    if (cacheKeyWithParams) {
+      const cached = getFontSizeCache(cacheKeyWithParams);
+      if (cached) return { fontSize: cached };
+    }
+    const fontSizeNum = tunedFontSize(
+      text,
+      width,
+      height,
+      debug
+    );
+    const fontSize = `${fontSizeNum.toFixed(2)}rem`;
+    if (cacheKeyWithParams) setFontSizeCache(cacheKeyWithParams, fontSize);
+    return { fontSize };
+  };
+  return { getTextStyle };
 }
 

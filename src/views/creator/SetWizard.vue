@@ -594,11 +594,6 @@ async function onSubmit() {
   }
 
   try {
-    console.log('Submitting set:', {
-      title: title.value,
-      cards: cards.value.map(card => card.id),
-      cardsFull: cards.value
-    });
 
     const submissionData = {
       title: title.value,

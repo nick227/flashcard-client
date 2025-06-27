@@ -67,10 +67,7 @@ const totalPages = ref(1)
 
 const fetchEducator = async () => {
   try {
-    console.log('Fetching educator with name:', targetEducatorName)
     const res = await api.get(`/users?name=${targetEducatorName}`)
-    console.log('Educator API response:', res.data)
-    
     const userData = Array.isArray(res.data) ? res.data[0] : res.data
     
     if (!userData) {
@@ -89,8 +86,6 @@ const fetchEducator = async () => {
       role: userData.role || { id: 1, name: 'user' }
     }
 
-    console.log('Processed educator data:', educator.value)
-
     if (educator.value && educator.value.id) {
       await fetchSets()
     } else {
@@ -107,7 +102,6 @@ const fetchEducator = async () => {
 const fetchSets = async () => {
   try {
     loading.value = true
-    console.log('Fetching sets for educator ID:', educator.value?.id)
     
     const res = await api.get(`/sets`, {
       params: {
@@ -117,21 +111,12 @@ const fetchSets = async () => {
       }
     })
 
-    console.log('Sets API response:', res.data)
-
     if (!res.data || !res.data.items) {
       sets.value = []
       return
     }
 
     const items = Array.isArray(res.data.items) ? res.data.items : []
-    console.log('Raw set items:', items)
-    
-    // Debug first set's category and tags
-    if (items.length > 0) {
-      console.log('First set category:', items[0].category, 'Type:', typeof items[0].category)
-      console.log('First set tags:', items[0].tags, 'Type:', typeof items[0].tags)
-    }
     
     sets.value = items.map((set: any) => {
       const mappedSet: any = {
@@ -181,7 +166,6 @@ const fetchSets = async () => {
           layout_back: card.layout_back ?? undefined
         }))
       }
-      console.log('Mapped set:', mappedSet)
       return mappedSet
     })
 

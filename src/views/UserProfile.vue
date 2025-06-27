@@ -10,14 +10,10 @@
           <div class="relative flex flex-col gap-4 items-center">
             <div class="group-upload">
               <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                <img v-if="user.image && !imageError" 
-                  @click="triggerFileInput" 
-                  :src="user.image" 
-                  :alt="user.name"
+                <img v-if="user.image && !imageError" @click="triggerFileInput" :src="user.image" :alt="user.name"
                   class="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                   @error="handleImageError" />
-                <div v-else
-                  @click="triggerFileInput"
+                <div v-else @click="triggerFileInput"
                   class="w-full h-full flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
                   <i class="fa-solid fa-user text-gray-400 text-3xl"></i>
                 </div>
@@ -41,8 +37,7 @@
             <p class="text-gray-600 mb-1">{{ user.email }}</p>
             <p class="text-gray-500">{{ user.role }}</p>
             <div class="mt-2">
-              <div v-if="!isEditingBio" 
-                @click="startEditingBio"
+              <div v-if="!isEditingBio" @click="startEditingBio"
                 class="bio-display p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group relative">
                 <p v-if="user.bio" class="whitespace-pre-wrap">{{ user.bio }}</p>
                 <p v-else class="text-gray-400 italic">Add a bio...</p>
@@ -50,14 +45,9 @@
                   <i class="fas fa-edit text-gray-400"></i>
                 </div>
               </div>
-              <textarea v-else
-                ref="bioTextarea"
-                v-model="editingBio"
+              <textarea v-else ref="bioTextarea" v-model="editingBio"
                 class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Add a bio..."
-                rows="3"
-                @blur="handleBioUpdate"
-                @keydown.esc="cancelBioEdit"></textarea>
+                placeholder="Add a bio..." rows="3" @blur="handleBioUpdate" @keydown.esc="cancelBioEdit"></textarea>
             </div>
           </div>
         </div>
@@ -268,7 +258,7 @@ onMounted(async () => {
     } catch (error) {
       console.error('UserProfile - Error fetching user data:', error)
     }
-    
+
     favorites.fetchData()
     purchases.fetchData()
     subscriptions.fetchData()
@@ -316,7 +306,6 @@ const handleBioUpdate = async (event: FocusEvent) => {
   try {
     const res = await api.patch(`/users/${user.value?.id}`, { bio })
     if (res && res.data) {
-      console.log('UserProfile - Bio update response:', res.data)
       auth.setUser(res.data)
     }
   } catch (error) {
@@ -341,17 +330,17 @@ const handleImageError = () => {
 // Update profile image
 async function updateProfileImage(file: File) {
   if (!user.value) return
-  
+
   try {
     const formData = new FormData()
     formData.append('image', file)
-    
+
     const res = await api.post('/users/profile/image', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
-    
+
     auth.setUser({
       ...user.value,
       image: res.data.image

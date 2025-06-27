@@ -313,7 +313,6 @@ const generateSet = async () => {
 }
 
 const handleCardGenerated = (card: Card) => {
-    console.log('AISetGenerator - Raw generated card:', JSON.stringify(card, null, 2))
     // No need to determine layout, just use what is provided or default
     const cardWithLayout = {
         ...card,
@@ -353,7 +352,6 @@ const handleError = (error: string) => {
     const isCancellation = error.includes('cancelled') || error.includes('Cancelled')
     
     if (isCancellation) {
-        console.log('Generation was cancelled - this is expected when navigating away')
         generating.value = false
         emit('update:generating', false)
         // Don't show error toast for cancellations
@@ -397,7 +395,6 @@ onUnmounted(() => {
                     category: props.category,
                     cancelled: true // Mark as cancelled since backend will be stopped
                 }))
-                console.log(`Saved ${generatedCards.value.length} generated cards to sessionStorage before cancellation`)
             } catch (error) {
                 console.error('Failed to save generation backup:', error)
             }

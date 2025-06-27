@@ -107,7 +107,6 @@ const fetchSets = async () => {
   loading.value = true
   try {
     const res = await api.get(`/sets?showHidden=true&educatorId=${LOGGED_IN_USER_ID}&page=${setsPage.value}&limit=${PAGE_SIZE}&sortBy=createdAt&sortOrder=desc`)
-    console.log('Client: Fetched sets:', res.data)
     // Ensure hidden property is properly handled
     sets.value = (res.data.items || res.data).map((set: any) => ({
       ...set,

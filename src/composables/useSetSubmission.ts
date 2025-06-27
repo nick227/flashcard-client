@@ -25,12 +25,6 @@ interface FormDataBuilder {
 
 class SetFormDataBuilder implements FormDataBuilder {
   buildBasicSetData(formData: FormData, data: SetSubmissionData): void {
-    console.log('[FormDataBuilder] Building basic set data...', {
-      title: data.title,
-      category: data.category,
-      price: data.price,
-      tagsCount: data.tags.length
-    });
 
     formData.append('title', data.title)
     formData.append('description', data.description)
@@ -40,55 +34,27 @@ class SetFormDataBuilder implements FormDataBuilder {
     formData.append('isArchived', 'false')
     formData.append('price', data.price.type === 'free' ? '0' : data.price.amount?.toString() || '0')
     formData.append('isSubscriberOnly', data.price.type === 'subscribers' ? 'true' : 'false')
-
-    console.log('[FormDataBuilder] Basic set data added to FormData');
   }
 
   async buildThumbnailData(formData: FormData, data: SetSubmissionData): Promise<void> {
-    console.log('[FormDataBuilder] Building thumbnail data...', {
-      hasThumbnailFile: !!data.thumbnailFile,
-      hasThumbnail: !!data.thumbnail,
-      thumbnailType: data.thumbnail ? (data.thumbnail.startsWith('data:') ? 'base64' : 'url') : 'none'
-    });
 
     if (data.thumbnailFile) {
-      console.log('[FormDataBuilder] Adding thumbnail file to FormData:', {
-        fileName: data.thumbnailFile.name,
-        fileSize: data.thumbnailFile.size,
-        fileType: data.thumbnailFile.type
-      });
       formData.append('thumbnail', data.thumbnailFile)
     } else if (data.thumbnail) {
       if (data.thumbnail.startsWith('data:')) {
-        console.log('[FormDataBuilder] Converting base64 thumbnail to file...');
         const response = await fetch(data.thumbnail)
         const blob = await response.blob()
         const file = new File([blob], 'thumbnail.png', { type: 'image/png' })
         formData.append('thumbnail', file)
-        console.log('[FormDataBuilder] Base64 thumbnail converted and added to FormData');
       } else {
-        console.log('[FormDataBuilder] Adding stock image thumbnail URL to FormData:', data.thumbnail);
         formData.append('thumbnailUrl', data.thumbnail)
       }
-    } else {
-      console.log('[FormDataBuilder] No thumbnail data to add');
     }
   }
 
   buildCardsData(formData: FormData, data: SetSubmissionData): void {
-    console.log('[FormDataBuilder] Building cards data...', {
-      cardsCount: data.cards.length,
-      pendingImageFilesCount: data.pendingImageFiles.size
-    });
 
     const cardsData = data.cards.map((card, index) => {
-      console.log(`[FormDataBuilder] Processing card ${index}:`, {
-        hasFrontContent: !!card.front.content,
-        hasFrontMedia: !!card.front.mediaUrl,
-        hasBackContent: !!card.back.content,
-        hasBackMedia: !!card.back.mediaUrl
-      });
-
       // If you need to attach pending image files for blob URLs, do it here for mediaUrl only
       // (Assume mediaUrl is a blob URL if it starts with 'blob:')
       let frontImageFile = null
@@ -118,20 +84,11 @@ class SetFormDataBuilder implements FormDataBuilder {
     })
 
     // Add image files to FormData
-    console.log('[FormDataBuilder] Adding card image files to FormData...');
     cardsData.forEach((card, cardIndex) => {
       if (card.front.imageFile) {
-        console.log(`[FormDataBuilder] Adding front image for card ${cardIndex}:`, {
-          fileName: card.front.imageFile.name,
-          fileSize: card.front.imageFile.size
-        });
         formData.append(`card_${cardIndex}_front_image`, card.front.imageFile)
       }
       if (card.back.imageFile) {
-        console.log(`[FormDataBuilder] Adding back image for card ${cardIndex}:`, {
-          fileName: card.back.imageFile.name,
-          fileSize: card.back.imageFile.size
-        });
         formData.append(`card_${cardIndex}_back_image`, card.back.imageFile)
       }
     })
@@ -151,13 +108,6 @@ class SetFormDataBuilder implements FormDataBuilder {
       hint: card.hint
     }))
 
-    console.log('[FormDataBuilder] Adding cards JSON to FormData:', {
-      cardsCount: cardsDataForJson.length,
-      cardsWithMedia: cardsDataForJson.filter(card => 
-        (card.front.imageUrl) || (card.back.imageUrl)
-      ).length
-    });
-
     formData.append('cards', JSON.stringify(cardsDataForJson))
   }
 }
@@ -168,14 +118,12 @@ const reloadCacheBySetId = async (setId: number) => {
   // Log before
   const beforeSingle = await cacheService.get(singleSetKey)
   const beforeList = await cacheService.get(listKey)
-  console.log('[reloadCacheBySetId] BEFORE invalidation:', { singleSetKey, beforeSingle, listKey, beforeList })
-  await cachedApi.invalidateCache(singleSetKey)
+    await cachedApi.invalidateCache(singleSetKey)
   await cacheService.deleteByPrefix('/api/sets')
   // Log after
   const afterSingle = await cacheService.get(singleSetKey)
   const afterList = await cacheService.get(listKey)
-  console.log('[reloadCacheBySetId] AFTER invalidation:', { singleSetKey, afterSingle, listKey, afterList })
-}
+  }
 
 export function useSetSubmission() {
   const { toast } = useToaster()
@@ -183,50 +131,16 @@ export function useSetSubmission() {
   const formDataBuilder = new SetFormDataBuilder()
 
   const buildFormData = async (data: SetSubmissionData): Promise<FormData> => {
-    console.log('[useSetSubmission] buildFormData started...', {
-      hasTitle: !!data.title,
-      hasDescription: !!data.description,
-      hasCategory: !!data.category,
-      hasThumbnail: !!data.thumbnail,
-      hasThumbnailFile: !!data.thumbnailFile,
-      cardsCount: data.cards.length,
-      pendingImageFilesCount: data.pendingImageFiles.size
-    });
 
     const formData = new FormData()
-    
-    console.log('[useSetSubmission] Building basic set data...');
     formDataBuilder.buildBasicSetData(formData, data)
-    
-    console.log('[useSetSubmission] Building thumbnail data...');
     await formDataBuilder.buildThumbnailData(formData, data)
-    
-    console.log('[useSetSubmission] Building cards data...');
     formDataBuilder.buildCardsData(formData, data)
-    
-    console.log('[useSetSubmission] FormData built successfully:', {
-      formDataEntries: Array.from(formData.entries()).map(([key, value]) => ({
-        key,
-        valueType: typeof value,
-        isFile: value instanceof File,
-        fileSize: value instanceof File ? value.size : null
-      }))
-    });
     
     return formData
   }
 
   const submitSet = async (data: SetSubmissionData, setId?: number): Promise<number> => {
-    console.log('[useSetSubmission] submitSet started...', {
-      setId,
-      hasTitle: !!data.title,
-      hasDescription: !!data.description,
-      hasCategory: !!data.category,
-      hasThumbnail: !!data.thumbnail,
-      hasThumbnailFile: !!data.thumbnailFile,
-      cardsCount: data.cards.length,
-      pendingImageFilesCount: data.pendingImageFiles.size
-    });
 
     isSubmitting.value = true;
 

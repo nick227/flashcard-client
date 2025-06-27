@@ -76,10 +76,8 @@ const blobUrls = ref<Set<string>>(new Set()) // Track all blob URLs for cleanup
 const { compressImage } = useImageCompression()
 
 const handleContentUpdate = (updates: { content?: string; mediaUrl?: string | null }) => {
-  console.log('[CardContent] handleContentUpdate called:', { updates, before: { ...cardState.value[props.side] } })
   Object.assign(cardState.value[props.side], updates)
   cardState.value = { ...cardState.value } // trigger reactivity
-  console.log('[CardContent] handleContentUpdate after assign:', { after: { ...cardState.value[props.side] } })
   emit('update', { ...cardState.value })   // emit a new object
 }
 

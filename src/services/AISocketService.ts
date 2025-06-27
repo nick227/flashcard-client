@@ -98,7 +98,6 @@ class AISocketService {
     public initialize() {
         // If socket already exists and is connected, don't reinitialize
         if (this.socket?.connected) {
-            console.log('Socket already connected, skipping initialization')
             return
         }
 
@@ -119,19 +118,11 @@ class AISocketService {
             return
         }
 
-        console.log('Initializing socket connection:', {
-            baseUrl,
-            isDev,
-            hasJwt: !!auth.jwt,
-            existingSocket: !!this.socket
-        })
-
         this.updateStatus('connecting', 'Connecting to AI service...')
 
         try {
             // If socket exists but is disconnected, reconnect it
             if (this.socket) {
-                console.log('Reconnecting existing socket')
                 this.socket.connect()
                 return
             }
@@ -171,14 +162,12 @@ class AISocketService {
         this.socket.removeAllListeners()
 
         this.socket.on('connect', () => {
-            console.log('Socket connected successfully, socket id:', this.socket?.id)
             this.isConnected = true
             this.reconnectAttempts = 0
             this.updateStatus('connected', 'Connected to AI service')
             
             // If we have an active generation, restart it
             if (this.activeGenerationId) {
-                console.log('Restarting active generation after reconnection')
                 this.updateStatus('connected', 'Reconnecting to previous generation...')
                 this.socket?.emit('startGeneration', {
                     title: this.currentTitle,
@@ -190,7 +179,6 @@ class AISocketService {
         })
 
         this.socket.on('disconnect', (reason) => {
-            console.log('Socket disconnected:', reason, 'socket id:', this.socket?.id)
             this.isConnected = false
             
             // Notify all disconnect listeners
@@ -198,7 +186,6 @@ class AISocketService {
             
             // If the disconnection was not initiated by the client and not due to server disconnect
             if (reason !== 'io client disconnect' && reason !== 'io server disconnect') {
-                console.log('Attempting to reconnect...')
                 this.updateStatus('reconnecting', 'Connection lost, attempting to reconnect...')
                 this.handleReconnection()
             } else {
@@ -311,14 +298,12 @@ class AISocketService {
 
     private validateConnection(): boolean {
         if (!this.socket) {
-            console.log('Socket not initialized, attempting to initialize...')
             this.initialize()
             // Return false to indicate we need to wait for connection
             return false
         }
 
         if (!this.isConnected || !this.socket.connected) {
-            console.log('Socket not connected, attempting to connect...')
             this.socket.connect()
             // Return false to indicate we need to wait for connection
             return false
@@ -364,15 +349,7 @@ class AISocketService {
 
         this.addListener('cardGenerated', (data: { generationId: string, card: any, progress: number, totalCards: number }) => {
             if (data.generationId === generationId) {
-                console.log('Received card data:', data.card)
                 const card: Card = mapAICardToFlatModel(data.card)
-                console.log('Transformed card to cell structure:', {
-                    frontContent: card.front.content || 'none',
-                    frontMediaUrl: card.front.mediaUrl || 'none',
-                    backContent: card.back.content || 'none',
-                    backMediaUrl: card.back.mediaUrl || 'none'
-                })
-                
                 this.updateProgress({
                     status: 'generating',
                     cardsGenerated: Math.round((data.progress / 100) * data.totalCards),
@@ -407,7 +384,6 @@ class AISocketService {
                 })
                 
                 if (isCancellation) {
-                    console.log(`Generation ${generationId} was cancelled`)
                     // Don't call onError for cancellations, just cleanup
                     this.cleanupListeners()
                 } else {
@@ -424,14 +400,12 @@ class AISocketService {
             return
         }
 
-        console.log(`Adding listener for event: ${event}`)
         
         // Remove any existing listeners for this event to prevent duplicates
         this.socket.off(event)
         
         // Add the new listener
         this.socket.on(event, callback)
-        console.log(`Listener added for event: ${event}`)
     }
 
     private cleanupListeners() {
@@ -477,11 +451,9 @@ class AISocketService {
         otherSideContent: string,
         callbacks: { onResult: (text: string) => void, onError: (err: string) => void }
     ) {
-        console.log('[AISocketService] generateSingleCardFace called:', { side, title, description, category, hasOtherSideContent: !!otherSideContent })
         
         // First validate connection
         if (!this.validateConnection()) {
-            console.log('[AISocketService] Connection validation failed, waiting for connection...')
             
             // Wait for connection to establish
             const connected = await this.waitForConnection(15000) // 15 second timeout
@@ -500,8 +472,6 @@ class AISocketService {
             return;
         }
         
-        console.log('[AISocketService] Emitting generateSingleCardFace event')
-        
         // Add timeout for socket response
         const responseTimeout = setTimeout(() => {
             console.error('[AISocketService] Socket response timeout')
@@ -513,12 +483,10 @@ class AISocketService {
             { side, title, description, category, otherSideContent },
             (response: { text?: string, error?: string }) => {
                 clearTimeout(responseTimeout); // Clear timeout on response
-                console.log('[AISocketService] Received response:', response)
                 if (response.error) {
                     console.error('[AISocketService] Server returned error:', response.error)
                     callbacks.onError(response.error);
                 } else if (response.text) {
-                    console.log('[AISocketService] Server returned text:', response.text)
                     callbacks.onResult(response.text);
                 } else {
                     console.error('[AISocketService] Invalid response format:', response)

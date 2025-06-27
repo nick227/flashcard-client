@@ -257,12 +257,10 @@ const {
 
 // Wrapper functions with console logs for debugging
 const handleNextWithLog = () => {
-  console.log('🎯 Next event received from FlashCardScaffold')
   handleNextCardWithHistory()
 }
 
 const handlePrevWithLog = () => {
-  console.log('🎯 Prev event received from FlashCardScaffold')
   prevCard()
 }
 
@@ -326,7 +324,6 @@ const fetchSet = async () => {
   }
   try {
     const res = await api.get(getApiUrl(`${apiEndpoints.sets.base}/${props.setId}`))
-    console.log('Raw API response:', res.data)
     set.value = res.data
 
     if (res.data.access && !res.data.access.hasAccess) {
@@ -338,7 +335,6 @@ const fetchSet = async () => {
       
       // Transform cards using the new helper function
       cards.value = cardsData.map((card: RawCard) => transformCard(card, res.data))
-      console.log('All transformed cards:', cards.value)
 
       // Initialize viewer
       await initializeViewer()
@@ -346,10 +342,6 @@ const fetchSet = async () => {
       // Initialize likes state
       await initializeLikes()
     }
-    //console.log('--------------------------------')
-    //console.log('--------------------------------')
-    //console.log('Set data:', set.value)
-    //console.log('Cards data:', JSON.stringify(cards.value, null, 2))
   } catch (err) {
     console.error('Error fetching set:', err)
     let message = 'Failed to load flashcard set'

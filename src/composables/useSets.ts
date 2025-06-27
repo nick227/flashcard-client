@@ -122,7 +122,6 @@ export function useSets() {
       ])
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('[Stats] Batch request cancelled')
       } else {
         console.warn('[Stats] Error prefetching next page details:', error)
       }

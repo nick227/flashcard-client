@@ -52,18 +52,6 @@ export function parseCSV(csvContent: string): ParseResult {
       let frontLayout = frontLayoutIndex >= 0 ? parseCsvValue(values[frontLayoutIndex] || '') || 'default' : 'default'
       let backLayout = backLayoutIndex >= 0 ? parseCsvValue(values[backLayoutIndex] || '') || 'default' : 'default'
 
-      // Debug log the parsed values
-      console.log(`Parsed line ${i + 1}:`, {
-        front,
-        back,
-        hint,
-        frontImage,
-        backImage,
-        frontLayout,
-        backLayout,
-        rawValues: values
-      })
-
       // Validate required fields - allow either text or image
       if (!front && !frontImage && !back && !backImage) {
         warnings.push(`Line ${i + 1}: Skipped - missing content`)

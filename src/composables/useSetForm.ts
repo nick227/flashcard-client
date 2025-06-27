@@ -53,7 +53,6 @@ export function useSetForm() {
   const addCard = () => {
     const tempDeckId = `temp-${Date.now()}` // Create a temporary deckId
     const newCard = CardService.createEmptyCard(tempDeckId)
-    console.log('Creating new card:', newCard)
     cards.value.unshift(newCard)
     cardsTouched.value = true
   }

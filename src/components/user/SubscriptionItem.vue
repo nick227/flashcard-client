@@ -31,28 +31,16 @@ const props = defineProps<{
 
 const imageError = ref(false)
 
-onMounted(() => {
-  console.log('SubscriptionItem mounted with props:', {
-    id: props.subscription.id,
-    educator_id: props.subscription.educator_id,
-    created_at: props.subscription.created_at,
-    educator: props.subscription.educator
-  })
-})
-
 const handleImageError = () => {
-  console.log('Image load error for subscription:', props.subscription.id)
   imageError.value = true
 }
 
 const getFirstLetter = computed(() => {
   const letter = props.subscription.educator?.name?.charAt(0).toUpperCase() || '?'
-  console.log('First letter computed:', letter, 'for educator:', props.subscription.educator?.name)
   return letter
 })
 
 const formatDate = (dateStr: string) => {
-  console.log('Formatting date:', dateStr)
   return new Date(dateStr).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
