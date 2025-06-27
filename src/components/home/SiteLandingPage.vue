@@ -1,81 +1,50 @@
 <template>
-  <div class="py-6">
-    <div class="max-w-7xl mx-auto px-6">
-      <!-- Hero Section -->
-      <div class="text-center mb-8">
-        <div>
-          <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-2 tracking-tight">Flashcard Academy</h1>
-          <p class="text-lg text-gray-600 mb-6">{{ siteDescription }}</p>
-          <div class="flex gap-4 justify-center flex-wrap">
-            <button class="button button-primary" @click="browseSets">Browse Sets</button>
-            <button class="button button-secondary" @click="createSet">Create Your Own</button>
-          </div>
-        </div>
-      </div>
+  <div class="py-8 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-      <!-- Stats & Newest User Row -->
-      <div class="flex items-center justify-between gap-8 mb-8 p-4 md:p-6 bg-white rounded-xl border border-gray-200">
-        <div class="flex gap-8 flex-1">
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-2xl font-bold text-blue-600">{{ formatNumber(setsCount) }}</span>
-            <span class="text-xs text-gray-500 font-medium uppercase tracking-wider">Sets</span>
-          </div>
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-2xl font-bold text-blue-600">{{ formatNumber(usersCount) }}</span>
-            <span class="text-xs text-gray-500 font-medium uppercase tracking-wider">Educators</span>
-          </div>
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-2xl font-bold text-blue-600">{{ formatNumber(categoriesCount) }}</span>
-            <span class="text-xs text-gray-500 font-medium uppercase tracking-wider">Categories</span>
-          </div>
+      <!-- Stats Row -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white rounded-2xl shadow transition p-6 flex flex-col items-center">
+          <i class="fa-solid fa-layer-group text-blue-500 text-3xl mb-2"></i>
+          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(setsCount) }}</span>
+          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Sets</span>
+        </div>
+        <div class="bg-white rounded-2xl shadow transition p-6 flex flex-col items-center">
+          <i class="fa-solid fa-chalkboard-user text-green-500 text-3xl mb-2"></i>
+          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(usersCount) }}</span>
+          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Educators</span>
+        </div>
+        <div class="bg-white rounded-2xl shadow transition p-6 flex flex-col items-center">
+          <i class="fa-solid fa-tags text-yellow-500 text-3xl mb-2"></i>
+          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(categoriesCount) }}</span>
+          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Categories</span>
         </div>
       </div>
-        
-        <div v-if="newestUser" @click="viewEducator(newestUser.name)" class="flex items-center gap-3 p-3 rounded-lg">
-          <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-blue-600">
-            <img v-if="newestUser.image" :src="newestUser.image" :alt="newestUser.name" loading="lazy" class="w-full h-full object-cover" />
-            <div v-else class="w-full h-full flex items-center justify-center text-base bg-gray-100">
-              <i class="fas fa-user"></i>
-            </div>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="bg-blue-600 text-white text-xs font-semibold px-2 py-0.5 rounded mb-1 uppercase tracking-wider w-fit">New Member</div>
-            <div class="text-sm font-semibold text-gray-900 truncate">{{ newestUser.name }}</div>
-          </div>
-        </div>
 
       <!-- Categories Section -->
-      <div class="bg-white rounded-xl p-6 border border-gray-200">
-        <div class="text-center mb-6">
-          <h2 class="text-2xl font-semibold text-gray-900">Explore by Category</h2>
+      <div class="bg-white rounded-2xl shadow p-8 border border-gray-200">
+        <div class="flex items-center justify-between mb-8">
+          <h2 class="text-2xl font-bold text-gray-900">Explore by Category</h2>
+          <button class="text-blue-600 font-semibold" @click="browseSets">See All Categories</button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div v-for="category in categoriesWithSets" :key="category.id" class="border border-gray-200 rounded-lg">
-            <div class="p-3 bg-white border-b border-gray-200 flex justify-between items-center">
-              <h3 class="text-base font-semibold text-gray-900">{{ category.name }}</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div v-for="category in categoriesWithSets" :key="category.id" class="bg-gray-50 rounded-xl shadow transition border border-gray-100 flex flex-col">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 class="text-lg font-semibold text-gray-800">{{ category.name }}</h3>
               <a class="text-blue-600 text-xs font-medium underline cursor-pointer" @click="viewCategory(category.name)">View All</a>
             </div>
-            <div class="flex flex-col gap-3 p-3">
-              <div v-for="set in category.sets" :key="set.id" class="flex gap-2 bg-gray-50 rounded-md overflow-hidden cursor-pointer transition-colors border border-gray-200 p-1 hover:bg-gray-100" @click="viewSet(set.id)">
-                <div class="w-24 h-20 flex-shrink-0">
-                  <img 
-                    v-if="set.thumbnail" 
-                    :src="set.thumbnail" 
-                    :alt="set.title"
-                    loading="lazy"
-                    class="w-full h-full object-contain"
-                    @error="handleImageError"
-                  />
-                  <div v-else class="w-full h-full flex items-center justify-center text-gray-400 text-xl">
-                    <i class="fas fa-layer-group"></i>
-                  </div>
+            <div class="flex flex-col gap-3 p-4 flex-1">
+              <div v-for="set in category.sets" :key="set.id" class="flex gap-3 items-center bg-white rounded-lg border border-gray-200 p-2 cursor-pointer transition" @click="viewSet(set.id)">
+                <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
+                  <img v-if="set.thumbnail" :src="set.thumbnail" :alt="set.title" class="w-full h-full object-contain" @error="handleImageError" />
+                  <i v-else class="fas fa-layer-group text-gray-300 text-2xl"></i>
                 </div>
-                <div class="flex-1 p-2 min-w-0">
-                  <h4 class="text-xs font-semibold text-gray-900 mb-1 line-clamp-1 leading-tight mt-0">{{ set.title }}</h4>
-                  <div class="flex flex-col gap-0.5 text-xs text-gray-500">
+                <div class="flex-1 min-w-0">
+                  <h4 class="text-sm font-semibold text-gray-900 mb-1 truncate">{{ set.title }}</h4>
+                  <div class="flex items-center gap-2 text-xs text-gray-500">
                     <span class="truncate">{{ set.educator?.name || 'Unknown' }}</span>
-                    <span class="font-semibold text-green-600" v-if="set.price > 0">${{ set.price }}</span>
-                    <span class="font-semibold text-green-600" v-else>Free</span>
+                    <span v-if="set.price > 0" class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">${{ set.price }}</span>
+                    <span v-else class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">Free</span>
                   </div>
                 </div>
               </div>
@@ -83,6 +52,7 @@
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </template>
@@ -99,12 +69,7 @@ const router = useRouter()
 const setsCount = ref(0)
 const usersCount = ref(0)
 const categoriesCount = ref(0)
-const newestUser = ref<any>(null)
 const categoriesWithSets = ref<any[]>([])
-
-const siteDescriptions = ["Think like Wikipedia, but for flashcards.", "Videos are lame, flashcards rule.", "Flip, flip, flip-a-flashcard.", "Mysterious world of flashcards. They don't want you to know about."]
-const siteDescription = ref(siteDescriptions[Math.floor(Math.random() * siteDescriptions.length)])
-
 // Methods
 const formatNumber = (num: number): string => {
   if (num >= 1000000) {
@@ -125,12 +90,7 @@ const createSet = () => {
 }
 
 const viewSet = (id: string) => {
-  //router.push(`/sets/${id}`)
   window.location.href = '/sets/' + id
-}
-
-const viewEducator = (id: string) => {
-  router.push('/u/' + id)
 }
 
 const viewCategory = (categoryName: string) => {
@@ -162,14 +122,6 @@ onMounted(async () => {
     // Categories count
     const categoriesCountRes = await api.get('/categories/count')
     categoriesCount.value = categoriesCountRes.data.count
-
-    // Newest user
-    try {
-      const newestUserData = await cachedApiEndpoints.getNewestUser()
-      newestUser.value = newestUserData
-    } catch (error) {
-      console.error('Error loading newest user:', error)
-    }
 
     // Categories with sets
     try {

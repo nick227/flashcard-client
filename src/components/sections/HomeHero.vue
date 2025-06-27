@@ -31,6 +31,10 @@ const listHeroDescriptions = [
   'Step right up and get your flash cards here.',
   'Money, love, and flash cards.',
   'There\'s only two certainties in life: death and flash cards.',
+  "Think like Wikipedia, but for flashcards.", 
+  "Videos are lame, flashcards rule.", 
+  "Flip, flip, flip-a-flashcard.", 
+  "Mysterious world of flashcards. They don't want you to know about."
 ];
 
 const listHeroTitles = [

@@ -1,10 +1,12 @@
 <template>
   <div class="home-page">
     <div class="container py-8">
-      <SiteLandingPage />
-    </div>
-    <div class="container py-0">
       <HomeHero />
+    </div>
+    <div class="container py-8">
+      <SiteLandingPage />
+      </div>
+    <div class="container py-0">
 
       <!-- Featured Set -->
       <div v-if="featuredSet">
