@@ -138,6 +138,7 @@ onMounted(() => {
     contentRef.value.innerText = props.content || ''
   }
   measureAndSetContainerSize()
+  window.addEventListener('resize', measureAndSetContainerSize)
 })
 
 watch(() => props.mediaUrl, () => {
@@ -167,6 +168,7 @@ watch(
 )
 
 onUnmounted(() => {
+  window.removeEventListener('resize', measureAndSetContainerSize)
   window.removeEventListener('resize', handleResize)
 })
 
