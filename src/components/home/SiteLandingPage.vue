@@ -25,7 +25,6 @@
       <div class="bg-white rounded-2xl shadow p-8 border border-gray-200">
         <div class="flex items-center justify-between mb-8">
           <h2 class="text-2xl font-bold text-gray-900">Explore by Category</h2>
-          <button class="text-blue-600 font-semibold" @click="browseSets">See All Categories</button>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div v-for="category in categoriesWithSets" :key="category.id" class="bg-gray-50 rounded-xl shadow transition border border-gray-100 flex flex-col">
@@ -79,14 +78,6 @@ const formatNumber = (num: number): string => {
     return (num / 1000).toFixed(1) + 'K'
   }
   return num.toString()
-}
-
-const browseSets = () => {
-  router.push('/browse')
-}
-
-const createSet = () => {
-  router.push('/creator')
 }
 
 const viewSet = (id: string) => {
