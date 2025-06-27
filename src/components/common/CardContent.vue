@@ -8,6 +8,7 @@
       :mediaUrl="cardState[side].mediaUrl"
       :is-mobile="isMobile"
       :is-editing="isEditing"
+      :is-flipped="isFlipped"
       @update="handleContentUpdate"
     />
     <div v-if="isEditing" class="card-controls">
@@ -48,6 +49,7 @@ const props = defineProps<{
   description?: string
   category?: string
   onImageFile?: (data: { file: File, side: CardSide }) => void
+  isFlipped?: boolean
 }>()
 
 const emit = defineEmits<{

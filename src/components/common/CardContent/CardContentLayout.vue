@@ -6,6 +6,7 @@
       :isEditing="isEditing"
       :side="side"
       :showMediaControls="isEditing"
+      :isFlipped="isFlipped"
       @update="updates => $emit('update', updates)"
     />
   </div>
@@ -22,8 +23,10 @@ withDefaults(defineProps<{
   mediaUrl: string | null
   isMobile?: boolean
   isEditing?: boolean
+  isFlipped?: boolean
 }>(), {
-  isEditing: false
+  isEditing: false,
+  isFlipped: false
 })
 
 defineEmits(['update'])
