@@ -570,7 +570,7 @@ function onAddSet(newCards: Card | Card[]) {
 }
 
 // Initialize composables
-const { isSubmitting, submitSet } = useSetSubmission()
+const { isSubmitting, submitSet, navigateToSet } = useSetSubmission()
 
 // Create reactive form data for validation
 const formDataForValidation = computed(() => ({
@@ -607,7 +607,7 @@ async function onSubmit() {
       pendingImageFiles: pendingImageFiles.value
     }
 
-    await submitSet(submissionData, setId.value)
+    const newSetId = await submitSet(submissionData, setId.value)
     
     // Mark as submitted and clear progress after successful submission
     markAsSubmitted()
@@ -615,7 +615,7 @@ async function onSubmit() {
     clearCardImageFilesFromStorage()
     //1 second delay
     await new Promise(resolve => setTimeout(resolve, 1000))
-    //navigateToSet(newSetId)
+    navigateToSet(newSetId)
   } catch (error: unknown) {
     toast('Error saving set: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error')
   }

@@ -34,13 +34,13 @@
     <template v-else>
       <!-- Show both if both are set -->
       <template v-if="content && mediaUrl">
-        <div class="text-content half-height" :style="computedStyle" v-html="viewModeContent"></div>
+        <div class="text-content half-height" :style="computedStyle" v-html="viewModeContent" ref="contentRef"></div>
         <div class="media-container half-height">
           <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
         </div>
       </template>
       <!-- Only content -->
-      <div v-else-if="content" class="text-content full-height" :style="computedStyle" v-html="viewModeContent"></div>
+      <div v-else-if="content" class="text-content full-height" :style="computedStyle" v-html="viewModeContent" ref="contentRef"></div>
       <!-- Only mediaUrl -->
       <div v-else-if="mediaUrl" class="media-container full-height">
         <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
@@ -146,6 +146,11 @@ watch(() => props.mediaUrl, () => {
       }
     })
   }
+  measureAndSetContainerSize()
+})
+
+watch(() => props.content, () => {
+  measureAndSetContainerSize()
 })
 
 onUnmounted(() => {
