@@ -61,8 +61,10 @@ const props = withDefaults(defineProps<{
   isEditing: boolean
   side: 'front' | 'back'
   showMediaControls?: boolean
+  isFlipped?: boolean
 }>(), {
-  showMediaControls: false
+  showMediaControls: false,
+  isFlipped: false
 })
 
 const emit = defineEmits(['update'])
@@ -153,6 +155,17 @@ watch(() => props.content, () => {
   measureAndSetContainerSize()
 })
 
+watch(
+  () => props.isFlipped,
+  (newVal) => {
+    if (newVal && props.side === 'back') {
+      nextTick(() => {
+        measureAndSetContainerSize()
+      })
+    }
+  }
+)
+
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
@@ -237,6 +250,7 @@ function handleKeyDown(event: KeyboardEvent) {
   border: 1px solid transparent;
   min-height: 0;
   box-sizing: border-box;
+  line-height: 1.5;
 }
 
 .text-content.full-height {

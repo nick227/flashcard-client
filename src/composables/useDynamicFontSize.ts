@@ -18,11 +18,11 @@ interface TextStyle {
 // =========================
 // Constants
 // =========================
-const minChars = 10;
+const minChars = 20;
 const maxChars = 180;
 const minFontSize = 1;
 const maxFontSize = 4;
-const baseArea = 400 * 400;
+const baseArea = 640 * 400;
 
 // =========================
 // Font Size Cache
