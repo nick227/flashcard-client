@@ -1,5 +1,5 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
+  <div class="container-main  mx-auto px-4 py-8">
     <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
       <div class="text-center">
         <div class="text-green-500 text-6xl mb-4">

@@ -1,12 +1,12 @@
 <template>
   <div class="home-page">
-    <div class="container py-8">
+    <div class="container-main  py-8">
       <HomeHero />
     </div>
-    <div v-if="!isMobile" class="container py-8">
+    <div v-if="!isMobile" class="container-main -main py-8">
       <SiteLandingPage />
       </div>
-    <div class="container py-0">
+    <div class="container-main -main py-0">
 
       <!-- Featured Set -->
       <div v-if="featuredSet && !isMobile">
@@ -118,3 +118,6 @@ const viewSet = (setId: number) => {
 
 onMounted(fetchSets)
 </script>
+
+<style scoped>
+</style>

@@ -1,6 +1,6 @@
 <template>
 
-  <div class="container mx-auto px-4 py-8 min-h-screen">
+  <div class="container-main  mx-auto px-4 py-8 min-h-screen">
     <!-- Authenticated user profile view -->
     <div v-if="isAuthenticated && user" class="max-w-6xl mx-auto">
       <!-- Profile header card -->

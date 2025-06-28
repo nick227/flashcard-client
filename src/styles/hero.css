@@ -25,7 +25,7 @@
 .hero {
     min-height: 320px;
     width: calc(100% - 3rem);
-    padding: 0 1.5rem;
+    max-width: var(--container-max-width);
     color: var(--hero-color);
     border-radius: var(--hero-radius);
     margin-bottom: var(--space-xs);
@@ -35,7 +35,7 @@
     justify-content: center;
     text-align: center;
     position: relative;
-    overflow: hidden;
+    margin: 0 auto;
 }
 
 .hero-title {
@@ -43,7 +43,7 @@
     font-weight: var(--hero-title-weight);
     line-height: 1.1;
     margin-bottom: var(--hero-title-mb);
-    text-align: left;
+    text-align: center;
     color: var(--hero-color);
 }
 

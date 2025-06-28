@@ -238,6 +238,8 @@
     gap: var(--space-lg);
     justify-items: center;
     align-items: stretch;
+    max-width: var(--container-max-width);
+    margin: 0 auto;
 }
 
 @media (max-width: 768px) {

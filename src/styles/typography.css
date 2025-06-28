@@ -1,39 +1,43 @@
-    h1 {
-        font-size: var(--font-size-xl);
-        font-weight: var(--font-weight-bold);
-        margin-bottom: 0;
-        letter-spacing: -0.01em;
-    }
-    
-    h2 {
-        font-size: var(--font-size-lg);
-        font-weight: var(--font-weight-bold);
-        margin-bottom: var(--space-sm);
-    }
-    
-    h3,
-    h4,
-    h5,
-    h6 {
-        font-weight: var(--font-weight-bold);
-        margin-bottom: var(--space-xs);
-    }
-    
+h1 {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: 0;
+    letter-spacing: -0.01em;
+}
+
+h2 {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-sm);
+}
+
+h3,
+h4,
+h5,
+h6 {
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--space-xs);
+}
+
+.site-title {
+    font-size: 4rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    text-align: center;
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-primary);
+}
+
+.cursive {
+    font-family: 'Playwrite HU', cursive;
+}
+
+.accent {
+    color: var(--color-accent);
+}
+
+@media (max-width: 768px) {
     .site-title {
-        font-size: 4rem;
-        font-weight: 400;
-        letter-spacing: -0.01em;
-        text-align: center;
-        color: var(--color-primary);
-        border-bottom: 1px solid var(--color-primary);
+        font-size: 2rem;
     }
-    
-    .cursive {
-        font-family: 'Playwrite HU', cursive;
-    }
-    
-    @media (max-width: 768px) {
-        .site-title {
-            font-size: 2rem;
-        }
-    }
+}

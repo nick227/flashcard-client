@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen flex flex-col">
     
-    <main class="container flex-1">
+    <main class="container-main  flex-1">
       <CreatorHero />
       <h2 class="text-xl font-semibold mb-4">Your Sets</h2>
       <div v-if="loading" class="text-gray-500">Loading your sets...</div>

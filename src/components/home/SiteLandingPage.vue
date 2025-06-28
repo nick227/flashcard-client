@@ -23,15 +23,8 @@
 
       <!-- Categories Section -->
       <div class="bg-white rounded-2xl p-8 border border-gray-200">
-        <div class="flex items-center justify-between mb-8">
-          <h2 class="text-2xl font-bold text-gray-900">Explore by Category</h2>
-        </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div v-for="category in categoriesWithSets" :key="category.id" class="rounded-xl transition border border-gray-100 flex flex-col">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 class="text-lg font-semibold text-gray-800">{{ category.name }}</h3>
-              <a class="text-blue-600 text-xs font-medium underline cursor-pointer" @click="viewCategory(category.name)">View All</a>
-            </div>
             <div class="flex flex-col gap-3 p-4 flex-1">
               <div v-for="set in category.sets" :key="set.id" class="flex gap-3 items-center bg-white rounded-lg border border-gray-200 p-2 cursor-pointer transition" @click="viewSet(set.id)">
                 <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">

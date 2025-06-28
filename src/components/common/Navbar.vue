@@ -1,6 +1,6 @@
 <template>
   <nav class="navbar mb-2 pb-2">
-    <div class="navbar-inner container">
+    <div class="navbar-inner container-main">
       <div class="navbar-masthead">
         <router-link to="/" class="navbar-logo">
           <svg width="40" height="40" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" class="logo-svg">

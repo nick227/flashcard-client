@@ -2,7 +2,7 @@
   <div>
     <Toaster :toasts="toasts" @remove="remove" />
     <div class="flex flex-col items-center justify-start pb-16">
-      <div class="container flex flex-col items-center w-full flex-1 justify-start">
+      <div class="container-main  flex flex-col items-center w-full flex-1 justify-start">
         <div class="flex flex-colpt-44 pb-4 max-w-[460px]">
           <div class="flex flex-col items-center w-full">
             <h1 class="font-bold mb-2 site-title">Flashcard Academy</h1>

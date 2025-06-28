@@ -1,6 +1,6 @@
 <template>
   
-  <div class="container flex flex-col items-center justify-center py-16 min-h-screen">
+  <div class="container-main  flex flex-col items-center justify-center py-16 min-h-screen">
     <div v-if="loading" class="text-gray-500">Loading profile...</div>
     <div v-else-if="error" class="text-red-500">{{ error }}</div>
     <div v-else-if="educator" class="w-full max-w-6xl">
@@ -191,11 +191,3 @@ onMounted(async () => {
   loading.value = false
 })
 </script>
-
-<style scoped>
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-</style> 

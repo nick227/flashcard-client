@@ -1,9 +1,9 @@
 <template>
-  <div class="container py-0">
+  <div class="container-main  py-0">
     <BrowseHero />
 
     <!-- Filter & Sort Controls -->
-    <section class="w-full my-8 gap-4">
+    <section class="my-8 gap-4 container-main">
       
       <div class="flex flex-wrap gap-4 w-full">
         <!-- Category Dropdown -->

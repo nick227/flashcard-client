@@ -2,7 +2,7 @@
   <div class="min-h-screen">
     <Toaster :toasts="toasts" @remove="id => toasts.splice(toasts.findIndex(t => t.id === id), 1)" />
 
-    <main class="container flex-1">
+    <main class="container-main  flex-1">
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-3xl font-bold flex w-full items-center justify-center cursive">{{ setId ? 'Edit Set' : 'Create Set' }}</h2>
       </div>
