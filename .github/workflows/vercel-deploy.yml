@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: POST to Vercel Deploy Hook
         run: |
-          curl -X POST https://api.vercel.com/v1/integrations/deploy/prj_RYWPpwTYsidpNyPapwSJA0a3Wbh4/tgrI8mCl4O
+          curl -X POST https://api.vercel.com/v1/integrations/deploy/prj_RYWPpwTYsidpNyPapwSJA0a3Wbh4/eC5H4O3okC
