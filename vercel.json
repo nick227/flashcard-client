@@ -16,14 +16,8 @@
     ],
     "rewrites": [{
         "source": "/(.*)",
-        "destination": "/index.html",
-        "has": [{
-            "type": "header",
-            "key": "Accept",
-            "value": "(?i)text/html"
-        }],
-        "missing": [{
-            "type": "file"
-        }]
-    }]
+        "destination": "/index.html"
+    }],
+    "cleanUrls": true,
+    "trailingSlash": false
 }
