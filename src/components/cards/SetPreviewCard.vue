@@ -1,5 +1,5 @@
 <template>
-  <div v-if="set" class="card flex flex-col overflow-hidden rounded-lg bg-white shadow-md transition-shadow duration-300 hover:shadow-xl">
+  <div v-if="set" class="card flex flex-col overflow-hidden rounded-lg bg-white duration-300">
     <!-- Image Container -->
     <div @click="handleView" class="relative cursor-pointer">
       <div class="aspect-video w-full">
@@ -235,24 +235,3 @@ const cards = computed(() => {
   return 0
 })
 </script>
-
-<style scoped>
-.truncate-2-lines {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.card {
-  /* Ensure the card itself doesn't have a fixed height so it can be defined by its content and aspect ratio image */
-  height: 100%; 
-}
-
-.card-title {
-  margin-top: 2px;
-  font-size: 1.25em;
-}
-
-</style>

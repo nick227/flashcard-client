@@ -153,7 +153,6 @@ function updateBack(card: Card) {
   border-radius: 1rem;
   width: 100%;
   min-height: 400px;
-  transition: transform 0.3s ease, box-shadow 0.2s ease;
   background: white;
   position: relative;
   perspective: 1000px;
@@ -167,7 +166,6 @@ function updateBack(card: Card) {
 }
 
 .flashcard-scaffold.editable:hover {
-  box-shadow: none;
   transform: none;
 }
 
@@ -176,7 +174,7 @@ function updateBack(card: Card) {
 }
 
 .fullscreen .flashcard-scaffold {
-  height: 70vh; /* Changed from 70% to vh for better responsiveness */
+  height: 70vh;
 }
 
 .formatted-content {

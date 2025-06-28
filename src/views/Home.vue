@@ -3,13 +3,13 @@
     <div class="container py-8">
       <HomeHero />
     </div>
-    <div class="container py-8">
+    <div v-if="!isMobile" class="container py-8">
       <SiteLandingPage />
       </div>
     <div class="container py-0">
 
       <!-- Featured Set -->
-      <div v-if="featuredSet">
+      <div v-if="featuredSet && !isMobile">
         <FeaturedSet :set="featuredSet" @view="viewSet" />
       </div>
 
@@ -50,6 +50,8 @@ const sets = ref<Set[]>([])
 const loading = ref(true)
 const featuredSet = ref<Set | null>(null)
 const error = ref<string | null>(null)
+const isMobile = ref(false)
+isMobile.value = window.innerWidth < 768
 
 const fetchSets = async () => {
   loading.value = true

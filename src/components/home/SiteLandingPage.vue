@@ -4,17 +4,17 @@
 
       <!-- Stats Row -->
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
-        <div class="bg-white rounded-2xl shadow transition p-6 flex flex-col items-center">
+        <div class="bg-white rounded-2xl transition p-6 flex flex-col items-center">
           <i class="fa-solid fa-layer-group text-blue-500 text-3xl mb-2"></i>
           <span class="text-3xl font-bold text-gray-900">{{ formatNumber(setsCount) }}</span>
           <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Sets</span>
         </div>
-        <div class="bg-white rounded-2xl shadow transition p-6 flex flex-col items-center">
+        <div class="bg-white rounded-2xl transition p-6 flex flex-col items-center">
           <i class="fa-solid fa-chalkboard-user text-green-500 text-3xl mb-2"></i>
           <span class="text-3xl font-bold text-gray-900">{{ formatNumber(usersCount) }}</span>
           <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Educators</span>
         </div>
-        <div class="bg-white rounded-2xl shadow transition p-6 flex flex-col items-center">
+        <div class="bg-white rounded-2xl transition p-6 flex flex-col items-center">
           <i class="fa-solid fa-tags text-yellow-500 text-3xl mb-2"></i>
           <span class="text-3xl font-bold text-gray-900">{{ formatNumber(categoriesCount) }}</span>
           <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Categories</span>
@@ -22,12 +22,12 @@
       </div>
 
       <!-- Categories Section -->
-      <div class="bg-white rounded-2xl shadow p-8 border border-gray-200">
+      <div class="bg-white rounded-2xl p-8 border border-gray-200">
         <div class="flex items-center justify-between mb-8">
           <h2 class="text-2xl font-bold text-gray-900">Explore by Category</h2>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div v-for="category in categoriesWithSets" :key="category.id" class="bg-gray-50 rounded-xl shadow transition border border-gray-100 flex flex-col">
+          <div v-for="category in categoriesWithSets" :key="category.id" class="bg-gray-50 rounded-xl transition border border-gray-100 flex flex-col">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 class="text-lg font-semibold text-gray-800">{{ category.name }}</h3>
               <a class="text-blue-600 text-xs font-medium underline cursor-pointer" @click="viewCategory(category.name)">View All</a>

@@ -47,8 +47,10 @@
     color: var(--hero-color);
 }
 
-.hero-title .accent {
-    color: var(--color-accent, #f59e42);
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 1.25rem;
+    }
 }
 
 .hero-description {

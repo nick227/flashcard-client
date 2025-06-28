@@ -20,13 +20,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
     <div id="app">
         <!-- Loading indicator -->
-        <div class="loading">
-            <img src="/flashcard.svg" alt="Loading..." width="48" height="48" />
+        <div id="loading-indicator" role="status" aria-busy="true">
+            <img class="loading-icon" src="/flashcard.svg" alt="Loading..." width="48" height="48" />
+            <p class="flashing">FLASH CARDS</p>
         </div>
     </div>
     <script type="module" src="./src/main.ts"></script>

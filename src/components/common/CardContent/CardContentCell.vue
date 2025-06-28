@@ -134,7 +134,13 @@ function measureAndSetContainerSize() {
 }
 
 onMounted(() => {
-  if (props.isEditing && contentRef.value && contentRef.value.innerText !== props.content) {
+  // Only set innerText if not already focused and content is out of sync
+  if (
+    props.isEditing &&
+    contentRef.value &&
+    document.activeElement !== contentRef.value &&
+    contentRef.value.innerText !== props.content
+  ) {
     contentRef.value.innerText = props.content || ''
   }
   measureAndSetContainerSize()
@@ -142,9 +148,18 @@ onMounted(() => {
 })
 
 watch(() => props.mediaUrl, () => {
-  if (props.isEditing && contentRef.value) {
+  // Only set innerText if not already focused and content is out of sync
+  if (
+    props.isEditing &&
+    contentRef.value &&
+    document.activeElement !== contentRef.value &&
+    contentRef.value.innerText !== props.content
+  ) {
     nextTick(() => {
-      if (contentRef.value && contentRef.value.innerText !== props.content) {
+      if (
+        contentRef.value &&
+        contentRef.value.innerText !== props.content
+      ) {
         contentRef.value.innerText = props.content || ''
       }
     })
@@ -152,7 +167,16 @@ watch(() => props.mediaUrl, () => {
   measureAndSetContainerSize()
 })
 
-watch(() => props.content, () => {
+watch(() => props.content, (newContent) => {
+  // Only set innerText if not already focused and content is out of sync
+  if (
+    props.isEditing &&
+    contentRef.value &&
+    document.activeElement !== contentRef.value &&
+    contentRef.value.innerText !== newContent
+  ) {
+    contentRef.value.innerText = newContent || ''
+  }
   measureAndSetContainerSize()
 })
 
@@ -183,6 +207,13 @@ const handleClick = (event: MouseEvent) => {
     event.stopPropagation()
     if (document.activeElement !== contentRef.value) {
       contentRef.value.focus()
+      // Move cursor to end
+      const range = document.createRange()
+      range.selectNodeContents(contentRef.value)
+      range.collapse(false)
+      const sel = window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
     }
   }
 }
