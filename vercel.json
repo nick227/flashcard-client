@@ -15,7 +15,15 @@
         }
     ],
     "rewrites": [{
-        "source": "/((?!api/|assets/|.*\\.(js|css|png|jpg|jpeg|svg|ico|webp|json|txt|woff2?|ttf|map)$).*)",
-        "destination": "/index.html"
+        "source": "/(.*)",
+        "destination": "/index.html",
+        "has": [{
+            "type": "header",
+            "key": "Accept",
+            "value": "(?i)text/html"
+        }],
+        "missing": [{
+            "type": "file"
+        }]
     }]
 }
