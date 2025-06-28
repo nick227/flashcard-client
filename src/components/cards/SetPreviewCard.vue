@@ -1,5 +1,5 @@
 <template>
-  <div v-if="set" class="card flex flex-col overflow-hidden rounded-lg bg-white duration-300">
+  <div v-if="set" class="card flex flex-col overflow-hidden rounded-sm bg-white duration-300">
     <!-- Image Container -->
     <div @click="handleView" class="relative cursor-pointer">
       <div class="aspect-video w-full">

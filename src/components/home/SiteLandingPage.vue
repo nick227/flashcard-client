@@ -1,5 +1,5 @@
 <template>
-  <div class="py-8 bg-gray-50">
+  <div class="py-8x">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
       <!-- Stats Row -->
@@ -9,12 +9,12 @@
           <span class="text-3xl font-bold text-gray-900">{{ formatNumber(setsCount) }}</span>
           <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Sets</span>
         </div>
-        <div class="bg-white rounded-2xl transition p-6 flex flex-col items-center">
+        <div class="bg-white rounded-2xl transition p-2 flex flex-col items-center">
           <i class="fa-solid fa-chalkboard-user text-green-500 text-3xl mb-2"></i>
           <span class="text-3xl font-bold text-gray-900">{{ formatNumber(usersCount) }}</span>
           <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Educators</span>
         </div>
-        <div class="bg-white rounded-2xl transition p-6 flex flex-col items-center">
+        <div class="bg-white rounded-2xl transition p-2 flex flex-col items-center">
           <i class="fa-solid fa-tags text-yellow-500 text-3xl mb-2"></i>
           <span class="text-3xl font-bold text-gray-900">{{ formatNumber(categoriesCount) }}</span>
           <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Categories</span>
@@ -27,7 +27,7 @@
           <h2 class="text-2xl font-bold text-gray-900">Explore by Category</h2>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div v-for="category in categoriesWithSets" :key="category.id" class="bg-gray-50 rounded-xl transition border border-gray-100 flex flex-col">
+          <div v-for="category in categoriesWithSets" :key="category.id" class="rounded-xl transition border border-gray-100 flex flex-col">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center">
               <h3 class="text-lg font-semibold text-gray-800">{{ category.name }}</h3>
               <a class="text-blue-600 text-xs font-medium underline cursor-pointer" @click="viewCategory(category.name)">View All</a>
