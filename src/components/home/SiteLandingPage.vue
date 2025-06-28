@@ -51,11 +51,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { api } from '@/api'
 import { cachedApiEndpoints } from '@/services/CachedApiService'
-
-const router = useRouter()
 
 // Reactive data
 const setsCount = ref(0)
@@ -75,10 +72,6 @@ const formatNumber = (num: number): string => {
 
 const viewSet = (id: string) => {
   window.location.href = '/sets/' + id
-}
-
-const viewCategory = (categoryName: string) => {
-  router.push(`/browse/${encodeURIComponent(categoryName)}`)
 }
 
 const handleImageError = (event: Event) => {
