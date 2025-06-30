@@ -43,7 +43,6 @@
     position: relative;
     font-family: var(--font-main);
     box-sizing: border-box;
-    aspect-ratio: var(--card-aspect-ratio);
 }
 
 
@@ -119,17 +118,12 @@
     position: relative;
 }
 
-.flashcard-scaffold .card {
-    aspect-ratio: var(--card-aspect-ratio);
-}
-
 
 /* Card preview styles */
 
 .card-preview {
     position: relative;
     width: 100%;
-    aspect-ratio: 16/9;
     overflow-y: auto;
     display: flex;
     align-items: center;
@@ -151,7 +145,6 @@
 .fullscreen .card-preview {
     width: 90vw;
     max-width: 100%;
-    aspect-ratio: 16/9;
     margin: auto;
 }
 
