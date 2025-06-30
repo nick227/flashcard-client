@@ -1,46 +1,29 @@
 <template>
   <div class="py-8x">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
+    <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Stats Row -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
-        <div class="bg-white rounded-2xl transition p-6 flex flex-col items-center">
-          <i class="fa-solid fa-layer-group text-blue-500 text-3xl mb-2"></i>
-          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(setsCount) }}</span>
-          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Sets</span>
+      <div class="">
+        <div class="">
+          <span class="">{{ formatNumber(setsCount) }}</span>
+          <span class="">Sets</span>
         </div>
-        <div class="bg-white rounded-2xl transition p-2 flex flex-col items-center">
-          <i class="fa-solid fa-chalkboard-user text-green-500 text-3xl mb-2"></i>
-          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(usersCount) }}</span>
-          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Educators</span>
+        <div class="">
+          <span class="">{{ formatNumber(usersCount) }}</span>
+          <span class="">Educators</span>
         </div>
-        <div class="bg-white rounded-2xl transition p-2 flex flex-col items-center">
-          <i class="fa-solid fa-tags text-yellow-500 text-3xl mb-2"></i>
-          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(categoriesCount) }}</span>
-          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Categories</span>
+        <div class="">
+          <span class="">{{ formatNumber(categoriesCount) }}</span>
+          <span class="">Categories</span>
         </div>
       </div>
 
       <!-- Categories Section -->
-      <div class="bg-white rounded-2xl p-8 border border-gray-200">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div v-for="category in categoriesWithSets" :key="category.id" class="rounded-xl transition border border-gray-100 flex flex-col">
-            <div class="flex flex-col gap-3 p-4 flex-1">
-              <div v-for="set in category.sets" :key="set.id" class="flex gap-3 items-center bg-white rounded-lg border border-gray-200 p-2 cursor-pointer transition" @click="viewSet(set.id)">
-                <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
-                  <img v-if="set.thumbnail" :src="set.thumbnail" :alt="set.title" class="w-full h-full object-contain" @error="handleImageError" />
-                  <i v-else class="fas fa-layer-group text-gray-300 text-2xl"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <h4 class="text-sm font-semibold text-gray-900 mb-1 truncate">{{ set.title }}</h4>
-                  <div class="flex items-center gap-2 text-xs text-gray-500">
-                    <span class="truncate">{{ set.educator?.name || 'Unknown' }}</span>
-                    <span v-if="set.price > 0" class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">${{ set.price }}</span>
-                    <span v-else class="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">Free</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div class="">
+        <h2 class="">Categories</h2>
+        <div class="">
+          <div @click="viewCategory(category.name)" v-for="category in categoryNames" :key="category.id" 
+          class="">
+            <h3 class="">{{ category.name }} ({{ category.setCount }})</h3>
           </div>
         </div>
       </div>
@@ -58,7 +41,7 @@ import { cachedApiEndpoints } from '@/services/CachedApiService'
 const setsCount = ref(0)
 const usersCount = ref(0)
 const categoriesCount = ref(0)
-const categoriesWithSets = ref<any[]>([])
+const categoryNames = ref<any[]>([])
 // Methods
 const formatNumber = (num: number): string => {
   if (num >= 1000000) {
@@ -70,19 +53,8 @@ const formatNumber = (num: number): string => {
   return num.toString()
 }
 
-const viewSet = (id: string) => {
-  window.location.href = '/sets/' + id
-}
-
-const handleImageError = (event: Event) => {
-  const target = event.target as HTMLImageElement
-  if (target) {
-    target.style.display = 'none'
-    const placeholder = target.nextElementSibling as HTMLElement
-    if (placeholder) {
-      placeholder.style.display = 'flex'
-    }
-  }
+const viewCategory = (name: string) => {
+  window.location.href = '/browse/' + name
 }
 
 // Load stats on mount
@@ -102,11 +74,9 @@ onMounted(async () => {
 
     // Categories with sets
     try {
-      const isMobile = window.innerWidth < 768
-      const catNum = isMobile ? 1 : 4
-      const setsPerCat = isMobile ? 4 : 5
-      const categoriesData = await cachedApiEndpoints.getRandomCategoriesWithSets(catNum, setsPerCat)
-      categoriesWithSets.value = categoriesData as any[]
+      //const isMobile = window.innerWidth < 768
+      const categoriesData = await cachedApiEndpoints.getCategories(true)
+      categoryNames.value = categoriesData as any[]
     } catch (error) {
       console.error('Error loading categories with sets:', error)
     }

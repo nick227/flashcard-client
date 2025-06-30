@@ -38,7 +38,7 @@ const listHeroDescriptions = [
 ];
 
 const listHeroTitles = [
-  'Learn anything through <span class="accent">flash cards</span>',
+  'Learn your future through <span class="accent">flash cards</span>',
   'What is the deal with <span class="accent">flash cards</span>?',
   'Face your fears with <span class="accent">flash cards</span>',
   '<span class="accent">Flashcards</span> Because Google is dead',

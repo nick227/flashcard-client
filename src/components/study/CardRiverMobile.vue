@@ -119,7 +119,6 @@ const getYouTubeEmbed = (url: string): string => {
   gap: 0;
   background: transparent;
   border-radius: 1.25rem;
-  box-shadow: none;
   padding: 0;
   width: 100%;
   min-height: 420px;
@@ -129,7 +128,6 @@ const getYouTubeEmbed = (url: string): string => {
   margin: 0 auto;
   min-height: 400px;
   border-radius: 1rem;
-  box-shadow: 0 4px 24px 0 rgba(30, 41, 59, 0.08);
   margin-bottom: 1.2rem;
   background: #fff;
   display: flex;
@@ -141,6 +139,9 @@ const getYouTubeEmbed = (url: string): string => {
 .panel-face.back {
   background: #2563eb;
   color: #fff;
+}
+.panel-face.front {
+  outline: 2px solid var(--color-border);
 }
 .formatted-content {
   text-align: center;
@@ -162,7 +163,6 @@ const getYouTubeEmbed = (url: string): string => {
   max-height: 220px;
   object-fit: contain;
   border-radius: 0.5rem;
-  box-shadow: 0 2px 4px rgba(30,41,59,0.10);
   background: #f8fafc;
 }
 .panel-text {

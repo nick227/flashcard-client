@@ -150,7 +150,7 @@
 .fullscreen .card,
 .fullscreen .card-preview {
     width: 90vw;
-    max-width: 1200px;
+    max-width: 100%;
     aspect-ratio: 16/9;
     margin: auto;
 }
@@ -234,7 +234,7 @@
 
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(390px, 1fr));
     gap: var(--space-lg);
     justify-items: center;
     align-items: stretch;

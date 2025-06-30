@@ -68,15 +68,7 @@
 
     <!-- Sets Grid with Transition -->
     <section class="section">
-      <transition-group 
-        name="fade-grid" 
-        tag="div" 
-        class="cards-grid"
-        :css="false"
-        @before-enter="onBeforeEnter"
-        @enter="onEnter"
-        @leave="onLeave"
-      >
+      <div ref="cardsGridRef" class="cards-grid">
         <SetPreviewCard
           v-for="set in sets || []"
           :key="set.id"
@@ -84,7 +76,7 @@
           @view="viewSet"
           :class="{ 'opacity-50': isTransitioning }"
         />
-      </transition-group>
+      </div>
       <!-- Loading indicator for pagination -->
       <FunnyLoadingIndicator v-if="(loading && sets?.length) || isBatchWaiting" />
       <LoadMoreButton v-if="showLoadMoreButton && hasMore" @click="handleLoadMore" />
@@ -108,12 +100,11 @@
 <script setup lang="ts">
 import BrowseHero from '../components/sections/BrowseHero.vue'
 import SetPreviewCard from '../components/cards/SetPreviewCard.vue'
-import { ref, onMounted, watch, onUnmounted, computed } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSets } from '@/composables/useSets'
 import FunnyLoadingIndicator from '../components/common/FunnyLoadingIndicator.vue'
 import LoadMoreButton from '../components/common/LoadMoreButton.vue'
-import { gsap } from 'gsap'
 
 const route = useRoute()
 const router = useRouter()
@@ -144,30 +135,6 @@ const {
   initialize,
   currentPage
 } = useSets()
-
-// Animation hooks for transition-group
-const onBeforeEnter = (el: Element) => {
-  gsap.set(el, { opacity: 0, y: 20 })
-}
-
-const onEnter = (el: Element, done: () => void) => {
-  gsap.to(el, {
-    opacity: 1,
-    y: 0,
-    duration: 0.3,
-    delay: Math.random() * 0.1, // Stagger effect
-    onComplete: done
-  })
-}
-
-const onLeave = (el: Element, done: () => void) => {
-  gsap.to(el, {
-    opacity: 0,
-    y: -20,
-    duration: 0.2,
-    onComplete: done
-  })
-}
 
 // Watch for route changes to update selected category
 watch(() => route.params.category, (newCategory) => {
@@ -284,7 +251,7 @@ onMounted(() => {
   }, 100)
 })
 
-onUnmounted(() => {
+onMounted(() => {
   if (observer) {
     observer.disconnect()
     observer = null
@@ -315,10 +282,6 @@ watch(() => route.fullPath, () => {
 </script>
 
 <style scoped>
-.cards-grid {
-  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
-  position: relative;
-}
 
 .search-input {
   width: calc(100% - 20px);

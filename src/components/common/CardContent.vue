@@ -232,7 +232,8 @@ onUnmounted(() => {
 <style scoped>
 .card-content {
   width: 100%;
-  height: 100%;
+  height: 460px;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -301,12 +302,6 @@ onUnmounted(() => {
   
   .control-button {
     flex: 1 1 calc(50% - var(--space-sm));
-  }
-}
-
-@media (max-width: 768px) {
-  .card-content {
-    min-height: 460px;
   }
 }
 </style> 

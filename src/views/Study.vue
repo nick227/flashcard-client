@@ -1,6 +1,6 @@
 <template>
   
-  <div class="container">
+  <div class="container-main mx-auto">
     <FlashCardViewer :set-id="setId" />
   </div>
 </template>

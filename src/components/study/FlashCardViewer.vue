@@ -163,12 +163,12 @@
     </div>
 
     <!-- Mobile View -->
-    <div v-if="showMobileView" class="mt-4 w-full">
+    <div v-if="showMobileView" class="my-4 w-full">
       <CardRiverMobile :cards="cards" />
     </div>
   </div>
     <!-- Related Sets-->
-     <div v-if="set" class="w-full">
+     <div v-if="set" class="w-full my-16">
       <RelatedSets :set-id="set.id" />
      </div>
 
