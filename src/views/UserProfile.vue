@@ -335,10 +335,8 @@ async function updateProfileImage(file: File) {
     const formData = new FormData()
     formData.append('image', file)
 
-    const res = await api.post('/users/profile/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+    const res = await api.patch(`/users/${user.value.id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     })
 
     auth.setUser({

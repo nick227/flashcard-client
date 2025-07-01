@@ -1,6 +1,7 @@
 <template>
   <div class="home-page">
 
+    <!-- Home Hero -->
     <div class="container-main  py-8">
       <HomeHero />
     </div>
@@ -30,7 +31,7 @@
         <h2 class="text-2xl font-bold mb-4">Ready to start your learning journey?</h2>
         <p class="mb-6 text-lg opacity-80 max-w-2xl mx-auto">Sign up for free and get instant access to hundreds of
           flash card sets, or create your own to help others learn.</p>
-        <a href="/browse" class="button button-accent text-lg px-10 py-4">Get Started</a>
+        <a href="/creator" class="button button-accent text-lg px-10 py-4">Get Started</a>
       </section>
     </div>
   </div>
