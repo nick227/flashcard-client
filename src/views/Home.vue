@@ -1,30 +1,21 @@
 <template>
   <div class="home-page">
+    <div class="container-main py-0 mb-8">
+      <HomeHero />
+    </div>
 
+    <div class="container-main py-0 mb-8">
+      <FlashCardViewer v-for="set in sets" :key="set.id" :set-id="set.id" :hideRelatedSets="true" />
+    </div>
 
-    <FlashCardViewer v-for="set in sets" :key="set.id" :set-id="set.id" :hideRelatedSets="true" />
-
-    <!-- Site Landing Page -->
     <div v-if="!isMobile" class="container-main -main py-8">
       <SiteLandingPage />
     </div>
 
-    <!-- All Sets Grid
-    <section class="section">
-      <h2 class="text-2xl font-bold text-gray-900 flex justify-center mb-8">Newest</h2>
-      <div v-if="loading" class="text-gray-500 text-center">Loading sets...</div>
-      <div v-else class="cards-grid">
-        <SetPreviewCard v-for="set in sets" :key="set.id" :set="set" @view="viewSet" />
-      </div>
-    </section>
-    -->
-    <div class="container-main py-0">
-      <!-- Home Hero -->
-      <div class="container-main  py-8">
-        <HomeHero />
-      </div>
-
+    <div class="container-main py-0 mb-8">
+      <BrowseHero />
     </div>
+
   </div>
 </template>
 
@@ -35,6 +26,7 @@ import SiteLandingPage from '@/components/home/SiteLandingPage.vue'
 import type { Set } from '@/types/set'
 import { api } from '@/api'
 import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
+import BrowseHero from '@/components/sections/BrowseHero.vue'
 
 const sets = ref<Set[]>([])
 const loading = ref(true)
@@ -50,8 +42,8 @@ const fetchSets = async () => {
     const res = await api.get('/sets', {
       params: {
         page: 1,
-        limit: 3,
-        sortOrder: 'featured',
+        limit: 10,
+        sortOrder: 'newest',
         fields: 'id'
       }
     })
