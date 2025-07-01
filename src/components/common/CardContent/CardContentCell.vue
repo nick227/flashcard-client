@@ -12,7 +12,7 @@
       </template>
       <!-- Show both if both are set (no embed, but both content and mediaUrl) -->
       <template v-else-if="content && mediaUrl">
-        <div class="text-content half-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInput" @blur="handleInput" @keydown="handleKeydown">{{ content }}</div>
+        <div class="text-content half-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="handleInput" @keydown="handleKeydown">{{ localContent }}</div>
         <div class="media-container half-height">
           <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
           <button class="media-close" @click="handleMediaRemove" aria-label="Remove media">
@@ -22,7 +22,7 @@
       </template>
       <!-- Only content -->
       <template v-else-if="content">
-        <div class="text-content full-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInput" @blur="handleInput" @keydown="handleKeydown">{{ content }}</div>
+        <div class="text-content full-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="handleInput" @keydown="handleKeydown">{{ localContent }}</div>
       </template>
       <!-- Only mediaUrl (no content): show only image, no text area -->
       <div v-else-if="mediaUrl" class="media-container full-height">
@@ -32,19 +32,19 @@
         </button>
       </div>
       <!-- Neither: just show contenteditable -->
-      <div v-else class="text-content full-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInput" @blur="handleInput" @keydown="handleKeydown"></div>
+      <div v-else class="text-content full-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="handleInput" @keydown="handleKeydown"></div>
     </template>
     <!-------------------- Viewing ----------------->
     <template v-else>
       <!-- Show both if both are set -->
       <template v-if="content && mediaUrl">
-        <div class="text-content half-height" v-html="content" ref="contentRef" :style="computedStyle"></div>
+        <div class="text-content half-height" v-html="localContent" ref="contentRef" :style="computedStyle"></div>
         <div class="media-container half-height">
           <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
         </div>
       </template>
       <!-- Only content -->
-      <div v-else-if="content" class="text-content full-height" v-html="content" ref="contentRef" :style="computedStyle"></div>
+      <div v-else-if="content" class="text-content full-height" v-html="localContent" ref="contentRef" :style="computedStyle"></div>
       <!-- Only mediaUrl -->
       <div v-else-if="mediaUrl" class="media-container full-height">
         <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
@@ -77,12 +77,15 @@ const emit = defineEmits(['update'])
 const contentRef = ref<HTMLElement | null>(null)
 const containerSize = ref({ width: 0, height: 0 })
 
+// Local content state for editing
+const localContent = ref(props.content)
+
 const { detectMediaType } = useMediaUtils()
 const { getTextStyle } = useDynamicFontSize()
 
+// Use localContent for font size and embed preview while editing
 const computedStyle = computed(() => {
-  // Always use props.content for font sizing
-  const text = props.content || ''
+  const text = props.isEditing ? localContent.value || '' : props.content || ''
   const fontSize = getTextStyle(text, {
     width: containerSize.value.width,
     height: containerSize.value.height
@@ -90,9 +93,7 @@ const computedStyle = computed(() => {
   return { fontSize }
 })
 
-// --- Embedded Media Parsing ---
 function extractEmbeddableMedia(content: string) {
-  // Correct regex for URLs
   const urls = (content.match(/https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+/g) || [])
   const embeds: { url: string, type: 'youtube' | 'image', embedUrl: string }[] = []
   for (const url of urls) {
@@ -106,14 +107,21 @@ function extractEmbeddableMedia(content: string) {
   return embeds
 }
 
-const embeddedMedia = computed(() => extractEmbeddableMedia(props.content))
+// Use localContent for embeddedMedia while editing
+const embeddedMedia = computed(() => extractEmbeddableMedia(props.isEditing ? localContent.value : props.content))
+
+function handleInputLocal(event: Event) {
+  if (!contentRef.value) return
+  localContent.value = (event.target as HTMLElement).innerText
+  // font size and embeddedMedia will update reactively
+}
 
 function handleInput() {
   if (!contentRef.value) return
-  const newText = contentRef.value.innerText
+  // On blur, emit the localContent to parent
   emit('update', {
     [props.side]: {
-      content: newText,
+      content: localContent.value,
       mediaUrl: props.mediaUrl
     }
   })
@@ -124,15 +132,15 @@ function handleMediaRemove(event: MouseEvent) {
   event.stopPropagation()
   emit('update', {
     [props.side]: {
-      content: props.content,
+      content: localContent.value,
       mediaUrl: null
     }
   })
 }
 
 function handleEmbedRemove(url: string) {
-  // Remove the URL from the content and emit
-  const newContent = (props.content || '').replace(url, '').replace(/\s{2,}/g, ' ').trim()
+  // Remove the URL from the local content and emit
+  const newContent = (localContent.value || '').replace(url, '').replace(/\s{2,}/g, ' ').trim()
   emit('update', {
     [props.side]: {
       content: newContent,
@@ -205,6 +213,10 @@ watch(() => props.mediaUrl, () => {
 })
 
 watch(() => props.content, (newContent) => {
+  if (!props.isEditing || document.activeElement !== contentRef.value) {
+    localContent.value = newContent
+  }
+  console.log('Watcher fired', { focused: document.activeElement === contentRef.value, newContent, current: contentRef.value?.innerText });
   if (
     props.isEditing &&
     contentRef.value &&
@@ -226,6 +238,11 @@ watch(
     }
   }
 )
+
+// Watch for localContent changes to update container size (for font size)
+watch(localContent, () => {
+  measureAndSetContainerSize()
+})
 
 onUnmounted(() => {
   window.removeEventListener('resize', measureAndSetContainerSize)

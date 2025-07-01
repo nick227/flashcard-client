@@ -19,7 +19,7 @@ interface TextStyle {
 // Constants
 // =========================
 const minChars = 20;
-const maxChars = 180;
+const maxChars = 250;
 const minFontSize = 1;
 const maxFontSize = 4;
 const baseArea = 640 * 400;

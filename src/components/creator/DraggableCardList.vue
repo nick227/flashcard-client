@@ -14,6 +14,7 @@
           :card="card"
           :is-editing="true"
           v-bind="cardProps"
+          :key="card.id"
           @update="onCardUpdate"
           @delete="onCardDelete"
           @request-delete="onRequestDelete"
