@@ -406,9 +406,15 @@ function onDeleteCard(index: number) {
 function onEditCard(updatedCard: Card) {
   const index = cards.value.findIndex(c => c.id === updatedCard.id)
   if (index !== -1) {
-    cards.value[index] = updatedCard
+    let merged = { ...cards.value[index] }
+    if (updatedCard.front) {
+      merged.front = { ...merged.front, ...updatedCard.front }
+    }
+    if (updatedCard.back) {
+      merged.back = { ...merged.back, ...updatedCard.back }
+    }
+    cards.value.splice(index, 1, merged)
     cardsTouched.value = true
-    // Force save progress after card update
     saveProgress({
       title: title.value,
       description: description.value,

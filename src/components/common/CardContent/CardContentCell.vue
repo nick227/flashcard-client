@@ -1,27 +1,30 @@
 <template>
-  <div class="card-content-cell">
+  <div :class="['card-content-cell', { content: !!content, media: mediaUrl }]">
+    <!-------------------- Editing ------------------>
     <template v-if="isEditing">
-      <!-- Show both if both are set -->
-      <template v-if="content && mediaUrl">
-        <div class="text-content half-height" :style="computedStyle" contenteditable="true" ref="contentRef" :data-placeholder="side === 'front' ? 'Front side' : 'Back side'" @input="handleInput" @blur="handleBlur" @focus="handleFocus" @paste="handlePaste" @click="handleClick" @keydown="handleKeyDown"></div>
+      <!-- If there is an embed, show only the embed(s) and hide the contenteditable -->
+      <template v-if="embeddedMedia.length > 0">
+        <div class="media-container full-height">
+          <template v-for="embed in embeddedMedia" :key="embed.url">
+            <MediaEmbed :url="embed.type === 'youtube' ? embed.embedUrl : embed.url" :type="embed.type" @remove="handleEmbedRemove(embed.url)" />
+          </template>
+        </div>
+      </template>
+      <!-- Show both if both are set (no embed, but both content and mediaUrl) -->
+      <template v-else-if="content && mediaUrl">
+        <div class="text-content half-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInput" @blur="handleInput" @keydown="handleKeydown">{{ content }}</div>
         <div class="media-container half-height">
           <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
           <button class="media-close" @click="handleMediaRemove" aria-label="Remove media">
             <i class="fas fa-times"></i>
           </button>
         </div>
-        <template v-for="embed in embeddedMedia" :key="embed.url">
-          <MediaEmbed :url="embed.type === 'youtube' ? embed.embedUrl : embed.url" :type="embed.type" @remove="handleEmbedRemove(embed.url)" />
-        </template>
       </template>
       <!-- Only content -->
       <template v-else-if="content">
-        <div class="text-content full-height" :style="computedStyle" contenteditable="true" ref="contentRef" :data-placeholder="side === 'front' ? 'Front side' : 'Back side'" @input="handleInput" @blur="handleBlur" @focus="handleFocus" @paste="handlePaste" @click="handleClick" @keydown="handleKeyDown"></div>
-        <template v-for="embed in embeddedMedia" :key="embed.url">
-          <MediaEmbed :url="embed.type === 'youtube' ? embed.embedUrl : embed.url" :type="embed.type" @remove="handleEmbedRemove(embed.url)" />
-        </template>
+        <div class="text-content full-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInput" @blur="handleInput" @keydown="handleKeydown">{{ content }}</div>
       </template>
-      <!-- Only mediaUrl -->
+      <!-- Only mediaUrl (no content): show only image, no text area -->
       <div v-else-if="mediaUrl" class="media-container full-height">
         <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
         <button class="media-close" @click="handleMediaRemove" aria-label="Remove media">
@@ -29,18 +32,19 @@
         </button>
       </div>
       <!-- Neither: just show contenteditable -->
-      <div v-else class="text-content full-height" :style="computedStyle" contenteditable="true" ref="contentRef" :data-placeholder="side === 'front' ? 'Front side' : 'Back side'" @input="handleInput" @blur="handleBlur" @focus="handleFocus" @paste="handlePaste" @click="handleClick" @keydown="handleKeyDown"></div>
+      <div v-else class="text-content full-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInput" @blur="handleInput" @keydown="handleKeydown"></div>
     </template>
+    <!-------------------- Viewing ----------------->
     <template v-else>
       <!-- Show both if both are set -->
       <template v-if="content && mediaUrl">
-        <div class="text-content half-height" :style="computedStyle" v-html="viewModeContent" ref="contentRef"></div>
+        <div class="text-content half-height" v-html="content" ref="contentRef" :style="computedStyle"></div>
         <div class="media-container half-height">
           <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
         </div>
       </template>
       <!-- Only content -->
-      <div v-else-if="content" class="text-content full-height" :style="computedStyle" v-html="viewModeContent" ref="contentRef"></div>
+      <div v-else-if="content" class="text-content full-height" v-html="content" ref="contentRef" :style="computedStyle"></div>
       <!-- Only mediaUrl -->
       <div v-else-if="mediaUrl" class="media-container full-height">
         <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
@@ -62,6 +66,7 @@ const props = withDefaults(defineProps<{
   side: 'front' | 'back'
   showMediaControls?: boolean
   isFlipped?: boolean
+  layout?: string
 }>(), {
   showMediaControls: false,
   isFlipped: false
@@ -72,11 +77,12 @@ const emit = defineEmits(['update'])
 const contentRef = ref<HTMLElement | null>(null)
 const containerSize = ref({ width: 0, height: 0 })
 
-const { detectAndRenderMedia, detectMediaType } = useMediaUtils()
+const { detectMediaType } = useMediaUtils()
 const { getTextStyle } = useDynamicFontSize()
 
 const computedStyle = computed(() => {
-  const text = props.isEditing ? (contentRef.value ? contentRef.value.innerText : props.content || '') : props.content || ''
+  // Always use props.content for font sizing
+  const text = props.content || ''
   const fontSize = getTextStyle(text, {
     width: containerSize.value.width,
     height: containerSize.value.height
@@ -86,7 +92,8 @@ const computedStyle = computed(() => {
 
 // --- Embedded Media Parsing ---
 function extractEmbeddableMedia(content: string) {
-  const urls = (content.match(/https?:\/\/[^\s<>"]+/g) || [])
+  // Correct regex for URLs
+  const urls = (content.match(/https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+/g) || [])
   const embeds: { url: string, type: 'youtube' | 'image', embedUrl: string }[] = []
   for (const url of urls) {
     const media = detectMediaType(url)
@@ -101,25 +108,57 @@ function extractEmbeddableMedia(content: string) {
 
 const embeddedMedia = computed(() => extractEmbeddableMedia(props.content))
 
-const viewModeContent = computed(() => detectAndRenderMedia(props.content, false))
-
 function handleInput() {
   if (!contentRef.value) return
-  const raw = contentRef.value.innerText
-  emit('update', { content: raw })
-  measureAndSetContainerSize()
+  const newText = contentRef.value.innerText
+  emit('update', {
+    [props.side]: {
+      content: newText,
+      mediaUrl: props.mediaUrl
+    }
+  })
 }
 
 function handleMediaRemove(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
-  emit('update', { mediaUrl: null })
+  emit('update', {
+    [props.side]: {
+      content: props.content,
+      mediaUrl: null
+    }
+  })
 }
 
 function handleEmbedRemove(url: string) {
   // Remove the URL from the content and emit
   const newContent = (props.content || '').replace(url, '').replace(/\s{2,}/g, ' ').trim()
-  emit('update', { content: newContent })
+  emit('update', {
+    [props.side]: {
+      content: newContent,
+      mediaUrl: props.mediaUrl
+    }
+  })
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (!contentRef.value) return
+  const isBackspaceOrDelete = event.key === 'Backspace' || event.key === 'Delete'
+  // Only trigger if mediaUrl is set and content is empty
+  if (isBackspaceOrDelete && props.mediaUrl) {
+    // Use setTimeout to wait for the DOM update after the key event
+    setTimeout(() => {
+      const text = contentRef.value?.innerText || ''
+      if (text.trim() === '') {
+        emit('update', {
+          [props.side]: {
+            content: '',
+            mediaUrl: props.mediaUrl
+          }
+        })
+      }
+    }, 0)
+  }
 }
 
 function measureAndSetContainerSize() {
@@ -134,7 +173,6 @@ function measureAndSetContainerSize() {
 }
 
 onMounted(() => {
-  // Only set innerText if not already focused and content is out of sync
   if (
     props.isEditing &&
     contentRef.value &&
@@ -148,7 +186,6 @@ onMounted(() => {
 })
 
 watch(() => props.mediaUrl, () => {
-  // Only set innerText if not already focused and content is out of sync
   if (
     props.isEditing &&
     contentRef.value &&
@@ -168,7 +205,6 @@ watch(() => props.mediaUrl, () => {
 })
 
 watch(() => props.content, (newContent) => {
-  // Only set innerText if not already focused and content is out of sync
   if (
     props.isEditing &&
     contentRef.value &&
@@ -193,69 +229,7 @@ watch(
 
 onUnmounted(() => {
   window.removeEventListener('resize', measureAndSetContainerSize)
-  window.removeEventListener('resize', handleResize)
 })
-
-function handleResize() {
-  if (!props.isEditing) {
-    // If you use resizeKey or similar, update here
-  }
-}
-
-const handleClick = (event: MouseEvent) => {
-  if (props.isEditing && contentRef.value) {
-    event.stopPropagation()
-    if (document.activeElement !== contentRef.value) {
-      contentRef.value.focus()
-      // Move cursor to end
-      const range = document.createRange()
-      range.selectNodeContents(contentRef.value)
-      range.collapse(false)
-      const sel = window.getSelection()
-      sel?.removeAllRanges()
-      sel?.addRange(range)
-    }
-  }
-}
-
-const handleFocus = () => {
-  if (contentRef.value && props.isEditing) {
-    if (document.activeElement !== contentRef.value) {
-      contentRef.value.focus()
-    }
-  }
-}
-
-function handlePaste(event: ClipboardEvent) {
-  event.preventDefault()
-  const text = event.clipboardData?.getData('text/plain') || ''
-  document.execCommand('insertText', false, text)
-  nextTick(() => {
-    handleInput()
-  })
-}
-
-function handleBlur() {
-  // No longer need to emit here, as we emit on every input
-}
-
-function handleKeyDown(event: KeyboardEvent) {
-  if (!contentRef.value) return
-  // Only trigger if both text and media are visible
-  if (props.content && props.mediaUrl) {
-    const isBackspaceOrDelete = event.key === 'Backspace' || event.key === 'Delete'
-    // If the text is empty after the key event, hide the text area
-    if (isBackspaceOrDelete) {
-      // Use setTimeout to wait for the DOM update after the key event
-      setTimeout(() => {
-        const text = contentRef.value?.innerText || ''
-        if (text.trim() === '') {
-          emit('update', { content: '' })
-        }
-      }, 0)
-    }
-  }
-}
 </script>
 
 <style scoped>
@@ -266,6 +240,9 @@ function handleKeyDown(event: KeyboardEvent) {
   flex-direction: column;
   gap: 0;
   position: relative;
+}
+.card-content-cell.media .text-content {
+  font-size: 1em !important;
 }
 
 .text-content {

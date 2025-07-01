@@ -2,28 +2,27 @@
   <div class="py-8x">
     <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Stats Row -->
-      <div class="">
-        <div class="">
-          <span class="">{{ formatNumber(setsCount) }}</span>
-          <span class="">Sets</span>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-white rounded-2xl transition p-6 flex flex-col items-center">
+          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(setsCount) }}</span>
+          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Sets</span>
         </div>
-        <div class="">
-          <span class="">{{ formatNumber(usersCount) }}</span>
-          <span class="">Educators</span>
+        <div class="bg-white rounded-2xl transition p-2 flex flex-col items-center">
+          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(usersCount) }}</span>
+          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Educators</span>
         </div>
-        <div class="">
-          <span class="">{{ formatNumber(categoriesCount) }}</span>
-          <span class="">Categories</span>
+        <div class="bg-white rounded-2xl transition p-2 flex flex-col items-center">
+          <span class="text-3xl font-bold text-gray-900">{{ formatNumber(categoriesCount) }}</span>
+          <span class="text-xs text-gray-500 uppercase tracking-wider mt-1">Categories</span>
         </div>
       </div>
 
       <!-- Categories Section -->
-      <div class="">
-        <h2 class="">Categories</h2>
-        <div class="">
-          <div @click="viewCategory(category.name)" v-for="category in categoryNames" :key="category.id" 
-          class="">
-            <h3 class="">{{ category.name }} ({{ category.setCount }})</h3>
+      <div class="bg-white rounded-2xl p-8 border border-gray-200">
+        <h2 class="text-2xl font-bold text-gray-900 flex justify-center mb-8">Categories</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 category-titles">
+          <div @click="viewCategory(category.name)" v-for="category in categoryNames" :key="category.id"   class="category-title flex flex-col items-center justify-center bg-gray-100 rounded-lg p-0 cursor-pointer">
+            <h3 class="text-lg font-semibold text-gray-800">{{ category.name }} ({{ category.setCount }})</h3>
           </div>
         </div>
       </div>

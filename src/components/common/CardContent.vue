@@ -37,7 +37,7 @@ import type { Card, CardSide } from '@/types/card'
 import CardContentLayout from './CardContent/CardContentLayout.vue'
 import { useCardContentAI } from './CardContent/CardContentAI'
 import { useToaster } from '@/composables/useToaster'
-import { ref, onUnmounted, watch } from 'vue'
+import { ref, onUnmounted, watch, onMounted, onUpdated, onBeforeUnmount } from 'vue'
 import { useImageCompression } from '@/composables/useImageCompression'
 
 const props = defineProps<{
@@ -77,10 +77,14 @@ const blobUrls = ref<Set<string>>(new Set()) // Track all blob URLs for cleanup
 
 const { compressImage } = useImageCompression()
 
-const handleContentUpdate = (updates: { content?: string; mediaUrl?: string | null }) => {
-  Object.assign(cardState.value[props.side], updates)
-  cardState.value = { ...cardState.value } // trigger reactivity
-  emit('update', { ...cardState.value })   // emit a new object
+const handleContentUpdate = (updates: { front?: any; back?: any }) => {
+  (['front', 'back'] as const).forEach((side) => {
+    if (updates[side]) {
+      Object.assign(cardState.value[side], updates[side])
+    }
+  })
+  cardState.value = { ...cardState.value }
+  emit('update', { ...cardState.value })
 }
 
 const handleAddImage = () => {
@@ -226,6 +230,17 @@ onUnmounted(() => {
     URL.revokeObjectURL(url)
   })
   blobUrls.value.clear()
+})
+
+const instanceId = Math.random()
+onMounted(() => {
+  console.log('CardContent mounted', instanceId, props.card.id, props.side)
+})
+onUpdated(() => {
+  console.log('CardContent updated', instanceId, props.card.id, props.side)
+})
+onBeforeUnmount(() => {
+  console.log('CardContent beforeUnmount', instanceId, props.card.id, props.side)
 })
 </script>
 

@@ -94,7 +94,6 @@ const onHintUpdate = () => {
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  outline: 1px solid var(--color-lightgray);
   padding-top: 0.5rem;
 }
 
