@@ -1,38 +1,29 @@
 <template>
   <div class="home-page">
 
-    <!-- Home Hero -->
-    <div class="container-main  py-8">
-      <HomeHero />
-    </div>
+
+    <FlashCardViewer v-for="set in sets" :key="set.id" :set-id="set.id" :hideRelatedSets="true" />
 
     <!-- Site Landing Page -->
     <div v-if="!isMobile" class="container-main -main py-8">
       <SiteLandingPage />
     </div>
 
-    <!-- All Sets Grid -->
+    <!-- All Sets Grid
     <section class="section">
       <h2 class="text-2xl font-bold text-gray-900 flex justify-center mb-8">Newest</h2>
       <div v-if="loading" class="text-gray-500 text-center">Loading sets...</div>
       <div v-else class="cards-grid">
-        <SetPreviewCard
-          v-for="set in sets"
-          :key="set.id"
-          :set="set"
-          @view="viewSet"
-        />
+        <SetPreviewCard v-for="set in sets" :key="set.id" :set="set" @view="viewSet" />
       </div>
     </section>
-
+    -->
     <div class="container-main py-0">
-      <!-- Call to Action Section -->
-      <section class="section text-center">
-        <h2 class="text-2xl font-bold mb-4">Ready to start your learning journey?</h2>
-        <p class="mb-6 text-lg opacity-80 max-w-2xl mx-auto">Sign up for free and get instant access to hundreds of
-          flash card sets, or create your own to help others learn.</p>
-        <a href="/creator" class="button button-accent text-lg px-10 py-4">Get Started</a>
-      </section>
+      <!-- Home Hero -->
+      <div class="container-main  py-8">
+        <HomeHero />
+      </div>
+
     </div>
   </div>
 </template>
@@ -40,10 +31,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import HomeHero from '@/components/sections/HomeHero.vue'
-import SetPreviewCard from '@/components/cards/SetPreviewCard.vue'
 import SiteLandingPage from '@/components/home/SiteLandingPage.vue'
 import type { Set } from '@/types/set'
 import { api } from '@/api'
+import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
 
 const sets = ref<Set[]>([])
 const loading = ref(true)
@@ -59,15 +50,20 @@ const fetchSets = async () => {
     const res = await api.get('/sets', {
       params: {
         page: 1,
-        limit: 12,
-        sortOrder: 'newest'
+        limit: 3,
+        sortOrder: 'featured',
+        fields: 'id'
       }
     })
 
     // Handle paginated response format
     const { items } = res.data
     sets.value = items || []
-    
+
+    console.log('--------------------------------')
+    console.log('res: ', res.data)
+    console.log('sets: ', sets.value)
+
   } catch (err: any) {
     console.error('Error fetching sets:', err)
     error.value = err.message || 'Failed to load sets'
@@ -75,11 +71,6 @@ const fetchSets = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const viewSet = (setId: number) => {
-  //router.push({ path: '/study', query: { set: setId } })
-  window.location.href = '/study/' + setId
 }
 
 onMounted(fetchSets)

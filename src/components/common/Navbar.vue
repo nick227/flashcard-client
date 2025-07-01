@@ -12,9 +12,9 @@
         </router-link>
       </div>
       <div class="navbar-actions">
-        <router-link to="/" class="navbar-link" active-class="active">Home</router-link>
-        <router-link to="/browse" class="navbar-link" active-class="active">Browse</router-link>
-        <router-link to="/creator" class="navbar-link" active-class="active">Create</router-link>
+        <a href="/" class="navbar-link" active-class="active">Home</a>
+        <a href="/browse" class="navbar-link" active-class="active">Browse</a>
+        <a href="/creator" class="navbar-link" active-class="active">Create</a>
         <div class="navbar-divider"></div>
         <AuthWidget />
       </div>

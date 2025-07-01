@@ -1,12 +1,6 @@
 <template>
   <div class="py-8x">
     <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
-      <!-- Featured Set -->
-      <div>
-        <h2 class="text-2xl font-bold text-gray-900 flex justify-center mb-8">Featured</h2>
-        <FeaturedSet v-if="featuredSet" :set="featuredSet" @view="viewSet" />
-      </div>
-
       <!-- Random Categories with Sets -->
       <div class="bg-white rounded-2xl p-8 border border-gray-200">
         <h2 class="text-2xl font-bold text-gray-900 flex justify-center mb-8">Categories</h2>
@@ -36,29 +30,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { api } from '@/api'
-import FeaturedSet from '@/components/home/FeaturedSet.vue'
-
-// Featured set
-const featuredSet = ref(null)
 
 // Random categories with sets
 const randomCategories = ref<any[]>([])
 
-const viewSet = (setId: number) => {
-  window.location.href = `/sets/${setId}`
-}
-
 onMounted(async () => {
-
-  // Featured set (fetch a random set)
-  try {
-    const setsRes = await api.get('/sets', { params: { limit: 1, sort: 'random' } })
-    console.log(setsRes.data)
-    featuredSet.value = setsRes.data && setsRes.data.items && setsRes.data.items.length ? setsRes.data.items[0] : null
-  } catch (error) {
-    featuredSet.value = null
-  }
 
   // Random categories with sets
   try {
@@ -69,24 +45,3 @@ onMounted(async () => {
   }
 })
 </script>
-
-<style scoped>
-.bg-white {
-  background: #fff;
-}
-.divider {
-  height: 1px;
-  background: #f3f4f6;
-  margin: 2rem 0;
-  width: 100%;
-}
-.testimonials-scroll {
-  display: flex;
-  overflow-x: auto;
-  gap: 2rem;
-  scroll-snap-type: x mandatory;
-}
-.testimonials-scroll > div {
-  scroll-snap-align: center;
-}
-</style>
