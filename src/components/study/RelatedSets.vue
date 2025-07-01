@@ -1,5 +1,5 @@
 <template>
-  <div class="related-sets w-full">
+  <div v-if="relatedSets.length > 0" class="related-sets w-full">
     <h2 class="text-xl font-semibold mb-4 text-center w-full">Related Sets</h2>
     <div v-if="loading" class="text-gray-500 text-sm">Loading related sets...</div>
     <div v-else-if="error" class="text-red-500 text-sm">{{ error }}</div>
