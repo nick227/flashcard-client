@@ -1,5 +1,5 @@
 <template>
-  <div class="container-main  flex flex-col items-center justify-start w-full px-4 py-2 mb-8 sm:mb-2">
+  <div class="container-main  flex flex-col items-center justify-start w-full px-4 py-2 mb-8 sm:mb-2 relative">
     <div style="width: 100%;">
     <div v-if="loading" class="text-gray-500 text-lg animated-bar"></div>
     <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
