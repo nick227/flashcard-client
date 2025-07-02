@@ -22,7 +22,12 @@
           ${{ typeof set.price === 'number' ? set.price : set.price.amount || 0 }}
         </span>
       </div>
+      <!-- Timer Bar-->
+      <div class="timer-bar">
+        <div v-if="timerProgress" class="timer-bar-fill" :style="{ width: `${timerProgress}%` }"></div>
+      </div>
     </div>
+
 
     <!-- Content Container -->
     <div class="flex flex-grow flex-col p-4">
@@ -66,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { cachedApiEndpoints } from '@/services/CachedApiService'
 import { useSetCards } from '@/composables/useSetCards'
@@ -118,6 +123,8 @@ const emit = defineEmits<{
   (e: 'view', setId: number): void
 }>()
 
+const timerProgress = ref(0)
+
 // Error handling for images
 const thumbnailError = ref(false)
 const educatorImageError = ref(false)
@@ -134,7 +141,7 @@ const setCardRef = (el: Element | null) => {
   cardRoot.value = (el instanceof HTMLElement) ? el : null
 }
 
-const { previewCard, currentCardSide, startPreview, stopPreview } = useCardPreview(setCards, fetchSetCards, props.set?.id ?? 0)
+const { previewCard, currentCardSide, startPreview, stopPreview } = useCardPreview(setCards, fetchSetCards, props.set?.id ?? 0, 3600, timerProgress)
 
 const isMobile = useIsMobile()
 console.log('[SetPreviewCard] isMobile', isMobile.value)
@@ -239,8 +246,6 @@ const cards = computed(() => {
   return 0
 })
 
-onUnmounted(() => {
-})
 </script>
 
 <style scoped>
@@ -263,5 +268,19 @@ onUnmounted(() => {
   position: relative;
   height: 460px;
   cursor: pointer;
+}
+
+.timer-bar {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.timer-bar-fill {
+  height: 100%;
+  background-color: blue;
 }
 </style>

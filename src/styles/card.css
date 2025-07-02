@@ -128,7 +128,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    max-width: 800px;
+    min-height: 420px;
+    max-width: var();
+    margin: 0 auto;
+    overflow: hidden;
     margin: 0 auto;
 }
 
@@ -143,7 +146,7 @@
 
 .fullscreen .card,
 .fullscreen .card-preview {
-    width: 90vw;
+    width: 99vw;
     max-width: 100%;
     margin: auto;
 }
@@ -239,6 +242,15 @@
     .cards-grid {
         grid-template-columns: 1fr;
     }
+}
+
+
+/* Card list */
+
+.card-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
 }
 
 

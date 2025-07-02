@@ -9,6 +9,7 @@
       :is-mobile="isMobile"
       :is-editing="isEditing"
       :is-flipped="isFlipped"
+      :card-id="cardState.id"
       @update="handleContentUpdate"
     />
     <div v-if="isEditing" class="card-controls">
@@ -37,7 +38,7 @@ import type { Card, CardSide } from '@/types/card'
 import CardContentLayout from './CardContent/CardContentLayout.vue'
 import { useCardContentAI } from './CardContent/CardContentAI'
 import { useToaster } from '@/composables/useToaster'
-import { ref, onUnmounted, watch, onMounted, onUpdated, onBeforeUnmount } from 'vue'
+import { ref, onUnmounted, watch } from 'vue'
 import { useImageCompression } from '@/composables/useImageCompression'
 
 const props = defineProps<{
@@ -230,17 +231,6 @@ onUnmounted(() => {
     URL.revokeObjectURL(url)
   })
   blobUrls.value.clear()
-})
-
-const instanceId = Math.random()
-onMounted(() => {
-  console.log('CardContent mounted', instanceId, props.card.id, props.side)
-})
-onUpdated(() => {
-  console.log('CardContent updated', instanceId, props.card.id, props.side)
-})
-onBeforeUnmount(() => {
-  console.log('CardContent beforeUnmount', instanceId, props.card.id, props.side)
 })
 </script>
 

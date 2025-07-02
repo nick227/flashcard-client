@@ -7,6 +7,7 @@
       :side="side"
       :showMediaControls="isEditing"
       :isFlipped="isFlipped"
+      :cardId="cardId"
       @update="updates => $emit('update', updates)"
     />
   </div>
@@ -24,6 +25,7 @@ withDefaults(defineProps<{
   isMobile?: boolean
   isEditing?: boolean
   isFlipped?: boolean
+  cardId: number | string
 }>(), {
   isEditing: false,
   isFlipped: false

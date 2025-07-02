@@ -12,7 +12,7 @@
       </template>
       <!-- Show both if both are set (no embed, but both content and mediaUrl) -->
       <template v-else-if="content && mediaUrl">
-        <div class="text-content half-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="handleInput" @keydown="handleKeydown">{{ localContent }}</div>
+        <div class="text-content half-height" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="onBlur" @focus="isFocused = true" @keydown="handleKeydown">{{ localContent }}</div>
         <div class="media-container half-height">
           <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
           <button class="media-close" @click="handleMediaRemove" aria-label="Remove media">
@@ -22,7 +22,7 @@
       </template>
       <!-- Only content -->
       <template v-else-if="content">
-        <div class="text-content full-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="handleInput" @keydown="handleKeydown">{{ localContent }}</div>
+        <div class="text-content full-height" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="onBlur" @focus="isFocused = true">{{ localContent }}</div>
       </template>
       <!-- Only mediaUrl (no content): show only image, no text area -->
       <div v-else-if="mediaUrl" class="media-container full-height">
@@ -32,12 +32,20 @@
         </button>
       </div>
       <!-- Neither: just show contenteditable -->
-      <div v-else class="text-content full-height" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="handleInput" @keydown="handleKeydown"></div>
+      <div v-else class="text-content full-height" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @focus="isFocused = true"></div>
     </template>
     <!-------------------- Viewing ----------------->
     <template v-else>
-      <!-- Show both if both are set -->
-      <template v-if="content && mediaUrl">
+      <!-- If there is an embed, show only the embed(s) and hide the text -->
+      <template v-if="embeddedMedia.length > 0">
+        <div class="media-container full-height">
+          <template v-for="embed in embeddedMedia" :key="embed.url">
+            <MediaEmbed :url="embed.type === 'youtube' ? embed.embedUrl : embed.url" :type="embed.type" />
+          </template>
+        </div>
+      </template>
+      <!-- Show both if both are set (no embed, but both content and mediaUrl) -->
+      <template v-else-if="content && mediaUrl">
         <div class="text-content half-height" v-html="localContent" ref="contentRef" :style="computedStyle"></div>
         <div class="media-container half-height">
           <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
@@ -67,6 +75,7 @@ const props = withDefaults(defineProps<{
   showMediaControls?: boolean
   isFlipped?: boolean
   layout?: string
+  cardId: number | string
 }>(), {
   showMediaControls: false,
   isFlipped: false
@@ -78,7 +87,7 @@ const contentRef = ref<HTMLElement | null>(null)
 const containerSize = ref({ width: 0, height: 0 })
 
 // Local content state for editing
-const localContent = ref(props.content)
+const localContent = ref('')
 
 const { detectMediaType } = useMediaUtils()
 const { getTextStyle } = useDynamicFontSize()
@@ -110,19 +119,43 @@ function extractEmbeddableMedia(content: string) {
 // Use localContent for embeddedMedia while editing
 const embeddedMedia = computed(() => extractEmbeddableMedia(props.isEditing ? localContent.value : props.content))
 
-function handleInputLocal(event: Event) {
-  if (!contentRef.value) return
-  localContent.value = (event.target as HTMLElement).innerText
-  // font size and embeddedMedia will update reactively
+const isFocused = ref(false)
+
+// Centralized emit logic for all update events (autosave)
+const emitUpdate = (content: string, mediaUrl: string | null = props.mediaUrl, reason = '') => {
+  const payload = {
+    id: props.cardId,
+    [props.side]: { content, mediaUrl }
+  }
+  if (reason) {
+    console.log(`[CardContentCell] emit (${reason})`, payload)
+  } else {
+    console.log('[CardContentCell] emit', payload)
+  }
+  emit('update', payload)
 }
 
-function handleInput() {
-  if (!contentRef.value) return
-  // On blur, emit the localContent to parent
-  emit('update', {
-    [props.side]: {
-      content: localContent.value,
-      mediaUrl: props.mediaUrl
+function handleInputLocal() {
+  // Do not update localContent here to avoid cursor jump
+  // Let the browser manage the DOM while typing
+}
+
+function onBlur() {
+  isFocused.value = false
+  if (contentRef.value) {
+    localContent.value = contentRef.value.innerText
+    emitUpdate(localContent.value, props.mediaUrl, 'onBlur')
+  }
+}
+
+function handlePaste(event: ClipboardEvent) {
+  event.preventDefault()
+  const text = event.clipboardData?.getData('text') || ''
+  document.execCommand('insertText', false, text)
+  nextTick(() => {
+    if (contentRef.value) {
+      localContent.value = contentRef.value.innerText
+      // Do not emit here, will be caught by blur or beforeunload
     }
   })
 }
@@ -130,40 +163,42 @@ function handleInput() {
 function handleMediaRemove(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
-  emit('update', {
-    [props.side]: {
-      content: localContent.value,
-      mediaUrl: null
-    }
-  })
+  if (contentRef.value) {
+    localContent.value = contentRef.value.innerText
+    emitUpdate(localContent.value, null, 'handleMediaRemove')
+  }
 }
 
 function handleEmbedRemove(url: string) {
-  // Remove the URL from the local content and emit
-  const newContent = (localContent.value || '').replace(url, '').replace(/\s{2,}/g, ' ').trim()
-  emit('update', {
-    [props.side]: {
-      content: newContent,
-      mediaUrl: props.mediaUrl
-    }
+  console.log('handleEmbedRemove', url)
+  // Remove all <a> tags with this URL as href and the raw URL from localContent.value
+  let newContent = localContent.value
+    // Remove anchor tags with this URL
+    .replace(
+      new RegExp(`<a[^>]+href=["']${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*>.*?<\\/a>`, 'gi'),
+      ''
+    )
+    // Remove raw URL text
+    .split(url).join('')
+    // Remove extra whitespace
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+
+  localContent.value = newContent
+  emitUpdate(newContent, props.mediaUrl, 'handleEmbedRemove')
+  nextTick(() => {
+    measureAndSetContainerSize()
   })
 }
 
 function handleKeydown(event: KeyboardEvent) {
   if (!contentRef.value) return
   const isBackspaceOrDelete = event.key === 'Backspace' || event.key === 'Delete'
-  // Only trigger if mediaUrl is set and content is empty
   if (isBackspaceOrDelete && props.mediaUrl) {
-    // Use setTimeout to wait for the DOM update after the key event
     setTimeout(() => {
       const text = contentRef.value?.innerText || ''
       if (text.trim() === '') {
-        emit('update', {
-          [props.side]: {
-            content: '',
-            mediaUrl: props.mediaUrl
-          }
-        })
+        emitUpdate('', props.mediaUrl, 'handleKeydown')
       }
     }, 0)
   }
@@ -181,50 +216,42 @@ function measureAndSetContainerSize() {
 }
 
 onMounted(() => {
-  if (
-    props.isEditing &&
-    contentRef.value &&
-    document.activeElement !== contentRef.value &&
-    contentRef.value.innerText !== props.content
-  ) {
-    contentRef.value.innerText = props.content || ''
-  }
+  localContent.value = props.content
   measureAndSetContainerSize()
   window.addEventListener('resize', measureAndSetContainerSize)
+  window.addEventListener('beforeunload', beforeUnloadHandler)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', measureAndSetContainerSize)
+  window.removeEventListener('beforeunload', beforeUnloadHandler)
+  // Optionally emit one last time on unmount for SPA navigation
+  if (contentRef.value) {
+    localContent.value = contentRef.value.innerText
+    emitUpdate(localContent.value, props.mediaUrl, 'onUnmounted')
+  }
+})
+
+function beforeUnloadHandler() {
+  if (contentRef.value) {
+    localContent.value = contentRef.value.innerText
+    emitUpdate(localContent.value, props.mediaUrl, 'beforeunload')
+  }
+}
+
+// Minimal watcher: only update localContent from props when not focused
+watch(() => props.content, (newContent) => {
+  if (!isFocused.value && localContent.value !== newContent) {
+    localContent.value = newContent
+  }
+  measureAndSetContainerSize()
+})
+
+watch(localContent, () => {
+  measureAndSetContainerSize()
 })
 
 watch(() => props.mediaUrl, () => {
-  if (
-    props.isEditing &&
-    contentRef.value &&
-    document.activeElement !== contentRef.value &&
-    contentRef.value.innerText !== props.content
-  ) {
-    nextTick(() => {
-      if (
-        contentRef.value &&
-        contentRef.value.innerText !== props.content
-      ) {
-        contentRef.value.innerText = props.content || ''
-      }
-    })
-  }
-  measureAndSetContainerSize()
-})
-
-watch(() => props.content, (newContent) => {
-  if (!props.isEditing || document.activeElement !== contentRef.value) {
-    localContent.value = newContent
-  }
-  console.log('Watcher fired', { focused: document.activeElement === contentRef.value, newContent, current: contentRef.value?.innerText });
-  if (
-    props.isEditing &&
-    contentRef.value &&
-    document.activeElement !== contentRef.value &&
-    contentRef.value.innerText !== newContent
-  ) {
-    contentRef.value.innerText = newContent || ''
-  }
   measureAndSetContainerSize()
 })
 
@@ -238,15 +265,6 @@ watch(
     }
   }
 )
-
-// Watch for localContent changes to update container size (for font size)
-watch(localContent, () => {
-  measureAndSetContainerSize()
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', measureAndSetContainerSize)
-})
 </script>
 
 <style scoped>

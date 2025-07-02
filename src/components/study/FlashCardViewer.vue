@@ -1,7 +1,6 @@
 <template>
-  <div class="container-main  flex flex-col items-center justify-start w-full px-4 py-2 mb-8 sm:mb-2 relative">
+  <div v-if="!loading" class="container-main  flex flex-col items-center justify-start w-full px-4 py-2 mb-8 sm:mb-2 relative">
     <div style="width: 100%;">
-    <div v-if="loading" class="text-gray-500 text-lg animated-bar"></div>
     <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
     <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>
     <div v-else-if="error" class="text-red-500 text-lg">{{ error }}</div>
@@ -168,7 +167,7 @@
     </div>
   </div>
     <!-- Related Sets-->
-     <div v-if="set && !hideRelatedSets" class="w-full my-16">
+     <div v-if="set && !props.hideRelatedSets" class="w-full my-16">
       <RelatedSets :set-id="set.id" />
      </div>
 
@@ -213,7 +212,6 @@ const unauthorized = ref(false)
 const accessDetails = ref<any>(null)
 const error = ref('')
 const isMobile = ref(false)
-const hideRelatedSets = ref(false)
 
 // Use composables
 const {

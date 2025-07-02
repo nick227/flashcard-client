@@ -191,10 +191,4 @@ const onRequestDelete = () => {
   margin-top: 0.5rem;
 }
 
-.card-preview {
-  min-height: 420px;
-  max-width: 640px;
-  margin: 0 auto;
-  overflow: hidden;
-}
 </style>

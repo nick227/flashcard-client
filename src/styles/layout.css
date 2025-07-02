@@ -4,6 +4,7 @@
     width: 100%;
     max-width: var(--container-max-width);
     box-sizing: border-box;
+    position: relative;
 }
 
 .flex-center {

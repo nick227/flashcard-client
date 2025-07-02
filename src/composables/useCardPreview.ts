@@ -21,11 +21,14 @@ export function useCardPreview(
   cards: Ref<any[]>,
   fetchCards: (setId: number) => Promise<void>,
   setId: number,
-  intervalMs = 3600
+  intervalMs = 3600,
+  timerProgress: Ref<number>
 ) {
   const previewCard = ref<any | null>(null)
   const currentCardSide = ref<'front' | 'back' | null>(null)
   let hoverInterval: number | null = null
+  let timerInterval: number | null = null
+  let timerStart = 0
 
   async function ensureCardsLoaded() {
     if (cards.value.length === 0) {
@@ -37,7 +40,30 @@ export function useCardPreview(
   function initializePreviewState(cardIndex = 0, side: 'front' | 'back' = 'front') {
     previewCard.value = transformCard(cards.value[cardIndex])
     currentCardSide.value = side
+    startTimerProgress(intervalMs)
     return { cardIndex, side }
+  }
+
+  function startTimerProgress(duration: number) {
+    timerProgress.value = 0
+    timerStart = Date.now()
+    if (timerInterval) clearInterval(timerInterval)
+    timerInterval = window.setInterval(() => {
+      const elapsed = Date.now() - timerStart
+      timerProgress.value = Math.min((elapsed / duration) * 100, 100)
+      if (timerProgress.value >= 100) {
+        clearInterval(timerInterval!)
+        timerInterval = null
+      }
+    }, 16) // ~60fps
+  }
+
+  function endTimerProgress() {
+    timerProgress.value = 0
+    if (timerInterval) {
+      clearInterval(timerInterval)
+      timerInterval = null
+    }
   }
 
   function startPreviewInterval(getIndexAndSide: () => { cardIndex: number, side: 'front' | 'back' }) {
@@ -50,6 +76,7 @@ export function useCardPreview(
       } else {
         cardIndex = (cardIndex + 1) % cards.value.length
         side = 'front'
+        startTimerProgress(intervalMs) 
       }
       previewCard.value = transformCard(cards.value[cardIndex])
       currentCardSide.value = side
@@ -70,6 +97,7 @@ export function useCardPreview(
       clearInterval(hoverInterval)
       hoverInterval = null
     }
+    endTimerProgress()
     previewCard.value = null
     currentCardSide.value = null
   }

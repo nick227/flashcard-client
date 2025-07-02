@@ -404,6 +404,7 @@ function onDeleteCard(index: number) {
 }
 
 function onEditCard(updatedCard: Card) {
+  console.log('Received update:', updatedCard);
   const index = cards.value.findIndex(c => c.id === updatedCard.id)
   if (index !== -1) {
     let merged = { ...cards.value[index] }

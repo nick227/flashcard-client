@@ -15,17 +15,6 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
-
-/* Animations */
-
-.animated-bar {
-    width: 100%;
-    height: 3px;
-    background: var(--color-primary);
-    animation: animated-bar 1s linear infinite;
-    z-index: 1000;
-}
-
 @keyframes animated-bar {
     0% {
         transform: translateX(-100%);
