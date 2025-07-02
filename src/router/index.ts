@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { nextTick } from 'vue'
 
 // Lazy load components
+
 const Home = () => import('../views/Home.vue')
 const Study = () => import('../views/Study.vue')
 const BrowseSets = () => import('../views/BrowseSets.vue')
@@ -46,10 +47,10 @@ const routes: RouteRecordRaw[] = [
     }
   },
   { 
-    path: '/home',
-    component: Home,
+    path: '/browse',
+    component: BrowseSets,
     meta: { 
-      title: 'Home'
+      title: 'Browse Sets'
     },
     children: [
       { 
