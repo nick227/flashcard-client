@@ -1,26 +1,14 @@
 <template>
   <div class="container-main  py-0">
-    <BrowseHero />
+    <HomeHero />
 
     <!-- Filter & Sort Controls -->
     <section class="my-8 gap-4 container-main">
+
+        <!-- Categories -->
+         <CategoryCloud />
       
-      <div class="flex flex-wrap gap-4 w-full">
-        <!-- Category Dropdown -->
-          <select 
-            v-model="selectedCategory"
-            @change="onCategoryChange"
-            class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white max-w-[200px]"
-          >
-            <option value="">All Categories</option>
-            <option 
-              v-for="cat in categories" 
-              :key="cat.id" 
-              :value="cat.name"
-            >
-              {{ cat.name }} ({{ cat.setCount }})
-            </option>
-          </select>
+      <div class="flex flex-wrap gap-4 w-full mt-8">
 
         <!-- Set Type Dropdown -->
           <select 
@@ -98,13 +86,14 @@
 </template>
 
 <script setup lang="ts">
-import BrowseHero from '../components/sections/BrowseHero.vue'
+import HomeHero from '../components/sections/HomeHero.vue'
 import SetPreviewCard from '../components/cards/SetPreviewCard.vue'
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSets } from '@/composables/useSets'
 import FunnyLoadingIndicator from '../components/common/FunnyLoadingIndicator.vue'
 import LoadMoreButton from '../components/common/LoadMoreButton.vue'
+import CategoryCloud from '../components/common/CategoryCloud.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -120,37 +109,18 @@ const showLoadMoreButton = computed(() => batchCount.value >= 3)
 const {
   sets,
   loading,
-  selectedCategory,
   sortOrder,
-  categories,
   hasMore,
   error,
   searchQuery,
   isTransitioning,
   loadSets,
-  updateCategory,
   updateSortOrder,
   updateSetType,
   updateSearch,
   initialize,
   currentPage
 } = useSets()
-
-// Watch for route changes to update selected category
-watch(() => route.params.category, (newCategory) => {
-  if (newCategory) {
-    updateCategory(decodeURIComponent(newCategory as string))
-  } else {
-    updateCategory('')
-  }
-  // Reset batch state on category change
-  batchCount.value = 0
-  isBatchWaiting.value = false
-  if (batchTimeout) {
-    clearTimeout(batchTimeout)
-    batchTimeout = null
-  }
-}, { immediate: true })
 
 // Watch for sort order changes
 watch(sortOrder, (newOrder) => {
@@ -163,15 +133,6 @@ watch(sortOrder, (newOrder) => {
     batchTimeout = null
   }
 })
-
-const onCategoryChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const catName = target.value
-  // Update URL without triggering a full route change
-  const newPath = catName ? `/browse/${encodeURIComponent(catName)}` : '/browse'
-  window.history.pushState({}, '', newPath)
-  updateCategory(catName)
-}
 
 const onSetTypeChange = (event: Event) => {
   const target = event.target as HTMLSelectElement

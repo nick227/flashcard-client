@@ -16,9 +16,9 @@ const NotFound = () => import('../views/NotFound.vue')
 const routes: RouteRecordRaw[] = [
   { 
     path: '/', 
-    component: Home,
+    component: BrowseSets,
     meta: { 
-      title: 'Home'
+      title: 'Flash Card Academy'
     }
   },
   { 
@@ -46,10 +46,10 @@ const routes: RouteRecordRaw[] = [
     }
   },
   { 
-    path: '/browse',
-    component: BrowseSets,
+    path: '/home',
+    component: Home,
     meta: { 
-      title: 'Browse Sets'
+      title: 'Home'
     },
     children: [
       { 

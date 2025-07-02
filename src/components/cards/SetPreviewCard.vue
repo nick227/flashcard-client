@@ -1,5 +1,5 @@
 <template>
-  <div :ref="setCardRef as any" v-if="set" class="card flex flex-col overflow-hidden rounded-sm bg-white duration-300">
+  <div :ref="setCardRef as any" v-if="set" class="card flex flex-col overflow-hidden rounded-sm bg-white duration-300 preview-card">
     <!-- Image Container -->
     <div @click="handleView" class="relative cursor-pointer" @mouseenter="startPreview" @mouseleave="stopPreview"
       @touchstart="startPreview" @touchend="stopPreview">
@@ -282,5 +282,10 @@ const cards = computed(() => {
 .timer-bar-fill {
   height: 100%;
   background-color: blue;
+}
+
+.preview-card {
+  cursor: pointer !important;
+  max-width: 590px;
 }
 </style>

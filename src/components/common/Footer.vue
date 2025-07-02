@@ -70,13 +70,11 @@
                     <h3>Categories</h3>
                     <div class="footer-section justify-between">
                     <div class="category-tags">
-                        <router-link v-for="category in categories"
-                           :key="category.id"
-                           :to="`/browse/${encodeURIComponent(category.name)}`"
-                           class="category-tag"
-                           :style="{ backgroundColor: getCategoryColor(category.name) }">
+                        <a v-for="category in categories"
+                           :href="`/browse/${category.name}`"
+                           class="category-tag">
                             {{ category.name }}
-                        </router-link>
+                    </a>
                     </div>
                     
                 <div class="newsletter">
@@ -133,20 +131,6 @@ const latestSets = computed(() => sets.value?.slice(0, 5) || [])
 onMounted(async () => {
   await initialize()
 })
-
-const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-        'Math': '#FF6B6B',
-        'Science': '#4ECDC4',
-        'Language': '#45B7D1',
-        'History': '#96CEB4',
-        'Art': '#FFEEAD',
-        'Music': '#D4A5A5',
-        'Technology': '#9B59B6',
-        'Business': '#3498DB'
-    }
-    return colors[category] || '#E0E0E0'
-}
 
 const formatTimeAgo = (date: string) => {
     const now = new Date()

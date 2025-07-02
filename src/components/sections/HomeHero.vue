@@ -47,7 +47,8 @@ const listHeroTitles = [
   '<span class="accent">Flashcards</span>: The forgotten art.',
   'Who wants more <span class="accent">flash cards</span>???',
   'Intensifying brain power with <span class="accent">flash cards</span>',
-  'Because <span class="accent">flash cards</span> will never leave you.'
+  'Because <span class="accent">flash cards</span> will never leave you.',
+  'Get your flash on.', 'Learn anything, anywhere, anytime.', 'Flash cards rock.', 'Flash card party!', 'Better than videos.'
 ]
 
 const heroTitle = computed(() => {

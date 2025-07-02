@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
 
-    <div class="container-main py-64">
+    <div class="container-main py-4">
       <HomeHero />
     </div>
 

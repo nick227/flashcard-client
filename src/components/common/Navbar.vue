@@ -13,7 +13,6 @@
       </div>
       <div class="navbar-actions">
         <a href="/" class="navbar-link" active-class="active">Home</a>
-        <a href="/browse" class="navbar-link" active-class="active">Browse</a>
         <a href="/creator" class="navbar-link" active-class="active">Create</a>
         <div class="navbar-divider"></div>
         <AuthWidget />
