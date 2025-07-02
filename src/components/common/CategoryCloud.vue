@@ -29,6 +29,8 @@ onMounted(async () => {
     gap: 10px;
     justify-content: center;
     align-items: center;
+    max-width: var(--container-width);
+    margin: 0 auto;
 }
 
 .category-cloud-item {

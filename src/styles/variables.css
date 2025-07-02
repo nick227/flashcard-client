@@ -38,6 +38,7 @@
     --font-size-xl: 3rem;
     --font-weight-bold: 700;
     --font-weight-normal: 400;
+    --container-width: 880px;
     --container-max-width: 2060px;
     --container-padding-x: 2rem;
 }
