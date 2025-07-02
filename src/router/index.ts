@@ -5,7 +5,6 @@ import { nextTick } from 'vue'
 
 // Lazy load components
 
-const Home = () => import('../views/Home.vue')
 const Study = () => import('../views/Study.vue')
 const BrowseSets = () => import('../views/BrowseSets.vue')
 const LoginRegister = () => import('../views/LoginRegister.vue')
