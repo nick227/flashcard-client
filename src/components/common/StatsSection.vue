@@ -67,7 +67,11 @@ onMounted(async () => {
   @apply text-gray-400 text-center py-6;
 }
 .stats-grid {
-  @apply grid grid-cols-3 gap-4 w-full;
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
 }
 .stat-item {
   @apply text-center p-4 bg-white/50 rounded-lg;

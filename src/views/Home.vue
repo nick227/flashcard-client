@@ -1,32 +1,37 @@
 <template>
   <div class="home-page">
 
-    <div v-if="randomSets.length > 0" class="container-main py-0 mb-8">
-      <FlashCardViewer :key="randomSets[0].id" :set-id="randomSets[0].id" :hideRelatedSets="true" />
-    </div>
-
-    <div class="container-main py-0 mb-8">
+    <div class="container-main py-64 mb-8">
       <HomeHero />
     </div>
 
-    <div class="container-main py-0 mb-8 flex flex-col gap-4 items-center justify-center">
+    <div class="container-main py-0 mb-8 flex flex-col gap-4 items-center justify-center pb-64">
       <h2 class="text-2xl font-bold">Interesting Categories</h2>
       <CategoryCloud />
     </div>
 
-    <div v-if="randomSets.length > 0" class="container-main py-0 mb-8">
+    <div v-if="randomSets.length > 0" class="container-main py-0 mb-64">
+      <FlashCardViewer :key="randomSets[0].id" :set-id="randomSets[0].id" :hideRelatedSets="true" />
+    </div>
+
+    <div v-if="randomSets.length > 0" class="container-main py-0 mb-64">
       <FlashCardViewer :key="randomSets[1].id" :set-id="randomSets[1].id" :hideRelatedSets="true" />
     </div>
 
-    <div class="container-main py-0 mb-8">
-      <BrowseHero />
-    </div>
-
-    <div v-if="randomSets.length > 0" class="container-main py-0 mb-8">
+    <div v-if="randomSets.length > 0" class="container-main py-0">
       <FlashCardViewer :key="randomSets[2].id" :set-id="randomSets[2].id" :hideRelatedSets="true" />
     </div>
 
-    <div class="container-main py-0 mb-8 flex justify-center mt-16">
+    <div class="container-main py-0 pt-64">
+      <BrowseHero />
+    </div>
+
+    <div class="container-main flex flex-col gap-4 items-center justify-center">
+      <p>Current Stats:</p>
+      <StatsSection />
+    </div>
+
+    <div class="container-main flex flex-col gap-4 items-center justify-center pb-64 pt-16">
       <button @click="goToBrowse" class="button button-primary text-lg">Show More</button>
     </div>
 
@@ -41,6 +46,7 @@ import { api } from '@/api'
 import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
 import CategoryCloud from '@/components/common/CategoryCloud.vue'
 import BrowseHero from '@/components/sections/BrowseHero.vue'
+import StatsSection from '@/components/common/StatsSection.vue'
 
 const randomSets = ref<Set[]>([])
 const loading = ref(true)
