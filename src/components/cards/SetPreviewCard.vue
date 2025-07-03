@@ -279,6 +279,7 @@ const cards = computed(() => {
   position: relative;
   height: 300px;
   width: 470px;
+  max-width: 100%;
   overflow: hidden;
   cursor: pointer;
 }

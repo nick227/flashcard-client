@@ -84,6 +84,7 @@ export function useCardPreview(
   }
 
   async function startPreview() {
+    if (previewCard.value && currentCardSide.value) return // Already running, do nothing
     const loaded = await ensureCardsLoaded()
     if (!loaded) return
     let cardIndex = 0
