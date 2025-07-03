@@ -16,6 +16,8 @@
           @update:tags="setTags = $event" @update:price="setPrice = $event" @update:thumbnail="handleThumbnailUpdate" />
         <div class="flex flex-wrap items-center gap-6 mb-8">
           <div class="flex flex-wrap items-center gap-2 mt-4 mb-4">
+            <!-- Toggle vew mode -->
+             <button class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600" @click="viewMode = viewMode === 'grid' ? 'single' : 'grid'"><i class="fa-solid fa-list"></i></button>
             <!-- Reverse Cards Button -->
             <button title="Reverse Card Order" class="button px-3 py-1 text-sm rounded-md bg-gray-100 text-gray-600"
               @click="reverseCards" :disabled="!hasCards">
@@ -39,14 +41,26 @@
             </button>
           </div>
         </div>
-        <div>
+        <div class="draggable-container" :class="viewMode === 'grid' ? 'grid' : 'list'">
           <DraggableCardList v-if="viewMode === 'grid'" :cards="cards" :cardComponent="CardTile" layout="grid"
             @update-order="updateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
             @request-delete="onRequestDelete" />
           <DraggableCardList v-else :cards="cards" :cardComponent="CardFullView" layout="list"
-            :cardProps="{ mode: 'single', autoFocus: false, autoFocusId: cards.length ? cards[0].id : null, title: title, description: description, category: selectedCategoryName, onImageFile }"
+            :cardProps="{ mode: 'single', autoFocus: false, autoFocusId: typeof cards[0]?.id === 'number' ? cards[0].id : null, title: title, description: description, category: selectedCategoryName, onImageFile }"
             @update-order="updateOrder" @delete-card="onDeleteCard" @edit-card="onEditCard"
-            @request-delete="onRequestDelete" />
+            @request-delete="onRequestDelete"
+            v-slot="{ card, index }"
+          >
+            <component
+              :is="CardFullView"
+              :card="card"
+              v-bind="{ mode: 'single', autoFocus: false, autoFocusId: typeof cards[0]?.id === 'number' ? cards[0].id : null, title: title, description: description, category: selectedCategoryName, onImageFile: onImageFileForCardFullView }"
+              :ref="el => cardRefs[index] = el"
+              @update="onEditCard"
+              @delete="onDeleteCard"
+              @request-delete="onRequestDelete"
+            />
+          </DraggableCardList>
         </div>
       </div>
       <!-- submit row -->
@@ -134,6 +148,55 @@ const {
 const selectedCategoryName = computed(() => {
   const cat = categories.value.find(c => c.id === category.value)
   return cat ? cat.name : ''
+})
+
+// Refs to all CardFullView instances
+const cardRefs = ref<any[]>([])
+
+function flushAllCardContentToStorage() {
+  // Only for 'list' mode (CardFullView)
+  if (viewMode.value !== 'single') return
+  let updated = false
+  cards.value.forEach((card, idx) => {
+    const cardRef = cardRefs.value[idx]
+    if (cardRef && typeof cardRef.getCardContent === 'function') {
+      const { front, back } = cardRef.getCardContent()
+      if (front && (front.content !== card.front.content || front.mediaUrl !== card.front.mediaUrl)) {
+        card.front.content = front.content
+        card.front.mediaUrl = front.mediaUrl
+        updated = true
+      }
+      if (back && (back.content !== card.back.content || back.mediaUrl !== card.back.mediaUrl)) {
+        card.back.content = back.content
+        card.back.mediaUrl = back.mediaUrl
+        updated = true
+      }
+    }
+  })
+  if (updated) {
+    saveProgress({
+      title: title.value,
+      description: description.value,
+      categoryId: category.value,
+      tags: setTags.value,
+      price: setPrice.value,
+      thumbnail: setThumbnail.value,
+      cards: cards.value,
+      cardImageFiles: {} // Will be populated by onImageFile when files are added
+    })
+  }
+}
+
+function beforeUnloadHandler() {
+  flushAllCardContentToStorage()
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', beforeUnloadHandler)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', beforeUnloadHandler)
 })
 
 // Save progress whenever form state changes
@@ -286,7 +349,7 @@ function applyHistoryState(state: HistoryState) {
   category.value = state.categoryId || 0
   setTags.value = state.tags
   setPrice.value = state.price
-  cards.value = state.cards
+  cards.value.splice(0, cards.value.length, ...state.cards)
   cardsTouched.value = true
 }
 
@@ -298,13 +361,14 @@ onMounted(async () => {
   }
 
   const progress = loadProgress()
+  console.log('Loaded progress:', progress)
   if (progress) {
     title.value = progress.title
     description.value = progress.description
     category.value = progress.categoryId || 0
     setTags.value = progress.tags
     setPrice.value = progress.price
-    cards.value = progress.cards
+    cards.value.splice(0, cards.value.length, ...progress.cards)
 
     // Handle thumbnail restoration
     if (progress.thumbnailFile) {
@@ -349,6 +413,7 @@ onMounted(async () => {
         }
       }
     }
+    console.log('Restored cards after localStorage:', JSON.parse(JSON.stringify(cards.value)));
   }
 
   // Load categories and tags
@@ -384,6 +449,7 @@ onMounted(async () => {
       } else {
         cards.value = []
       }
+      console.log('Cards after setData fetch:', JSON.parse(JSON.stringify(cards.value)));
     } catch (error) {
       toast('Error loading set: ' + error, 'error')
     }
@@ -404,7 +470,7 @@ function onDeleteCard(index: number) {
 }
 
 function onEditCard(updatedCard: Card) {
-  console.log('Received update:', updatedCard);
+  console.log('onEditCard received:', JSON.parse(JSON.stringify(updatedCard)));
   const index = cards.value.findIndex(c => c.id === updatedCard.id)
   if (index !== -1) {
     let merged = { ...cards.value[index] }
@@ -415,7 +481,17 @@ function onEditCard(updatedCard: Card) {
       merged.back = { ...merged.back, ...updatedCard.back }
     }
     cards.value.splice(index, 1, merged)
+    console.log('cards after update:', JSON.parse(JSON.stringify(cards.value)));
     cardsTouched.value = true
+    console.log('Calling saveProgress with:', {
+      title: title.value,
+      description: description.value,
+      categoryId: category.value,
+      tags: setTags.value,
+      price: setPrice.value,
+      thumbnail: setThumbnail.value,
+      cards: cards.value,
+    });
     saveProgress({
       title: title.value,
       description: description.value,
@@ -657,9 +733,17 @@ function clearCardImageFilesFromStorage() {
   }
 }
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-})
+// Add a wrapper for onImageFile to match the expected signature
+function onImageFileForCardFullView(data: { file: File, side: 'front' | 'back' }) {
+  if (onImageFile) {
+    onImageFile({
+      file: data.file,
+      side: data.side,
+      cellIndex: 0,   // or another sensible default
+      base64: ''      // or another sensible default
+    });
+  }
+}
 </script>
 
 <style scoped>
@@ -670,6 +754,10 @@ onUnmounted(() => {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.grid:deep(.card-controls) {
+  display: none;
 }
 
 @media (max-width: 600px) {

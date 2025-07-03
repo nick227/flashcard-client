@@ -1,6 +1,7 @@
 <template>
   <div class="card-content-layout" :class="[layout, side, { 'mobile': isMobile }]">
     <CardContentCell
+      ref="cellRef"
       :content="content"
       :mediaUrl="mediaUrl"
       :isEditing="isEditing"
@@ -15,7 +16,7 @@
 
 <script setup lang="ts">
 import CardContentCell from './CardContentCell.vue'
-import { withDefaults } from 'vue'
+import { withDefaults, ref, defineExpose } from 'vue'
 
 withDefaults(defineProps<{
   layout: string
@@ -32,6 +33,9 @@ withDefaults(defineProps<{
 })
 
 defineEmits(['update'])
+
+const cellRef = ref()
+defineExpose({ cellRef })
 </script>
 
 <style scoped>
@@ -39,7 +43,7 @@ defineEmits(['update'])
   display: flex;
   width: 100%;
   height: 100%;
-  max-height: 380px;
+  aspect-ratio: 1/16;
   padding: var(--space-md);
   box-sizing: border-box;
   border-radius: var(--radius-lg);

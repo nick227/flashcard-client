@@ -1,28 +1,7 @@
 <template>
   <div class="home-page">
 
-    <div class="container-main py-4">
-      <HomeHero />
-    </div>
-
-    <div class="container-main py-0 mb-8 flex flex-col gap-4 items-center justify-center pb-64">
-      <h2 class="text-2xl font-bold">Interesting Categories</h2>
-      <CategoryCloud />
-    </div>
-
-    <div v-if="randomSets.length > 0" class="container-main py-0 mb-64">
-      <FlashCardViewer :key="randomSets[0].id" :set-id="randomSets[0].id" :hideRelatedSets="true" />
-    </div>
-
-    <div v-if="randomSets.length > 0" class="container-main py-0 mb-64">
-      <FlashCardViewer :key="randomSets[1].id" :set-id="randomSets[1].id" :hideRelatedSets="true" />
-    </div>
-
-    <div v-if="randomSets.length > 0" class="container-main py-0">
-      <FlashCardViewer :key="randomSets[2].id" :set-id="randomSets[2].id" :hideRelatedSets="true" />
-    </div>
-
-    <div class="container-main py-0 pt-64">
+    <div class="container-main py-0 pt-8">
       <BrowseHero />
     </div>
 
@@ -31,8 +10,27 @@
       <StatsSection />
     </div>
 
-    <div class="container-main flex flex-col gap-4 items-center justify-center pb-64 pt-16">
+    <div class="container-main flex flex-col gap-4 items-center justify-center pb-8 pt-16">
       <button @click="goToBrowse" class="button button-primary text-lg">Show More</button>
+    </div>
+
+    <div class="container-main py-0 mb-8 flex flex-col gap-4 items-center justify-center">
+      <h2 class="text-2xl font-bold">Interesting Categories</h2>
+      <CategoryCloud />
+    </div>
+
+    <div v-for="(set, idx) in randomSets" :key="set.id" class="my-24 alternate-bg">
+
+      <div class="w-full py-12">
+        <FeaturedSet :set="randomSets[idx]" />
+      </div>
+      <div class="w-full pb-24 pt-12">
+        <FlashCardViewer :key="set.id" :set-id="set.id" :hideRelatedSets="true" />
+      </div>
+    </div>
+
+    <div class="container-main py-64">
+      <HomeHero />
     </div>
 
   </div>
@@ -47,6 +45,7 @@ import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
 import CategoryCloud from '@/components/common/CategoryCloud.vue'
 import BrowseHero from '@/components/sections/BrowseHero.vue'
 import StatsSection from '@/components/common/StatsSection.vue'
+import FeaturedSet from '@/components/home/FeaturedSet.vue'
 
 const randomSets = ref<Set[]>([])
 const loading = ref(true)
@@ -79,4 +78,8 @@ const fetchSets = async () => {
 onMounted(fetchSets)
 </script>
 
-<style scoped></style>
+<style scoped>
+.alternate-bg:nth-child(odd) {
+  background: #fafafa;
+}
+</style>

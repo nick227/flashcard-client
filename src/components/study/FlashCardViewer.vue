@@ -1,175 +1,159 @@
 <template>
-  <div v-if="!loading" class="container-main  flex flex-col items-center justify-start w-full px-4 py-2 mb-8 sm:mb-2 relative">
+  <div v-if="!loading"
+    class="container-main  flex flex-col items-center justify-start w-full px-4 py-2 mb-8 sm:mb-2 relative">
     <div style="width: 100%;">
-    <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
-    <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>
-    <div v-else-if="error" class="text-red-500 text-lg">{{ error }}</div>
-    <div v-else-if="!set" class="text-gray-500 text-lg">Set not found</div>
-    <div v-else-if="unauthorized && set" class="w-full max-w-4xl mx-auto">
-      <div class="bg-white rounded-lg overflow-hidden">
-        <!-- Set Header with Image -->
-        <div class="relative bg-gray-200 h-96">
-          <img v-if="set?.thumbnail" :src="set.thumbnail" :alt="set?.title" class="w-full h-full object-contain" />
-          <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
-            <i class="fas fa-book text-4xl text-gray-400"></i>
+      <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
+      <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>
+      <div v-else-if="error" class="text-red-500 text-lg">{{ error }}</div>
+      <div v-else-if="!set" class="text-gray-500 text-lg">Set not found</div>
+      <div v-else-if="unauthorized && set" class="w-full max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg overflow-hidden">
+          <!-- Set Header with Image -->
+          <div class="relative bg-gray-200 h-96">
+            <img v-if="set?.thumbnail" :src="set.thumbnail" :alt="set?.title" class="w-full h-full object-contain" />
+            <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
+              <i class="fas fa-book text-4xl text-gray-400"></i>
+            </div>
           </div>
-        </div>
 
-        <!-- Set Details -->
-        <div class="p-8">
-          <div class="flex items-center justify-between mb-4">
-            <div>
+          <!-- Set Details -->
+          <div class="p-8">
+            <div class="flex items-center justify-between mb-4">
               <span class="inline-block px-3 py-1 text-sm font-semibold text-blue-600 bg-blue-100 rounded-full">
                 {{ set?.category }}
               </span>
-            </div>
-            <div v-if="accessDetails?.setType === 'premium'" class="text-xl font-bold text-green-600">
-              ${{ formatPrice(set?.price?.amount) }}
-            </div>
-          </div>
-
-          <h1 class="text-3xl font-bold mb-4">{{ set?.title }}</h1>
-          <p class="text-gray-600 mb-8">{{ set?.description }}</p>
-
-          <!-- Access Message -->
-          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <i class="fas fa-lock text-blue-500 text-xl"></i>
-              </div>
-              <div class="ml-3">
-                <p class="text-blue-700 font-medium">{{ accessDetails?.message }}</p>
+              <div v-if="accessDetails?.setType === 'premium'" class="text-xl font-bold text-green-600">
+                ${{ formatPrice(set?.price?.amount) }}
               </div>
             </div>
-          </div>
 
-          <!-- Action Buttons -->
-          <div class="flex justify-center gap-4">
-            <button v-if="accessDetails?.setType === 'premium'" @click="redirectToCheckout(setId)"
-              :disabled="checkoutLoading"
-              class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-              <i class="fas" :class="checkoutLoading ? 'fa-spinner fa-spin' : 'fa-shopping-cart'"></i>
-              <span class="ml-2">{{ checkoutLoading ? 'Processing...' : 'Purchase Set' }}</span>
-            </button>
-            <button v-if="accessDetails?.setType === 'subscriber'" @click="subscribeToUnlockSet(set?.educatorId)"
-              :disabled="subscribeLoading"
-              class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-              <i class="fas" :class="subscribeLoading ? 'fa-spinner fa-spin' : 'fa-user-plus'"></i>
-              <span class="ml-2">{{ subscribeLoading ? 'Processing...' : 'Subscribe to Educator' }}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            <h1 class="text-3xl font-bold mb-4">{{ set?.title }}</h1>
+            <p class="text-gray-600 mb-8">{{ set?.description }}</p>
 
-    <!-- No Cards -->
-    <div v-else-if="!cards || cards.length === 0" class="w-full max-w-4xl mx-auto">
-      <div class="bg-white rounded-lg overflow-hidden">
-        <!-- Set Header with Image -->
-        <div class="relative bg-gray-200 h-96">
-          <img v-if="set?.thumbnail" :src="set.thumbnail" :alt="set?.title" class="w-full h-full object-contain" />
-          <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
-            <i class="fas fa-book text-4xl text-gray-400"></i>
-          </div>
-        </div>
-
-        <!-- Set Details -->
-        <div class="p-8">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <span class="inline-block px-3 py-1 text-sm font-semibold text-blue-600 bg-blue-100 rounded-full">
-                {{ set?.category }}
-              </span>
+            <!-- Access Message -->
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <i class="fas fa-lock text-blue-500 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                  <p class="text-blue-700 font-medium">{{ accessDetails?.message }}</p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <h1 class="text-3xl font-bold mb-4">{{ set?.title }}</h1>
-          <p class="text-gray-600 mb-8">{{ set?.description }}</p>
-
-          <!-- Empty State Message -->
-          <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-8">
-            <div class="flex">
-              <div class="flex-shrink-0">
-                <i class="fas fa-exclamation-circle text-yellow-500 text-xl"></i>
-              </div>
-              <div class="ml-3">
-                <p class="text-yellow-700 font-medium">This set doesn't have any cards yet.</p>
-                <p class="text-yellow-600 mt-1">Check back later or contact the educator for more information.</p>
-              </div>
+            <!-- Action Buttons -->
+            <div class="flex justify-center gap-4">
+              <button v-if="accessDetails?.setType === 'premium'" @click="redirectToCheckout(setId)"
+                :disabled="checkoutLoading"
+                class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas" :class="checkoutLoading ? 'fa-spinner fa-spin' : 'fa-shopping-cart'"></i>
+                <span class="ml-2">{{ checkoutLoading ? 'Processing...' : 'Purchase Set' }}</span>
+              </button>
+              <button v-if="accessDetails?.setType === 'subscriber'" @click="subscribeToUnlockSet(set?.educatorId)"
+                :disabled="subscribeLoading"
+                class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas" :class="subscribeLoading ? 'fa-spinner fa-spin' : 'fa-user-plus'"></i>
+                <span class="ml-2">{{ subscribeLoading ? 'Processing...' : 'Subscribe to Educator' }}</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Card Area -->
-    <div v-else class="w-full max-w-3xl mx-auto flex flex-col">
-      <!-- Header with Download and Like -->
-      <CardHeader 
-        v-if="set && !likesLoading" 
-        :set="set" 
-        :is-liked="isLiked || false" 
-        :set-likes="setLikes || 0" 
-        @download="downloadSet"
-        @toggle-like="toggleLike" 
-      />
-
-      <!-- Main Card Area -->
-      <div class="main-card-area flex-1 min-h-[600px] flex flex-col" tabindex="0"
-        :class="{ 'fullscreen': isFullScreen }">
-        <!-- Single Card View -->
-        <div class="flex-1 flex flex-col">
-          <div class="flex-1 flex items-center justify-center">
-            <FlashCardScaffold 
-              v-if="cards && cards.length > 0 && cards[currentIndex]" 
-              :card="cards[currentIndex]"
-              :flipped="flipped" 
-              :current-flip="currentFlip" 
-              @flip="handleCardFlip" 
-              @next="handleNextWithLog"
-              @prev="handlePrevWithLog"
-            />
-            <div v-else class="text-center text-gray-500 py-8">
-              No cards available to display
+      <!-- No Cards -->
+      <div v-else-if="!cards || cards.length === 0" class="w-full max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg overflow-hidden">
+          <!-- Set Header with Image -->
+          <div class="relative bg-gray-200 h-96">
+            <img v-if="set?.thumbnail" :src="set.thumbnail" :alt="set?.title" class="w-full h-full object-contain" />
+            <div v-else class="w-full h-full flex items-center justify-center bg-gray-100">
+              <i class="fas fa-book text-4xl text-gray-400"></i>
             </div>
           </div>
-          <CardControls v-if="cards && cards.length > 0" :current-index="currentIndex" :total-cards="cards.length"
-            :is-prev-disabled="isPrevDisabled" :is-next-disabled="isNextDisabled" :progress-percent="progressPercent"
-            :show-exit="isFullScreen" mode="view" @prev="prevCard" @next="handleNextCardWithHistory" />
+
+          <!-- Set Details -->
+          <div class="p-8">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <span class="inline-block px-3 py-1 text-sm font-semibold text-blue-600 bg-blue-100 rounded-full">
+                  {{ set?.category }}
+                </span>
+              </div>
+            </div>
+
+            <h1 class="text-3xl font-bold mb-4">{{ set?.title }}</h1>
+            <p class="text-gray-600 mb-8">{{ set?.description }}</p>
+
+            <!-- Empty State Message -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-8">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <i class="fas fa-exclamation-circle text-yellow-500 text-xl"></i>
+                </div>
+                <div class="ml-3">
+                  <p class="text-yellow-700 font-medium">This set doesn't have any cards yet.</p>
+                  <p class="text-yellow-600 mt-1">Check back later or contact the educator for more information.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Bottom Controls -->
-      <div class="flex justify-center w-full mb-4 flex-wrap main-controls">
-        <a @click="handleRestart" class="button-round" href="javascript:void(0)">
-          <i class="fa-solid fa-rotate-right"></i> Restart
-        </a>
-        <a @click="handleShuffle" class="button-round" href="javascript:void(0)">
-          <i class="fa-solid fa-shuffle"></i> Shuffle
-        </a>
-        <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)">
-          <i class="fa-solid fa-mobile"></i> Mobile
-        </a>
-        <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)">
-          <i class="fa-solid fa-expand"></i> Full-Screen
-        </a>
-        <CardHint 
-          v-if="cards[currentIndex]?.hint" 
-          :hint="cards[currentIndex].hint || ''" 
-          @show-hint="() => showHintToast(cards[currentIndex]?.hint || '')" 
-        />
+      <!-- Card Area -->
+      <div v-else class="w-full max-w-3xl mx-auto flex flex-col">
+        <!-- Header with Download and Like -->
+        <CardHeader v-if="set && !likesLoading" :set="set" :is-liked="isLiked || false" :set-likes="setLikes || 0"
+          @download="downloadSet" @toggle-like="toggleLike" />
+
+        <!-- Main Card Area -->
+        <div class="main-card-area flex-1 min-h-[600px] flex flex-col" tabindex="0"
+          :class="{ 'fullscreen': isFullScreen }">
+          <!-- Single Card View -->
+          <div class="flex-1 flex flex-col">
+            <div class="flex-1 flex items-center justify-center">
+              <FlashCardScaffold v-if="cards && cards.length > 0 && cards[currentIndex]" :card="cards[currentIndex]"
+                :flipped="flipped" :current-flip="currentFlip" @flip="handleCardFlip" @next="handleNextWithLog"
+                @prev="handlePrevWithLog" />
+              <div v-else class="text-center text-gray-500 py-8">
+                No cards available to display
+              </div>
+            </div>
+            <CardControls v-if="cards && cards.length > 0" :current-index="currentIndex" :total-cards="cards.length"
+              :is-prev-disabled="isPrevDisabled" :is-next-disabled="isNextDisabled" :progress-percent="progressPercent"
+              :show-exit="isFullScreen" mode="view" @prev="prevCard" @next="handleNextCardWithHistory" />
+          </div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div class="flex justify-center w-full mb-4 flex-wrap main-controls">
+          <a @click="handleRestart" class="button-round" href="javascript:void(0)">
+            <i class="fa-solid fa-rotate-right"></i> Restart
+          </a>
+          <a @click="handleShuffle" class="button-round" href="javascript:void(0)">
+            <i class="fa-solid fa-shuffle"></i> Shuffle
+          </a>
+          <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)">
+            <i class="fa-solid fa-mobile"></i> Mobile
+          </a>
+          <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)">
+            <i class="fa-solid fa-expand"></i> Full-Screen
+          </a>
+          <CardHint v-if="cards[currentIndex]?.hint" :hint="cards[currentIndex].hint || ''"
+            @show-hint="() => showHintToast(cards[currentIndex]?.hint || '')" />
+        </div>
+      </div>
+
+      <!-- Mobile View -->
+      <div v-if="showMobileView" class="my-4 w-full">
+        <CardRiverMobile :cards="cards" />
       </div>
     </div>
-
-    <!-- Mobile View -->
-    <div v-if="showMobileView" class="my-4 w-full">
-      <CardRiverMobile :cards="cards" />
-    </div>
-  </div>
     <!-- Related Sets-->
-     <div v-if="set && !props.hideRelatedSets" class="w-full my-16">
+    <div v-if="set && !props.hideRelatedSets" class="w-full my-16">
       <RelatedSets :set-id="set.id" />
-     </div>
+    </div>
 
     <Toaster :toasts="toasts" @remove="remove" />
   </div>
@@ -332,7 +316,7 @@ const fetchSet = async () => {
       cards.value = []
     } else {
       const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
-      
+
       // Transform cards using the new helper function
       cards.value = cardsData.map((card: RawCard) => transformCard(card, res.data))
 

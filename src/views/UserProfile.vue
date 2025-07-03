@@ -34,7 +34,7 @@
           <!-- User information -->
           <div class="flex-1">
             <h1 class="text-2xl font-bold mb-2">{{ user.name }}</h1>
-            <p class="text-gray-600 mb-1">{{ user.email }}</p>
+            <p class="text-gray-600 mb-1 truncate">{{ user.email }}akjsn kjfawen kjfnwake j</p>
             <p class="text-gray-500">{{ user.role }}</p>
             <div class="mt-2">
               <div v-if="!isEditingBio" @click="startEditingBio"
@@ -365,5 +365,12 @@ async function updateProfileImage(file: File) {
 
 .bio-display:focus-within {
   border-color: #3b82f6;
+}
+
+.truncate {
+  max-width: 175px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

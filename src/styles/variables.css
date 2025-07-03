@@ -41,4 +41,8 @@
     --container-width: 880px;
     --container-max-width: 2060px;
     --container-padding-x: 2rem;
+    --card-max-width: 590px;
+    --card-max-height: 550px;
+    --card-tile-height: 260px;
+    --card-tile-width: 360px;
 }

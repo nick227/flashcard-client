@@ -1,10 +1,10 @@
 <template>
-  <div v-if="relatedSets.length > 0" class="related-sets w-full">
+  <div v-if="relatedSets.length > 0" class="w-full">
     <h2 class="text-xl font-semibold mb-4 text-center w-full">Related Sets</h2>
     <div v-if="loading" class="text-gray-500 text-sm">Loading related sets...</div>
     <div v-else-if="error" class="text-red-500 text-sm">{{ error }}</div>
     <div v-else-if="relatedSets.length === 0" class="text-gray-500 text-sm">No related sets found</div>
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-else class="related-sets gap-4">
       <div 
         v-for="relatedSet in relatedSets" 
         :key="relatedSet.id"
@@ -29,8 +29,8 @@
           </div>
           <div class="flex-1 min-w-0">
             <h3 
-            @click="navigateToSet(relatedSet.id)" class="font-medium text-gray-900 truncate link cursor-pointer hover:underline line-clamp-1">{{ relatedSet.title }}</h3>
-            <p class="text-sm text-gray-500 truncate">{{ relatedSet.description }}</p>
+            @click="navigateToSet(relatedSet.id)" class="font-medium text-gray-900 truncate link cursor-pointer hover:underline w-full title">{{ relatedSet.title }}</h3>
+            <p class="text-sm text-gray-500 line-clamp-2 w-full">{{ relatedSet.description }}</p>
             <div class="flex items-center gap-2 mt-1">
               <span class="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
                 {{ relatedSet.category?.name || relatedSet.category }}
@@ -101,6 +101,23 @@ onMounted(() => {
 h3{
   margin: 0;
   padding: 0;
+}
+.related-sets {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: center;
+  margin: 0 auto;
+  max-width: var(--container-width);
+}
+.title {
+  max-width: calc(var(--container-width) - 85px);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
 }
 </style>
 

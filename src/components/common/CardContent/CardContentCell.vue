@@ -12,7 +12,7 @@
       </template>
       <!-- Show both if both are set (no embed, but both content and mediaUrl) -->
       <template v-else-if="content && mediaUrl">
-        <div class="text-content half-height" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="onBlur" @focus="isFocused = true" @keydown="handleKeydown">{{ localContent }}</div>
+        <div class="text-content half-height" tabindex="0" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="onBlur" @focus="onFocus" @keydown="handleKeydown"></div>
         <div class="media-container half-height">
           <img :src="mediaUrl" alt="Card image" style="width: 100%; height: 100%; object-fit: contain;" />
           <button class="media-close" @click="handleMediaRemove" aria-label="Remove media">
@@ -22,7 +22,7 @@
       </template>
       <!-- Only content -->
       <template v-else-if="content">
-        <div class="text-content full-height" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="onBlur" @focus="isFocused = true">{{ localContent }}</div>
+        <div class="text-content full-height" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @blur="onBlur" @focus="onFocus" tabindex="0"></div>
       </template>
       <!-- Only mediaUrl (no content): show only image, no text area -->
       <div v-else-if="mediaUrl" class="media-container full-height">
@@ -32,7 +32,7 @@
         </button>
       </div>
       <!-- Neither: just show contenteditable -->
-      <div v-else class="text-content full-height" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @focus="isFocused = true"></div>
+      <div v-else class="text-content full-height" @blur="onBlur" @paste="handlePaste" ref="contentRef" contenteditable="true" :style="computedStyle" @input="handleInputLocal" @focus="onFocus" tabindex="0"></div>
     </template>
     <!-------------------- Viewing ----------------->
     <template v-else>
@@ -136,13 +136,19 @@ const emitUpdate = (content: string, mediaUrl: string | null = props.mediaUrl, r
 }
 
 function handleInputLocal() {
-  // Do not update localContent here to avoid cursor jump
-  // Let the browser manage the DOM while typing
+  console.log('[CardContentCell] handleInputLocal fired')
+  if (contentRef.value) {
+    localContent.value = contentRef.value.innerText
+  }
+  console.log('[CardContentCell] handleInputLocal fired', localContent.value)
+  measureAndSetContainerSize()
 }
 
 function onBlur() {
+  console.log('[CardContentCell] onBlur fired')
   isFocused.value = false
   if (contentRef.value) {
+    console.log('[CardContentCell] onBlur fired', contentRef.value.innerText)
     localContent.value = contentRef.value.innerText
     emitUpdate(localContent.value, props.mediaUrl, 'onBlur')
   }
@@ -215,14 +221,52 @@ function measureAndSetContainerSize() {
   })
 }
 
+let resizeObserver: ResizeObserver | null = null
+
+function beforeUnloadHandler() {
+  console.log('[CardContentCell] beforeUnloadHandler fired')
+  if (contentRef.value) {
+    localContent.value = contentRef.value.innerText
+    emitUpdate(localContent.value, props.mediaUrl, 'beforeunload')
+    console.log('[CardContentCell] Saved content on beforeunload:', localContent.value)
+  }
+}
+
+// Utility to sync DOM with localContent
+function syncContentEditable() {
+  nextTick(() => {
+    if (contentRef.value && !isFocused.value) {
+      contentRef.value.innerText = localContent.value || ''
+    }
+  })
+}
+
 onMounted(() => {
   localContent.value = props.content
-  measureAndSetContainerSize()
+  syncContentEditable()
+  nextTick(() => {
+    measureAndSetContainerSize()
+    setTimeout(() => {
+      measureAndSetContainerSize()
+    }, 100)
+    if (contentRef.value && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        measureAndSetContainerSize()
+      })
+      resizeObserver.observe(contentRef.value)
+    }
+  })
   window.addEventListener('resize', measureAndSetContainerSize)
   window.addEventListener('beforeunload', beforeUnloadHandler)
+  console.log('[CardContentCell] beforeunload event registered')
 })
 
 onUnmounted(() => {
+  if (resizeObserver && contentRef.value) {
+    resizeObserver.unobserve(contentRef.value)
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
   window.removeEventListener('resize', measureAndSetContainerSize)
   window.removeEventListener('beforeunload', beforeUnloadHandler)
   // Optionally emit one last time on unmount for SPA navigation
@@ -232,27 +276,25 @@ onUnmounted(() => {
   }
 })
 
-function beforeUnloadHandler() {
-  if (contentRef.value) {
-    localContent.value = contentRef.value.innerText
-    emitUpdate(localContent.value, props.mediaUrl, 'beforeunload')
-  }
-}
-
 // Minimal watcher: only update localContent from props when not focused
+
 watch(() => props.content, (newContent) => {
   if (!isFocused.value && localContent.value !== newContent) {
     localContent.value = newContent
   }
-  measureAndSetContainerSize()
+  nextTick(() => {
+    measureAndSetContainerSize()
+  })
 })
 
 watch(localContent, () => {
-  measureAndSetContainerSize()
+  syncContentEditable()
 })
 
 watch(() => props.mediaUrl, () => {
-  measureAndSetContainerSize()
+  nextTick(() => {
+    measureAndSetContainerSize()
+  })
 })
 
 watch(
@@ -265,6 +307,27 @@ watch(
     }
   }
 )
+
+function onFocus() {
+  isFocused.value = true
+  console.log('[CardContentCell] focus fired')
+}
+
+function getContent() {
+  // Always return the latest content and mediaUrl for this side
+  let content = localContent.value
+  if (contentRef.value && props.isEditing) {
+    content = contentRef.value.innerText
+  }
+  return {
+    id: props.cardId,
+    side: props.side,
+    content,
+    mediaUrl: props.mediaUrl
+  }
+}
+
+defineExpose({ getContent })
 </script>
 
 <style scoped>

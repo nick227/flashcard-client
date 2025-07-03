@@ -1,5 +1,5 @@
 <template>
-  <form class="grid gap-4 mb-8">
+  <form class="flex flex-col gap-4 mb-8 justify-start">
     <!-- Thumbnail upload section -->
     <ThumbnailUploader
       :title="props.title"
@@ -10,6 +10,7 @@
     />
 
     <!-- Set title input -->
+    <h2 class="text-2xl font-bold mt-8 mb-0 py-0">Title</h2>
     <FormInput
       type="text"
       :modelValue="props.title"
@@ -23,6 +24,7 @@
     />
 
     <!-- Set description input -->
+     <h2 class="text-2xl font-bold mt-8 mb-0 py-0">Description</h2>
     <FormInput
       type="textarea"
       :modelValue="props.description"
@@ -36,6 +38,7 @@
     />
 
     <!-- Category selection -->
+     <h2 class="text-2xl font-bold mt-8 mb-0 py-0">Category</h2>
     <FormInput
       type="select"
       :modelValue="props.category || ''"
@@ -52,6 +55,7 @@
     </FormInput>
 
     <!-- Tags and price components -->
+    <h2 class="text-2xl font-bold mt-8 mb-0 py-0">Tags</h2>
     <TagsInput 
       :availableTags="props.availableTags" 
       :modelValue="props.tags" 

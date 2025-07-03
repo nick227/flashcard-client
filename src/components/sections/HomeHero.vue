@@ -3,25 +3,14 @@
     <h1 class="hero-title" v-html="heroTitle"></h1>
     <p class="hero-description" v-html="heroDescription"></p>
     <div class="hero-actions">
-      <button class="button" @click="browseSets">Browse Sets</button>
+      <button class="button button-primary" @click="browseSets">Browse Sets</button>
       <button class="button button-success" @click="startTeaching">Start Teaching</button>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import { computed } from 'vue'
-
-const router = useRouter()
-
-const browseSets = () => {
-  router.push('/browse')
-}
-
-const startTeaching = () => {
-  router.push('/creator')
-}
 
 const listHeroDescriptions = [
   'Unlock your learning potential with interactive, beautiful flash cards.',
@@ -58,6 +47,14 @@ const heroTitle = computed(() => {
 const heroDescription = computed(() => {
   return listHeroDescriptions[Math.floor(Math.random() * listHeroDescriptions.length)]
 })
+
+const browseSets = () => {
+  window.location.href = '/browse'
+}
+
+const startTeaching = () => {
+  window.location.href = '/creator'
+}
 
 </script>
 

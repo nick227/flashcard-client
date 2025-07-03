@@ -1,6 +1,5 @@
 <template>
   <div class="price-selector">
-    <label class="block mb-1 font-medium text-gray-700">Access & Pricing</label>
     <select class="input w-full mb-2" :value="actualType" @change="onTypeChange(($event.target as HTMLSelectElement).value)">
       <option value="free">Free</option>
       <option value="subscribers">Subscribers Only</option>

@@ -35,7 +35,7 @@
           </div>
         </div>
         <!-- Set title -->
-        <h1 class="text-2xl font-bold flex-1 set-title">{{ set.title }}</h1>
+        <h1 @click="loadSet" class="text-2xl font-bold flex-1 set-title link">{{ set.title }}</h1>
     </div>
       <!-- Action Buttons -->
       <div class="flex items-center justify-end sm:justify-end gap-4 title-buttons w-full mb-2">
@@ -73,6 +73,10 @@ const handleAvatarError = () => {
 
 const handleAvatarLoad = () => {
   avatarError.value = false
+}
+
+const loadSet = () => {
+  window.location.href = `/sets/${props.set.id}`
 }
 
 const getEducatorInitials = computed(() => {

@@ -2,6 +2,7 @@
   <div class="card-content" :class="{ 'is-editing': isEditing }">
     <span v-if="isEditing" class="text-xs text-muted text-center mb-2">{{ side }}</span>
     <CardContentLayout
+      ref="layoutRef"
       :layout="cardState[side].layout"
       :side="side"
       :content="cardState[side].content"
@@ -77,6 +78,9 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const blobUrls = ref<Set<string>>(new Set()) // Track all blob URLs for cleanup
 
 const { compressImage } = useImageCompression()
+
+const layoutRef = ref()
+defineExpose({ layoutRef })
 
 const handleContentUpdate = (updates: { front?: any; back?: any }) => {
   (['front', 'back'] as const).forEach((side) => {
@@ -237,10 +241,12 @@ onUnmounted(() => {
 <style scoped>
 .card-content {
   width: 100%;
-  height: 460px;
+  height: 100%;
   max-height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .card-controls {

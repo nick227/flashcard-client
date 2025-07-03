@@ -1,5 +1,5 @@
 <template>
-  <div :ref="setCardRef as any" v-if="set" class="card flex flex-col overflow-hidden rounded-sm bg-white duration-300 preview-card">
+  <div :ref="setCardRef as any" v-if="set" class="card flex flex-col overflow-hidden rounded-sm bg-white duration-300 preview-card" :class="theme">
     <!-- Image Container -->
     <div @click="handleView" class="relative cursor-pointer" @mouseenter="startPreview" @mouseleave="stopPreview"
       @touchstart="startPreview" @touchend="stopPreview">
@@ -83,6 +83,7 @@ import { useIsMobile } from '@/composables/useIsMobile'
 const router = useRouter()
 
 const props = defineProps<{
+  theme?: string,
   set?: {
     id: number
     title: string
@@ -144,7 +145,6 @@ const setCardRef = (el: Element | null) => {
 const { previewCard, currentCardSide, startPreview, stopPreview } = useCardPreview(setCards, fetchSetCards, props.set?.id ?? 0, 3600, timerProgress)
 
 const isMobile = useIsMobile()
-console.log('[SetPreviewCard] isMobile', isMobile.value)
 if (isMobile.value) {
   useCardPreviewOnView(
     cardRoot,
@@ -216,7 +216,6 @@ const fetchStats = async () => {
 }
 
 onMounted(async () => {
-  console.log('[SetPreviewCard] onMounted')
   if (!props.set) return
   fetchStats()
   await nextTick()
@@ -249,24 +248,15 @@ const cards = computed(() => {
 </script>
 
 <style scoped>
-.card-large {
-  width: 100%;
-  background: green;
-}
 
-.card-small {
-  width: 160px;
-  background: blue;
-}
-
-.card-medium {
-  width: 360px;
-  background: red;
+.preview-card {
+  cursor: pointer !important;
+  max-width: 590px;
 }
 
 .thumbnail-container {
   position: relative;
-  height: 460px;
+  height: 470px;
   cursor: pointer;
 }
 
@@ -277,6 +267,7 @@ const cards = computed(() => {
   height: 3px;
   border-radius: 2px;
   background: transparent;
+  margin-top: 10px;
 }
 
 .timer-bar-fill {
@@ -284,8 +275,11 @@ const cards = computed(() => {
   background-color: blue;
 }
 
-.preview-card {
-  cursor: pointer !important;
-  max-width: 590px;
+.small .thumbnail-container {
+  position: relative;
+  height: 300px;
+  width: 470px;
+  overflow: hidden;
+  cursor: pointer;
 }
 </style>

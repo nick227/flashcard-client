@@ -9,13 +9,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { api } from '@/api'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
 const categories = ref<any[]>([])
 
 const handleCategoryClick = (category: any) => {
-    router.push(`/browse/${category.name}`)
+    window.location.href = `/browse/${category.name}`
 }
 
 onMounted(async () => {

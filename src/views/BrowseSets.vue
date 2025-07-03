@@ -10,38 +10,12 @@
       
       <div class="flex flex-wrap gap-4 w-full mt-8">
 
-        <!-- Set Type Dropdown -->
-          <select 
-            v-model="selectedSetType"
-            @change="onSetTypeChange"
-            class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white max-w-[200px]"
-          >
-            <option value="">All Types</option>
-            <option value="free">Free</option>
-            <option value="premium">Premium</option>
-            <option value="subscriber">Subscriber</option>
-          </select>
-        <!-- Sort -->
-          <select 
-            id="sort" 
-            v-model="sortOrder" 
-            class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white max-w-[200px]"
-          >
-            <option value="featured">Featured</option>
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-          </select>
         <!-- Search -->
-        <div class="relative flex-1">
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            placeholder="Search sets..." 
-            class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 search-input"
-            @input="onSearchInput"
-            :disabled="loading"
-          />
-        </div>
+        <SearchInput
+          v-model="searchQuery"
+          @submit="onSearchSubmit"
+          :disabled="loading"
+        />
       </div>
         <!-- Loading indicator -->
         <div v-if="loading" class="flex items-center">
@@ -61,6 +35,7 @@
           v-for="set in sets || []"
           :key="set.id"
           :set="set"
+          theme="small"
           @view="viewSet"
           :class="{ 'opacity-50': isTransitioning }"
         />
@@ -94,11 +69,11 @@ import { useSets } from '@/composables/useSets'
 import FunnyLoadingIndicator from '../components/common/FunnyLoadingIndicator.vue'
 import LoadMoreButton from '../components/common/LoadMoreButton.vue'
 import CategoryCloud from '../components/common/CategoryCloud.vue'
+import SearchInput from '../components/common/SearchInput.vue'
 
 const route = useRoute()
 const router = useRouter()
 const sentinel = ref<HTMLElement | null>(null)
-const selectedSetType = ref('')
 
 const batchDelay = ref(0)
 let batchTimeout: ReturnType<typeof setTimeout> | null = null
@@ -109,74 +84,19 @@ const showLoadMoreButton = computed(() => batchCount.value >= 3)
 const {
   sets,
   loading,
-  sortOrder,
   hasMore,
   error,
   searchQuery,
   isTransitioning,
   loadSets,
-  updateSortOrder,
-  updateSetType,
   updateSearch,
   initialize,
-  currentPage,
-  updateCategory
+  currentPage
 } = useSets()
-
-// Watch for sort order changes
-watch(sortOrder, (newOrder) => {
-  updateSortOrder(newOrder)
-  // Reset batch state on sort change
-  batchCount.value = 0
-  isBatchWaiting.value = false
-  if (batchTimeout) {
-    clearTimeout(batchTimeout)
-    batchTimeout = null
-  }
-})
-
-// Restore watcher for category route param
-watch(() => route.params.category, (newCategory) => {
-  if (newCategory) {
-    updateCategory(decodeURIComponent(newCategory as string))
-  } else {
-    updateCategory('')
-  }
-  // Reset batch state on category change
-  batchCount.value = 0
-  isBatchWaiting.value = false
-  if (batchTimeout) {
-    clearTimeout(batchTimeout)
-    batchTimeout = null
-  }
-}, { immediate: true })
-
-const onSetTypeChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const type = target.value
-  updateSetType(type)
-}
 
 const viewSet = (setId: number) => {
   //router.push({ path: '/study/' + setId })
   window.location.href = '/study/' + setId
-}
-
-// Debounced search input
-const debouncedSearch = ref<number | null>(null)
-const onSearchInput = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const value = target.value.trim()
-  
-  if (debouncedSearch.value) {
-    clearTimeout(debouncedSearch.value)
-  }
-  
-  debouncedSearch.value = window.setTimeout(() => {
-    if (value.length >= 2 || value.length === 0) {
-      updateSearch(value)
-    }
-  }, 300)
 }
 
 // Intersection Observer for infinite scroll
@@ -238,9 +158,6 @@ onMounted(() => {
     clearTimeout(batchTimeout)
     batchTimeout = null
   }
-  if (debouncedSearch.value) {
-    clearTimeout(debouncedSearch.value)
-  }
 })
 
 // Cleanup on route change
@@ -257,6 +174,11 @@ watch(() => route.fullPath, () => {
     batchTimeout = null
   }
 })
+
+function onSearchSubmit(value: string) {
+  const trimmed = value.trim()
+  updateSearch(trimmed)
+}
 </script>
 
 <style scoped>

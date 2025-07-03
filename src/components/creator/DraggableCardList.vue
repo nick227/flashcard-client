@@ -86,7 +86,7 @@ function onRequestDelete(cardId: number) {
 
 .card-list.grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-tile-width), 1fr));
   gap: var(--space-md);
 }
 

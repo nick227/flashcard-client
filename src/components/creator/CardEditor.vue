@@ -1,8 +1,9 @@
 <template>
-  <div class="card-editor-wrapper">
+  <div class="card-editor-wrapper my-4">
     <div class="card-editor">
       <div class="card-side front">
         <CardContent
+          ref="frontContentRef"
           :card="card"
           side="front"
           :is-editing="true"
@@ -15,6 +16,7 @@
       </div>
       <div class="card-side back">
         <CardContent
+          ref="backContentRef"
           :card="card"
           side="back"
           :is-editing="true"
@@ -75,6 +77,18 @@ const onHintUpdate = () => {
     hint: localHint.value
   })
 }
+
+const frontContentRef = ref()
+const backContentRef = ref()
+
+function getAllContent() {
+  // Traverse the ref chain to get the latest content for both sides
+  const front = frontContentRef.value?.layoutRef?.cellRef?.getContent?.()
+  const back = backContentRef.value?.layoutRef?.cellRef?.getContent?.()
+  return { front, back }
+}
+
+defineExpose({ getAllContent })
 </script>
 
 <style scoped>
@@ -95,12 +109,13 @@ const onHintUpdate = () => {
   display: flex;
   flex-direction: column;
   padding-top: 0.5rem;
+  height: var(--card-max-height);
 }
 
 .hint-section {
   display: block;
   width: 100%;
   padding: 0.5rem 0;
-  margin-top: 0.5rem;
+  margin-top: 3em;
 }
 </style> 

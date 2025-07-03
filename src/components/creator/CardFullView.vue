@@ -4,7 +4,7 @@
       <i class="fa-solid fa-grip-lines fa-lg text-gray-400"></i>
     </div>
     <!-- Top action buttons: Delete and Preview toggle -->
-    <div class="flex justify-between items-center mb-3">
+    <div class="flex justify-between items-center mb-16 mt-8">
       <button class="button button-danger button-icon text-xs px-3 py-1" @click="onRequestDelete">
         <i class="fa-solid fa-trash"></i>
       </button>
@@ -15,6 +15,7 @@
     <div class="cards-container">
       <!-- Edit mode: show editable front/back fields -->
       <CardEditor
+        ref="cardEditorRef"
         v-show="!previewMode"
         :card="props.card"
         :title="props.title || ''"
@@ -72,6 +73,8 @@ const flipped = ref(false)
 const touchedFront = ref(false)
 const touchedBack = ref(false)
 
+const cardEditorRef = ref()
+
 // Computed
 const isBlank = computed(() => {
   return (!props.card.front.content && !props.card.front.mediaUrl) || 
@@ -89,6 +92,12 @@ const handleFlip = () => {
 const onRequestDelete = () => {
   emit('request-delete', props.card.id)
 }
+
+function getCardContent() {
+  return cardEditorRef.value?.getAllContent?.()
+}
+
+defineExpose({ getCardContent })
 </script>
 
 <style scoped>

@@ -3,17 +3,17 @@
     <div class="featured-content">
       <div class="featured-image">
         <a :href="`/sets/${set.id}`">
-          <div class="w-full h-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+          <div class="w-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
             <img 
               v-if="set.thumbnail"
               v-show="!thumbnailError" 
               :src="set.thumbnail" 
               :alt="set.title + ' Thumbnail'" 
-              class="w-full h-full object-cover"
+              class="w-full object-cover"
               @error="handleThumbnailError"
               @load="handleThumbnailLoad"
             />
-            <div v-if="!set.thumbnail || thumbnailError" class="w-full h-full flex items-center justify-center">
+            <div v-if="!set.thumbnail || thumbnailError" class="flex items-center justify-center thumbnail-fallback">
               <span class="text-8xl font-bold text-gray-400">{{ getFirstLetter }}</span>
             </div>
           </div>
@@ -31,7 +31,7 @@
         </div>
 
         <h2 class="title my-0"><a :href="`/sets/${set.id}`">{{ set.title }}</a></h2>
-        <p class="description">{{ set.description }}</p>
+        <p class="description py-0 my-0">{{ set.description }}</p>
         
         <div v-if="set.tags" class="tags-container">
           <span v-for="tag in set.tags" :key="tag" class="tag"><a :href="`/tags/${tag}`">{{ tag }}</a></span>
@@ -72,11 +72,6 @@
           </div>
         </div>
 
-        <div class="actions mt-8">
-          <button class="button button-primary" @click="$emit('view', set.id)">
-            Try This Set
-          </button>
-        </div>
       </div>
     </div>
   </section>
@@ -181,19 +176,31 @@ defineEmits<{
 
 <style scoped>
 .featured-set {
-  @apply w-full py-8 md:py-16 md:px-8 mb-8 md:mb-16;
+  @apply w-full py-8;
+  display: flex;
+  margin: 0 auto;
+  max-width: var(--container-width);
+}
+
+.thumbnail-fallback {
+  background: red;
+  min-width: 490px;
+  min-height: 300px;
+  max-width: 100%;
 }
 
 .featured-content {
-  @apply max-w-7xl mx-auto flex flex-col lg:flex-row gap-4 md:gap-8 items-center;
+  display: flex;
+  width: 100%;
+  gap: 16px;
 }
 
 .featured-image {
-  @apply w-full lg:w-1/2 h-[340px] md:min-h-[400px] lg:h-[500px];
+  @apply w-1/3 md:w-1/2;
 }
 
 .featured-info {
-  @apply w-full lg:w-1/2 flex flex-col gap-3 md:gap-4;
+  @apply w-1/2 flex flex-col gap-3 md:gap-4;
 }
 
 .title {
@@ -214,10 +221,6 @@ defineEmits<{
 
 .educator-info {
   @apply mt-2 md:mt-4;
-}
-
-.actions {
-  @apply mt-4 md:mt-6;
 }
 
 .featured-image img {

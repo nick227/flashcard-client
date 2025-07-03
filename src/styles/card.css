@@ -129,7 +129,7 @@
     align-items: center;
     justify-content: center;
     min-height: 420px;
-    max-width: var();
+    max-width: var(--card-max-width);
     margin: 0 auto;
     overflow: hidden;
     margin: 0 auto;
