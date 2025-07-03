@@ -13,7 +13,13 @@ export function useCardLikes(setId: number) {
       const response = await api.get(apiEndpoints.sets.batch('likes'), {
         params: { ids: setId }
       })
-      likes.value = response.data[setId] || 0
+      console.debug('[useCardLikes] batch likes response:', response.data)
+      if (typeof response.data !== 'object' || response.data === null) {
+        console.warn('[useCardLikes] Unexpected response format for batch likes:', response.data)
+        likes.value = 0
+        return
+      }
+      likes.value = response.data[setId] ?? 0
     } catch (error) {
       console.error('Error fetching set likes:', error)
       likes.value = 0

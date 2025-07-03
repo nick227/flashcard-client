@@ -116,7 +116,7 @@ h3{
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: wrap;
 
 }
 </style>
