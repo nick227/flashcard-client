@@ -119,7 +119,8 @@ const {
   updateSetType,
   updateSearch,
   initialize,
-  currentPage
+  currentPage,
+  updateCategory
 } = useSets()
 
 // Watch for sort order changes
@@ -133,6 +134,22 @@ watch(sortOrder, (newOrder) => {
     batchTimeout = null
   }
 })
+
+// Restore watcher for category route param
+watch(() => route.params.category, (newCategory) => {
+  if (newCategory) {
+    updateCategory(decodeURIComponent(newCategory as string))
+  } else {
+    updateCategory('')
+  }
+  // Reset batch state on category change
+  batchCount.value = 0
+  isBatchWaiting.value = false
+  if (batchTimeout) {
+    clearTimeout(batchTimeout)
+    batchTimeout = null
+  }
+}, { immediate: true })
 
 const onSetTypeChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
