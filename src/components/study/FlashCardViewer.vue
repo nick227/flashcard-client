@@ -108,19 +108,44 @@
           @download="downloadSet" @toggle-like="toggleLike" />
 
         <!-- Main Card Area -->
-        <div class="main-card-area flex-1 min-h-[600px] flex flex-col" tabindex="0"
+        <div class="main-card-area" tabindex="0"
           :class="{ 'fullscreen': isFullScreen }">
           <!-- Single Card View -->
           <div class="flex-1 flex flex-col">
             <div class="flex-1 flex items-center justify-center">
-              <FlashCardScaffold v-if="cards && cards.length > 0 && cards[currentIndex]" :card="cards[currentIndex]"
-                :flipped="flipped" :current-flip="currentFlip" @flip="handleCardFlip" @next="handleNextWithLog"
-                @prev="handlePrevWithLog" />
-              <div v-else class="text-center text-gray-500 py-8">
-                No cards available to display
-              </div>
+              <template v-if="autoPlay">
+                <template v-if="cards.length === 0">
+                  <div class="text-center text-gray-500 py-8">No cards available to preview.</div>
+                </template>
+                <template v-else>
+                  <div class="autoplay-preview-container">
+                    <CardContent
+                      v-if="previewCard && currentCardSide"
+                      :card="previewCard"
+                      :side="currentCardSide"
+                      :is-editing="false"
+                      :is-flipped="false"
+                    />
+                    <div v-else class="text-center text-gray-500 py-8">
+                      Loading preview...
+                    </div>
+                  </div>
+                </template>
+              </template>
+              <template v-else>
+                <FlashCardScaffold v-if="cards && cards.length > 0 && cards[currentIndex]" :card="cards[currentIndex]"
+                  :flipped="flipped" :current-flip="currentFlip" @flip="handleCardFlip" @next="handleNextWithLog"
+                  @prev="handlePrevWithLog" />
+                <div v-else class="text-center text-gray-500 py-8">
+                  No cards available to display
+                </div>
+              </template>
             </div>
-            <CardControls v-if="cards && cards.length > 0" :current-index="currentIndex" :total-cards="cards.length"
+            <!-- Timer Bar for autoplay -->
+            <div v-if="autoPlay" class="timer-bar pt-4 mb-36">
+              <div class="timer-bar-fill" :style="{ width: `${timerProgress}%` }"></div>
+            </div>
+            <CardControls v-if="cards && cards.length > 0 && !autoPlay" :current-index="currentIndex" :total-cards="cards.length"
               :is-prev-disabled="isPrevDisabled" :is-next-disabled="isNextDisabled" :progress-percent="progressPercent"
               :show-exit="isFullScreen" mode="view" @prev="prevCard" @next="handleNextCardWithHistory" />
           </div>
@@ -128,17 +153,24 @@
 
         <!-- Bottom Controls -->
         <div class="flex justify-center w-full mb-4 flex-wrap main-controls">
-          <a @click="handleRestart" class="button-round" href="javascript:void(0)">
+          <a @click="handleRestart" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
             <i class="fa-solid fa-rotate-right"></i> Restart
           </a>
-          <a @click="handleShuffle" class="button-round" href="javascript:void(0)">
+          <a @click="handleShuffle" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
             <i class="fa-solid fa-shuffle"></i> Shuffle
           </a>
           <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)">
             <i class="fa-solid fa-mobile"></i> Mobile
           </a>
-          <a @click="toggleFullScreen" class="button-round" href="javascript:void(0)">
+          <a @click="toggleFullScreen" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
             <i class="fa-solid fa-expand"></i> Full-Screen
+          </a>
+          <a @click="toggleAutoPlay"
+             class="button-round"
+             :aria-pressed="autoPlay"
+             :title="autoPlay ? 'Pause Autoplay' : 'Start Autoplay'"
+             :disabled="autoPlayLoading">
+            <i :class="autoPlay ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i>
           </a>
           <CardHint v-if="cards[currentIndex]?.hint" :hint="cards[currentIndex].hint || ''"
             @show-hint="() => showHintToast(cards[currentIndex]?.hint || '')" />
@@ -160,7 +192,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { api, getApiUrl, apiEndpoints } from '@/api'
 import FlashCardScaffold from '@/components/common/FlashCardScaffold.vue'
 import CardControls from './CardControls.vue'
@@ -171,21 +203,20 @@ import { useCardLikes } from '@/composables/useCardLikes.ts'
 import { useCardGrid } from '@/composables/useCardGrid.ts'
 import type { Card, CardLayout } from '@/types/card'
 import type { FlashCardSet } from '@/types'
-import { useRouter, useRoute } from 'vue-router'
 import { useToaster } from '@/composables/useToaster'
 import Toaster from '@/components/common/Toaster.vue'
 import CardRiverMobile from './CardRiverMobile.vue'
 import { useCardViewer } from '@/composables/useCardViewer'
 import { useCardControls } from '@/composables/useCardControls'
 import { loadStripe } from '@stripe/stripe-js'
+import { useCardPreview } from '@/composables/useCardPreview'
+import CardContent from '@/components/common/CardContent.vue'
 
 const props = defineProps<{
   setId: number | string
   hideRelatedSets?: boolean
 }>()
 
-const route = useRoute()
-const router = useRouter()
 const { toast, toasts, remove } = useToaster()
 const loading = ref(true)
 const checkoutLoading = ref(false)
@@ -195,7 +226,8 @@ const set = ref<FlashCardSet | null>(null)
 const unauthorized = ref(false)
 const accessDetails = ref<any>(null)
 const error = ref('')
-const isMobile = ref(false)
+const autoPlay = ref(false)
+const timerProgress = ref(0)
 
 // Use composables
 const {
@@ -217,11 +249,8 @@ const {
 
 const {
   isFullScreen,
-  showHint,
   toggleFullScreen,
-  handleFullScreenChange,
-  showHintToast,
-  handleKeyDown
+  showHintToast
 } = useCardControls(cards)
 
 const {
@@ -239,92 +268,41 @@ const {
   toggleMobileView
 } = useCardGrid(cards)
 
-// Wrapper functions with console logs for debugging
-const handleNextWithLog = () => {
-  handleNextCardWithHistory()
-}
+// Track autoplay initialization/loading
+const autoPlayLoading = ref(false)
 
-const handlePrevWithLog = () => {
-  prevCard()
-}
-
-function formatPrice(price: number | undefined): string {
-  if (!price) return '0.00'
-  return price.toFixed(2)
-}
-
-// Add type for raw card data from API
-interface RawCard {
-  id: number
-  front: {
-    text?: string
-    imageUrl?: string
-    layout?: CardLayout
-  }
-  back: {
-    text?: string
-    imageUrl?: string
-    layout?: CardLayout
-  }
-  hint?: string
-  createdAt?: string
-  updatedAt?: string
-  reviewCount?: number
-  lastReviewed?: string
-  difficulty?: number
-  deckId?: string
-}
-
-// Helper function to transform a card
-function transformCard(card: RawCard, setData: any): Card {
-  return {
-    id: Number(card.id),
-    title: setData.title || '',
-    description: setData.description || '',
-    front: {
-      layout: card.front.layout || 'default' as CardLayout,
-      content: card.front.text || '',
-      mediaUrl: card.front.imageUrl || null
-    },
-    back: {
-      layout: card.back.layout || 'default' as CardLayout,
-      content: card.back.text || '',
-      mediaUrl: card.back.imageUrl || null
-    },
-    hint: card.hint || null,
-    createdAt: card.createdAt || new Date().toISOString(),
-    updatedAt: card.updatedAt || new Date().toISOString(),
-    reviewCount: card.reviewCount || 0,
-    difficulty: card.difficulty || 0,
-    userId: setData.educatorId?.toString() || '0',
-    deckId: card.deckId || ''
+// Shared function to fetch set and cards
+async function loadSetAndCards(setId: number) {
+  try {
+    const res = await api.get(getApiUrl(`${apiEndpoints.sets.base}/${setId}`))
+    return res.data
+  } catch (err) {
+    console.error('Error fetching set/cards:', err)
+    return null
   }
 }
 
-const fetchSet = async () => {
-  if (!props.setId) {
+// fetchSet uses shared loader and updates set and cards
+const fetchSet = async (setId?: number) => {
+  const id = setId ?? Number(props.setId)
+  if (!id) {
     console.error('No setId provided to fetchSet!')
     return
   }
   try {
-    const res = await api.get(getApiUrl(`${apiEndpoints.sets.base}/${props.setId}`))
-    set.value = res.data
-
-    if (res.data.access && !res.data.access.hasAccess) {
+    const data = await loadSetAndCards(id)
+    if (!data) return
+    set.value = data
+    if (data.access && !data.access.hasAccess) {
       unauthorized.value = true
-      accessDetails.value = res.data.access
+      accessDetails.value = data.access
       cards.value = []
     } else {
-      const cardsData = Array.isArray(res.data.cards) ? res.data.cards : []
-
-      // Transform cards using the new helper function
-      cards.value = cardsData.map((card: RawCard) => transformCard(card, res.data))
-
-      // Initialize viewer
+      const cardsData = Array.isArray(data.cards) ? data.cards : []
+      cards.value = cardsData.map((card: RawCard) => transformCard(card, data))
       await initializeViewer()
-
-      // Initialize likes state
       await initializeLikes()
+      console.log('Fetched cards:', cardsData);
     }
   } catch (err) {
     console.error('Error fetching set:', err)
@@ -347,6 +325,14 @@ const fetchSet = async () => {
     loading.value = false
   }
 }
+
+// Now useCardPreview can be safely called
+const {
+  previewCard,
+  currentCardSide,
+  startPreview,
+  stopPreview
+} = useCardPreview(cards, fetchSet, Number(props.setId), 3600, timerProgress)
 
 const downloadSet = async () => {
   try {
@@ -463,32 +449,15 @@ watch(() => props.setId, async (newId) => {
   }
 }, { immediate: true })
 
-// Initialize on mount
-onMounted(async () => {
-  isMobile.value = window.innerWidth < 768
-  if (route.query.canceled === 'true') {
-    toast('Checkout was canceled. You can try again when you\'re ready.', 'info')
-    router.replace({ path: route.path })
-  }
+// Watch for setId changes to stop preview and reset autoplay
+watch(() => props.setId, () => {
+  stopPreview()
+  autoPlay.value = false
+})
 
-  // Add global keyboard listener
-  const handleKeyDownWrapper = (e: KeyboardEvent) => {
-    handleKeyDown(
-      e,
-      isFullScreen.value,
-      prevCard,
-      handleNextCardWithHistory,
-      showHint,
-      cards.value[currentIndex.value]
-    )
-  }
-  window.addEventListener('keydown', handleKeyDownWrapper)
-
-  // Cleanup
-  onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeyDownWrapper)
-    document.removeEventListener('fullscreenchange', handleFullScreenChange)
-  })
+// Cleanup on unmount
+onUnmounted(() => {
+  stopPreview()
 })
 
 const handleShuffle = () => {
@@ -513,6 +482,84 @@ const handleShuffle = () => {
 function getCardId(card: Card): number {
   return typeof card.id === 'string' ? parseInt(card.id, 10) : card.id
 }
+
+// Wrapper functions with console logs for debugging
+const handleNextWithLog = () => {
+  handleNextCardWithHistory()
+}
+
+const handlePrevWithLog = () => {
+  prevCard()
+}
+
+function formatPrice(price: number | undefined): string {
+  if (!price) return '0.00'
+  return price.toFixed(2)
+}
+
+const toggleAutoPlay = async () => {
+  if (autoPlayLoading.value) return
+  autoPlayLoading.value = true
+  autoPlay.value = !autoPlay.value
+  if (autoPlay.value) {
+    await startPreview()
+    setTimeout(() => {
+      autoPlayLoading.value = false
+      console.log('previewCard', previewCard.value, 'currentCardSide', currentCardSide.value)
+    }, 300)
+  } else {
+    stopPreview()
+    autoPlayLoading.value = false
+  }
+}
+
+// Add type for raw card data from API
+interface RawCard {
+  id: number
+  front: {
+    text?: string
+    imageUrl?: string
+    layout?: CardLayout
+  }
+  back: {
+    text?: string
+    imageUrl?: string
+    layout?: CardLayout
+  }
+  hint?: string
+  createdAt?: string
+  updatedAt?: string
+  reviewCount?: number
+  lastReviewed?: string
+  difficulty?: number
+  deckId?: string
+}
+
+// Helper function to transform a card
+function transformCard(card: RawCard, setData: any): Card {
+  return {
+    id: Number(card.id),
+    title: setData.title || '',
+    description: setData.description || '',
+    front: {
+      layout: card.front.layout || 'default' as CardLayout,
+      content: card.front.text || '',
+      mediaUrl: card.front.imageUrl || null
+    },
+    back: {
+      layout: card.back.layout || 'default' as CardLayout,
+      content: card.back.text || '',
+      mediaUrl: card.back.imageUrl || null
+    },
+    hint: card.hint || null,
+    createdAt: card.createdAt || new Date().toISOString(),
+    updatedAt: card.updatedAt || new Date().toISOString(),
+    reviewCount: card.reviewCount || 0,
+    difficulty: card.difficulty || 0,
+    userId: setData.educatorId?.toString() || '0',
+    deckId: card.deckId || ''
+  }
+}
 </script>
 
 <style scoped>
@@ -522,5 +569,35 @@ function getCardId(card: Card): number {
     text-align: center;
     margin-bottom: 6px;
   }
+}
+
+.autoplay-progress-indicator {
+  text-align: center;
+  color: #888;
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+.autoplay-preview-container {
+  width: 100%;
+  height: 470px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-bar {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: transparent;
+  margin-top: 10px;
+  position: relative;
+}
+
+.timer-bar-fill {
+  height: 100%;
+  background-color: blue;
+  transition: width 0.3s linear;
 }
 </style>

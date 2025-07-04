@@ -50,6 +50,11 @@ defineExpose({ cellRef })
   position: relative;
 }
 
+.card-content-layout.back {
+  background-color: var(--color-back);
+  color: var(--color-white);
+}
+
 .content-area {
   display: flex;
   align-items: center;
@@ -91,16 +96,6 @@ defineExpose({ cellRef })
   width: 100%;
   height: 50%;
   min-height: 100px;
-}
-
-/* Side-specific styles */
-.front {
-  background: var(--color-surface);
-}
-
-.back {
-    background: var(--color-primary);
-    color: var(--color-white);
 }
 
 /* Mobile styles */

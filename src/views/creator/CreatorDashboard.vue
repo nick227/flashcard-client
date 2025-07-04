@@ -3,7 +3,7 @@
     
     <main class="container-main  flex-1">
       <CreatorHero />
-      <h2 class="text-xl font-semibold mb-4">Your Sets</h2>
+      <h2 class="text-xl font-semibold mb-4 w-full flex justify-center">Your Sets</h2>
       <div v-if="loading" class="text-gray-500">Loading your sets...</div>
       <div v-else-if="sets.length === 0" class="text-gray-500">You have not created any sets yet.</div>
       <SetsTable
@@ -21,7 +21,7 @@
       />
 
       <div class="my-12">
-        <h2 class="text-xl font-semibold mb-4">All Sales</h2>
+        <h2 class="text-xl font-semibold mb-4 w-full flex justify-center">All Sales</h2>
         <div v-if="salesLoading" class="text-gray-500">Loading sales...</div>
         <div v-else-if="paginatedSales.length === 0" class="text-gray-500">No sales yet.</div>
         <SalesTable
@@ -38,7 +38,7 @@
       </div>
 
       <div>
-        <h2 class="text-xl font-semibold mb-4">All Subscribers</h2>
+        <h2 class="text-xl font-semibold mb-4 w-full flex justify-center">All Subscribers</h2>
         <div v-if="subsLoading" class="text-gray-500">Loading subscribers...</div>
         <div v-else-if="paginatedSubs.length === 0" class="text-gray-500">No subscribers yet.</div>
         <SubscribersTable
@@ -112,7 +112,6 @@ const fetchSets = async () => {
       ...set,
       hidden: Boolean(set.hidden) // Ensure hidden is a boolean
     }))
-    console.log('Processed sets with hidden status:', sets.value.map(s => ({ id: s.id, title: s.title, hidden: s.hidden })))
     setsTotalPages.value = Math.ceil(res.data.pagination?.total / PAGE_SIZE) || 1
     totalSets.value = res.data.pagination?.total || sets.value.length
     loading.value = false

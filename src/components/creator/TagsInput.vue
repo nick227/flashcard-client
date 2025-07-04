@@ -117,7 +117,7 @@ function onInput() {
   max-width: 180px;
   flex: 1;
   padding: 0.2rem 0;
-  color: #2563eb;
+  color: var(--color-primary);
 }
 .tag-input:focus, .tag-input:focus-visible {
   outline: none !important;
@@ -138,7 +138,7 @@ function onInput() {
 .suggestions-list li {
   padding: 0.5rem 1rem;
   cursor: pointer;
-  color: #2563eb;
+  color: var(--color-primary);
   font-weight: 500;
   font-size: 0.97em;
 }

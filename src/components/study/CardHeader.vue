@@ -1,17 +1,13 @@
 <template>
   <div class="w-full">
+    <div class="flex justify-between">
     <div class="flex flex-col items-start w-full">
       <!-- Creator Info with Avatar -->
       <div class="flex items-center gap-3 mb-4">
-        <img 
-          v-if="set.educatorImage && !avatarError" 
-          :src="set.educatorImage" 
-          :alt="set.educatorName"
-          class="w-8 h-8 rounded-full object-cover"
-          @error="handleAvatarError"
-          @load="handleAvatarLoad"
-        />
-        <div v-else class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+        <img v-if="set.educatorImage && !avatarError" :src="set.educatorImage" :alt="set.educatorName"
+          class="w-8 h-8 rounded-full object-cover" @error="handleAvatarError" @load="handleAvatarLoad" />
+        <div v-else
+          class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
           {{ getEducatorInitials }}
         </div>
         <a @click="router.push(`/u/${set.educatorName}`)" class="link">
@@ -19,33 +15,32 @@
         </a>
       </div>
     </div>
+      
+    <!-- Category Badge -->
+    <span @click="loadCategory" class="category-badge">{{ set.category }}</span>
+    </div>
     <!-- Title Row -->
     <div class="title-container mb-2 flex gap-4 items-start">
-        <!-- Set thumbnail -->
-        <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gray-100 mt-4">
-          <img 
-            v-if="set.thumbnail && !thumbnailError" 
-            :src="set.thumbnail" 
-            :alt="set.title"
-            class="w-full h-full object-cover"
-            @error="handleThumbnailError"
-          />
-          <div v-else class="w-full h-full flex items-center justify-center">
-            <span class="text-2xl font-bold text-gray-400">{{ getFirstLetter }}</span>
-          </div>
+      <!-- Set thumbnail -->
+      <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gray-100 mt-4">
+        <img v-if="set.thumbnail && !thumbnailError" :src="set.thumbnail" :alt="set.title"
+          class="w-full h-full object-cover" @error="handleThumbnailError" />
+        <div v-else class="w-full h-full flex items-center justify-center">
+          <span class="text-2xl font-bold text-gray-400">{{ getFirstLetter }}</span>
         </div>
-        <!-- Set title -->
-        <h1 @click="loadSet" class="text-2xl font-bold flex-1 set-title link">{{ set.title }}</h1>
-    </div>
-      <!-- Action Buttons -->
-      <div class="flex items-center justify-end sm:justify-end gap-4 title-buttons w-full mb-2">
-        <!-- Download Button -->
-        <a class="link" @click="$emit('download')">
-          <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download 
-        </a>
-        <!-- Like Button -->
-        <LikeButton :set-id="set.id" />
       </div>
+      <!-- Set title -->
+      <h1 @click="loadSet" class="text-2xl font-bold flex-1 set-title link">{{ set.title }}</h1>
+    </div>
+    <!-- Action Buttons -->
+    <div class="flex items-center justify-end sm:justify-end gap-4 title-buttons w-full mb-2">
+      <!-- Download Button -->
+      <a class="link" @click="$emit('download')">
+        <i :class="['fa-solid', 'fa-download', 'text-gray-400', 'text-2xl']"></i>&nbsp; Download
+      </a>
+      <!-- Like Button -->
+      <LikeButton :set-id="set.id" />
+    </div>
   </div>
 </template>
 
@@ -79,6 +74,10 @@ const loadSet = () => {
   window.location.href = `/sets/${props.set.id}`
 }
 
+const loadCategory = () => {
+  window.location.href = `/browse/${props.set.category}`
+}
+
 const getEducatorInitials = computed(() => {
   if (!props.set.educatorName) return 'U'
   const cleanName = props.set.educatorName
@@ -89,10 +88,10 @@ const getEducatorInitials = computed(() => {
   const initials = cleanName.length === 1
     ? cleanName[0].slice(0, 2).toUpperCase()
     : cleanName
-        .slice(0, 2)
-        .map((word: string) => word.charAt(0))
-        .join('')
-        .toUpperCase()
+      .slice(0, 2)
+      .map((word: string) => word.charAt(0))
+      .join('')
+      .toUpperCase()
   return initials || 'U'
 })
 
@@ -194,7 +193,7 @@ const getFirstLetter = computed(() => {
     line-height: 1.2;
     padding: 15px 0;
   }
-  
+
   .title-buttons {
     text-align: center;
     display: flex;
@@ -205,4 +204,4 @@ const getFirstLetter = computed(() => {
     white-space: nowrap;
   }
 }
-</style> 
+</style>

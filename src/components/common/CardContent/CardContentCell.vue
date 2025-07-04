@@ -122,33 +122,24 @@ const embeddedMedia = computed(() => extractEmbeddableMedia(props.isEditing ? lo
 const isFocused = ref(false)
 
 // Centralized emit logic for all update events (autosave)
-const emitUpdate = (content: string, mediaUrl: string | null = props.mediaUrl, reason = '') => {
+const emitUpdate = (content: string, mediaUrl: string | null = props.mediaUrl, _reason = '') => {
   const payload = {
     id: props.cardId,
     [props.side]: { content, mediaUrl }
-  }
-  if (reason) {
-    console.log(`[CardContentCell] emit (${reason})`, payload)
-  } else {
-    console.log('[CardContentCell] emit', payload)
   }
   emit('update', payload)
 }
 
 function handleInputLocal() {
-  console.log('[CardContentCell] handleInputLocal fired')
   if (contentRef.value) {
     localContent.value = contentRef.value.innerText
   }
-  console.log('[CardContentCell] handleInputLocal fired', localContent.value)
   measureAndSetContainerSize()
 }
 
 function onBlur() {
-  console.log('[CardContentCell] onBlur fired')
   isFocused.value = false
   if (contentRef.value) {
-    console.log('[CardContentCell] onBlur fired', contentRef.value.innerText)
     localContent.value = contentRef.value.innerText
     emitUpdate(localContent.value, props.mediaUrl, 'onBlur')
   }
@@ -176,7 +167,6 @@ function handleMediaRemove(event: MouseEvent) {
 }
 
 function handleEmbedRemove(url: string) {
-  console.log('handleEmbedRemove', url)
   // Remove all <a> tags with this URL as href and the raw URL from localContent.value
   let newContent = localContent.value
     // Remove anchor tags with this URL
@@ -224,11 +214,9 @@ function measureAndSetContainerSize() {
 let resizeObserver: ResizeObserver | null = null
 
 function beforeUnloadHandler() {
-  console.log('[CardContentCell] beforeUnloadHandler fired')
   if (contentRef.value) {
     localContent.value = contentRef.value.innerText
     emitUpdate(localContent.value, props.mediaUrl, 'beforeunload')
-    console.log('[CardContentCell] Saved content on beforeunload:', localContent.value)
   }
 }
 
@@ -258,7 +246,6 @@ onMounted(() => {
   })
   window.addEventListener('resize', measureAndSetContainerSize)
   window.addEventListener('beforeunload', beforeUnloadHandler)
-  console.log('[CardContentCell] beforeunload event registered')
 })
 
 onUnmounted(() => {
@@ -310,7 +297,6 @@ watch(
 
 function onFocus() {
   isFocused.value = true
-  console.log('[CardContentCell] focus fired')
 }
 
 function getContent() {

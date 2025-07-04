@@ -31,7 +31,7 @@ defineEmits<{
   display: flex;
   align-items: center;
   background: #e0e7ef;
-  color: #2563eb;
+  color: var(--color-primary);
   font-weight: 500;
   border-radius: 999px;
   padding: 0.18rem 0.7rem;

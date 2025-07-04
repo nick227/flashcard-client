@@ -32,10 +32,3 @@ function onFileChange(e: Event) {
   }
 }
 </script> 
-
-<style scoped>
-.button:hover {
-  background-color: var(--color-primary);
-  color: var(--color-white);
-}
-</style>

@@ -235,7 +235,7 @@ function updateBack(card: Card) {
 }
 
 .card-face.back {
-  background: #2563eb;
+  background: var(--color-back);
   transform: rotateY(180deg);
   color: white;
 }

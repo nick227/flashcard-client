@@ -1,6 +1,6 @@
 <template>
   <section v-if="set" class="featured-set">
-    <div class="featured-content">
+    <div class="featured-content flex flex-col gap-4">
       <div class="featured-image">
         <a :href="`/sets/${set.id}`">
           <div class="w-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
@@ -53,12 +53,12 @@
         </div>
 
         <div class="educator-info mt-4 flex items-center gap-3">
-          <a :href="`/u/${set.educatorName}`">
+          <a :href="`/u/${educatorName}`">
             <img 
               v-if="educatorImage"
               v-show="!educatorImageError"
               :src="educatorImage" 
-              :alt="set.educatorName + ' avatar'"
+              :alt="educatorName + ' avatar'"
               class="w-10 h-10 rounded-full object-cover"
               @error="handleEducatorImageError"
               @load="handleEducatorImageLoad"
@@ -68,7 +68,7 @@
             </div>
           </a>
           <div>
-            <div class="font-medium text-gray-900"><a :href="`/u/${set.educatorName}`">{{ set.educatorName }}</a></div>
+            <div class="font-medium text-gray-900"><a :href="`/u/${educatorName}`">{{ educatorName }}</a></div>
           </div>
         </div>
 
@@ -102,8 +102,15 @@ const props = defineProps<{
 
 // Computed property for educator image URL
 const educatorImage = computed(() => {
-  if (!props.set?.educatorId) return null
-  return props.set.educatorImage
+  if (props.set?.educator && props.set.educator.image) return props.set.educator.image
+  if (props.set?.educatorImage) return props.set.educatorImage
+  return null
+})
+
+const educatorName = computed(() => {
+  if (props.set?.educator && props.set.educator.name) return props.set.educator.name
+  if (props.set?.educatorName) return props.set.educatorName
+  return 'Unknown'
 })
 
 // Get first letter of title for fallback
@@ -187,12 +194,6 @@ defineEmits<{
   min-width: 490px;
   min-height: 300px;
   max-width: 100%;
-}
-
-.featured-content {
-  display: flex;
-  width: 100%;
-  gap: 16px;
 }
 
 .featured-image {

@@ -137,7 +137,7 @@ const getYouTubeEmbed = (url: string): string => {
   overflow: hidden;
 }
 .panel-face.back {
-  background: #2563eb;
+  background: var(--color-back);
   color: #fff;
 }
 .panel-face.front {

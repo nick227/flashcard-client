@@ -45,6 +45,12 @@ export interface Set {
   }>
   isArchived: boolean
   isSubscriberOnly?: boolean
+  educator?: {
+    id: number
+    name: string
+    image?: string
+    email?: string
+  }
 }
 
 export interface SetCreate {

@@ -1,7 +1,7 @@
 <template>
   <div class="overflow-x-show -mx-4 sm:mx-0">
     <!-- Search input -->
-    <div class="flex justify-end">
+    <div class="flex justify-end mb-4">
       <input type="text" v-model="searchQuery" placeholder="Search..." class="w-full sm:w-auto px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 search-input" />
     </div>
     <!-- Loading State -->
@@ -20,25 +20,20 @@
 
     <!-- Table Content -->
     <div v-else ref="tableContainer">
-      <table class="min-w-full bg-white rounded-xl shadow px-2">
+      <table class="min-w-full bg-white rounded-xl">
         <thead>
           <tr class="bg-gray-50 text-gray-700 text-left">
             <th 
               v-for="column in columns" 
               :key="column.key" 
-              class="py-3 px-2 sm:px-4 font-medium text-xs sm:text-sm uppercase tracking-wider whitespace-nowrap"
+              class="px-2 sm:px-4 font-medium text-xs sm:text-sm uppercase tracking-wider whitespace-nowrap"
               :class="{ 'cursor-pointer hover:bg-gray-100 active:bg-gray-200': column.sortable }"
               @click="handleSort(column)"
             >
               <div class="flex items-center gap-1 sm:gap-2">
                 {{ column.label }}
                 <span v-if="column.sortable" class="text-gray-400">
-                  <svg v-if="sortKey === column.key" class="h-3 w-3 sm:h-4 sm:w-4" :class="{ 'transform rotate-180': sortOrder === 'desc' }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                  </svg>
-                  <svg v-else class="h-3 w-3 sm:h-4 sm:w-4 opacity-0 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                  </svg>
+                  <i class="fa-solid fa-sort"></i>
                 </span>
               </div>
             </th>
@@ -64,7 +59,7 @@
       </table>
 
       <!-- Enhanced Pagination -->
-      <div v-if="showPagination" class="flex flex-col sm:flex-row items-center justify-between px-2 sm:px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-4 gap-4">
+      <div v-if="showPagination" class="flex flex-col sm:flex-row items-center justify-center w-full mt-8 px-2 sm:px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-4 gap-4">
         <div class="flex items-center text-xs sm:text-sm text-gray-700">
           <span>
             Showing

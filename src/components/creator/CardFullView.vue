@@ -111,7 +111,7 @@ defineExpose({ getCardContent })
 }
 
 .card-full-view:focus-within {
-  border-color: #2563eb;
+  border-color: var(--color-primary);
 }
 
 .card-error {
@@ -185,7 +185,7 @@ defineExpose({ getCardContent })
 
 .input:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: var(--color-primary);
 }
 
 .text-red-500 {

@@ -98,7 +98,7 @@
             
             .link:hover,
             .link.active {
-                color: var(--color-success) !important;
+                color: var(--color-primary-hover) !important;
                 text-decoration: none;
             }
             
@@ -110,6 +110,8 @@
                 font-size: 0.875rem;
                 margin-right: 1rem;
                 transition: opacity 0.3s ease;
+                height: 20px;
+                cursor: pointer;
             }
             
             .button-round.active {

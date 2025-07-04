@@ -5,32 +5,29 @@
       <BrowseHero />
     </div>
 
-    <div class="container-main flex flex-col gap-4 items-center justify-center">
-      <p>Current Stats:</p>
+    <div class="container-main flex flex-col gap-4 items-center justify-center pb-24">
+      <CategoryCloud />
       <StatsSection />
     </div>
 
-    <div class="container-main flex flex-col gap-4 items-center justify-center pb-8 pt-16">
-      <button @click="goToBrowse" class="button button-primary text-lg">Show More</button>
-    </div>
-
-    <div class="container-main py-0 mb-8 flex flex-col gap-4 items-center justify-center">
-      <h2 class="text-2xl font-bold">Interesting Categories</h2>
-      <CategoryCloud />
-    </div>
-
-    <div v-for="(set, idx) in randomSets" :key="set.id" class="my-24 alternate-bg">
-
-      <div class="w-full py-12">
-        <FeaturedSet :set="randomSets[idx]" />
+    <transition-group name="fade" tag="div">
+      <div v-for="id in newestSets" :key="id" class="py-24 alternate-bg">
+        <FlashCardViewer :set-id="id" :hideRelatedSets="true" />
       </div>
-      <div class="w-full pb-24 pt-12">
-        <FlashCardViewer :key="set.id" :set-id="set.id" :hideRelatedSets="true" />
-      </div>
-    </div>
+      <div v-if="loading" class="loading-indicator">Loading...</div>
+    </transition-group>
 
-    <div class="container-main py-64">
+    <div class="container-main flex flex-col gap-4 items-center justify-center py-48">
       <HomeHero />
+      <LoadMoreSetsButton
+        v-if="!noMoreResults"
+        :loading="loading"
+        @loadMore="loadMore"
+      />
+      <div v-else class="end-message">🎉 You've reached the end of the sets!</div>
+    </div>
+
+    <div class="container-main py-4">
     </div>
 
   </div>
@@ -39,47 +36,59 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import HomeHero from '@/components/sections/HomeHero.vue'
-import type { Set } from '@/types/set'
 import { api } from '@/api'
 import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
 import CategoryCloud from '@/components/common/CategoryCloud.vue'
 import BrowseHero from '@/components/sections/BrowseHero.vue'
 import StatsSection from '@/components/common/StatsSection.vue'
-import FeaturedSet from '@/components/home/FeaturedSet.vue'
+import LoadMoreSetsButton from '@/components/common/LoadMoreSetsButton.vue'
 
-const randomSets = ref<Set[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
-const isMobile = ref(false)
-isMobile.value = window.innerWidth < 768
+const newestSets = ref<number[]>([])
+const limit = 9
+const offset = ref(0)
+const noMoreResults = ref(false)
+const loading = ref(false)
 
-const goToBrowse = () => {
-  window.location.href = '/browse'
+const getSets = async ({ limit, offset, fields }: { limit: number, offset: number, fields?: string }) => {
+  const res = await api.get('/sets', { params: { limit, offset, fields } })
+  return res.data
 }
 
-const fetchSets = async () => {
+const loadMore = async () => {
   loading.value = true
-  error.value = null
   try {
-    //get random set
-    const res = await api.get('/sets/random', {
-      params: { limit: 3 }
-    })
-    randomSets.value = res.data;
-
-  } catch (err: any) {
-    console.error('Error fetching sets:', err)
-    error.value = err.message || 'Failed to load sets'
+    const data = await getSets({ limit, offset: offset.value, fields: 'id' })
+    const unique = data.items.map((item: { id: number }) => item.id).filter((id: number) => !newestSets.value.includes(id))
+    newestSets.value = [...newestSets.value, ...unique]
+    offset.value += limit
+    if (data.items.length < limit) {
+      noMoreResults.value = true
+    }
   } finally {
+    await new Promise(resolve => setTimeout(resolve, 2 * 1000))
     loading.value = false
   }
 }
 
-onMounted(fetchSets)
+onMounted(loadMore)
 </script>
 
 <style scoped>
 .alternate-bg:nth-child(odd) {
   background: #fafafa;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.4s;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.end-message {
+  color: #888;
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 2rem 0;
 }
 </style>

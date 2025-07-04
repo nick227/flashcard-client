@@ -53,8 +53,6 @@ export function useSetWizardStorage() {
   const savedProgress = ref<SavedProgress | null>(null)
 
   function saveProgress(progress: SavedProgress) {
-    console.log('Saving to localStorage:', JSON.parse(JSON.stringify(progress)));
-    console.log('useSetWizardStorage - Saving progress:', progress)
     try {
       // Ensure cards have all required properties
       const processedProgress = {
@@ -65,7 +63,6 @@ export function useSetWizardStorage() {
       // Log only the cards array for debugging
       localStorage.setItem(SET_WIZARD_PROGRESS_KEY, JSON.stringify(processedProgress))
       savedProgress.value = processedProgress
-      console.log('useSetWizardStorage - Saved progress:', processedProgress)
     } catch (error) {
       console.error('useSetWizardStorage - Error saving progress:', error)
     }
@@ -108,7 +105,6 @@ export function useSetWizardStorage() {
     const stored = localStorage.getItem(SET_WIZARD_PROGRESS_KEY)
     if (stored) {
       const progress = JSON.parse(stored)
-      console.log('Loaded from localStorage:', progress)
       try {
         // Normalize cards on load
         progress.cards = (progress.cards || []).map(normalizeCard)

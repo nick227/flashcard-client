@@ -69,21 +69,13 @@ function tunedFontSize(
   text: string,
   width = 0,
   height = 0,
-  debug = false
+  _debug = false
 ): number {
   if (!text || width === 0 || height === 0) return minFontSize;
   const charFont = charBasedFontSize(text);
   const areaFactor = areaScaleFactor(width, height);
   let finalFontSize = charFont * areaFactor;
   finalFontSize = clampFontSize(finalFontSize);
-
-  if (debug) {
-    // eslint-disable-next-line no-console
-    console.log('[useDynamicFontSize]', {
-      text, len: text.length, width, height, minChars, maxChars, minFontSize, maxFontSize, baseArea,
-      charFont, areaFactor, finalFontSize
-    });
-  }
 
   return finalFontSize;
 }

@@ -361,7 +361,6 @@ onMounted(async () => {
   }
 
   const progress = loadProgress()
-  console.log('Loaded progress:', progress)
   if (progress) {
     title.value = progress.title
     description.value = progress.description
@@ -413,7 +412,6 @@ onMounted(async () => {
         }
       }
     }
-    console.log('Restored cards after localStorage:', JSON.parse(JSON.stringify(cards.value)));
   }
 
   // Load categories and tags
@@ -449,7 +447,6 @@ onMounted(async () => {
       } else {
         cards.value = []
       }
-      console.log('Cards after setData fetch:', JSON.parse(JSON.stringify(cards.value)));
     } catch (error) {
       toast('Error loading set: ' + error, 'error')
     }
@@ -470,7 +467,6 @@ function onDeleteCard(index: number) {
 }
 
 function onEditCard(updatedCard: Card) {
-  console.log('onEditCard received:', JSON.parse(JSON.stringify(updatedCard)));
   const index = cards.value.findIndex(c => c.id === updatedCard.id)
   if (index !== -1) {
     let merged = { ...cards.value[index] }
@@ -481,17 +477,7 @@ function onEditCard(updatedCard: Card) {
       merged.back = { ...merged.back, ...updatedCard.back }
     }
     cards.value.splice(index, 1, merged)
-    console.log('cards after update:', JSON.parse(JSON.stringify(cards.value)));
     cardsTouched.value = true
-    console.log('Calling saveProgress with:', {
-      title: title.value,
-      description: description.value,
-      categoryId: category.value,
-      tags: setTags.value,
-      price: setPrice.value,
-      thumbnail: setThumbnail.value,
-      cards: cards.value,
-    });
     saveProgress({
       title: title.value,
       description: description.value,

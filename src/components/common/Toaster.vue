@@ -92,7 +92,7 @@ function remove(id: number) {
 }
 
 .toaster-info {
-  background: #2563eb;
+  background: var(--color-primary);
   color: #fff;
 }
 

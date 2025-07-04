@@ -1,10 +1,12 @@
 :root {
     /* Color Palette */
-    --color-primary: #2563eb;
-    --color-primary-hover: #1d4ed8;
+    --color-primary: #101010;
+    --color-blue: #2563eb;
+    --color-primary-hover: #191ba3;
     --color-lightgray: lightgray;
     --color-accent: #4ca319;
     --color-bg: #f8fafc;
+    --color-back: #000000;
     --color-surface: #fff;
     --color-border: #e5e7eb;
     --color-muted: #64748b;
