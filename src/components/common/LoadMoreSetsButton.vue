@@ -9,8 +9,7 @@
       @click="$emit('loadMore')"
       :disabled="props.loading"
     >
-      <span v-if="props.loading">Loading...</span>
-      <span v-else>Show More Sets</span>
+      <span>Show More Sets</span>
     </button>
   </section>
 </template>

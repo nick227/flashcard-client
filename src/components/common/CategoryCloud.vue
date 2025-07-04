@@ -1,7 +1,7 @@
 <template>
     <div class="category-cloud">
         <div @click="handleCategoryClick(category)" class="category-cloud-item chip" v-for="category in categories" :key="category.id">
-            <span class="category-cloud-item-name">{{ category.name }}</span>
+            <span class="category-cloud-item-name">{{ category.name }} ({{ category.setCount }})</span>
         </div>
     </div>
 </template>
@@ -9,11 +9,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { api } from '@/api'
+import { useRouter } from 'vue-router'
 
 const categories = ref<any[]>([])
+const router = useRouter()
 
 const handleCategoryClick = (category: any) => {
-    window.location.href = `/browse/${category.name}`
+    router.push(`/browse/${category.name}`)
 }
 
 onMounted(async () => {

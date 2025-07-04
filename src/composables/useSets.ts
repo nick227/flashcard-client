@@ -295,6 +295,18 @@ export function useSets() {
     debouncedLoad()
   }
 
+  watch(
+    () => route.params.category,
+    (newCategory) => {
+      if (newCategory) {
+        updateCategory(newCategory)
+      } else {
+        updateCategory('') // Show all if no category
+      }
+    },
+    { immediate: true }
+  )
+
   return {
     state,
     sets: computed(() => state.data),

@@ -251,7 +251,7 @@ const cards = computed(() => {
 
 .preview-card {
   cursor: pointer !important;
-  max-width: 590px;
+  max-width: var(--card-max-width);
 }
 
 .thumbnail-container {
@@ -278,7 +278,7 @@ const cards = computed(() => {
 .small .thumbnail-container {
   position: relative;
   height: 300px;
-  width: 470px;
+  width: 100%;
   max-width: 100%;
   overflow: hidden;
   cursor: pointer;
