@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted } from 'vue'
 import HomeHero from '@/components/sections/HomeHero.vue'
 import { api } from '@/api'
 import FlashCardViewer from '@/components/study/FlashCardViewer.vue'
@@ -60,8 +60,6 @@ const loadMore = async () => {
     const data = await getSets({ limit, offset: offset.value, fields: 'id' })
     const unique = data.items.map((item: { id: number }) => item.id).filter((id: number) => !newestSets.value.includes(id))
     newestSets.value = [...newestSets.value, ...unique]
-    // nextTick is not strictly necessary here, but can help if UI update is delayed
-    // await nextTick()
     offset.value += limit
     if (data.items.length < limit) {
       noMoreResults.value = true
