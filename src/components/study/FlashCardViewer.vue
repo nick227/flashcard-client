@@ -111,7 +111,7 @@
         <div class="main-card-area" tabindex="0"
           :class="{ 'fullscreen': isFullScreen }">
           <!-- Single Card View -->
-          <div class="flex-1 flex flex-col">
+          <div class="flex-1 flex flex-col w-full">
             <div class="flex-1 flex items-center justify-center">
               <template v-if="autoPlay">
                 <template v-if="cards.length === 0">
@@ -599,5 +599,23 @@ function transformCard(card: RawCard, setData: any): Card {
   height: 100%;
   background-color: blue;
   transition: width 0.3s linear;
+}
+
+.main-card-area.fullscreen {
+  position: fixed;
+  inset: 0;
+  padding: 0 1em;
+  width: calc(100vw - 2em);
+  height: 100vh;
+  background: #fff;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+  min-height: unset;
+  max-width: unset;
+  box-shadow: none;
 }
 </style>
