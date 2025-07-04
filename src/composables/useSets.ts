@@ -299,7 +299,7 @@ export function useSets() {
     () => route.params.category,
     (newCategory) => {
       if (newCategory) {
-        updateCategory(newCategory)
+        updateCategory(Array.isArray(newCategory) ? newCategory[0] : newCategory)
       } else {
         updateCategory('') // Show all if no category
       }
