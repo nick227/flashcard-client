@@ -302,7 +302,6 @@ const fetchSet = async (setId?: number) => {
       cards.value = cardsData.map((card: RawCard) => transformCard(card, data))
       await initializeViewer()
       await initializeLikes()
-      console.log('Fetched cards:', cardsData);
     }
   } catch (err) {
     console.error('Error fetching set:', err)
@@ -505,7 +504,6 @@ const toggleAutoPlay = async () => {
     await startPreview()
     setTimeout(() => {
       autoPlayLoading.value = false
-      console.log('previewCard', previewCard.value, 'currentCardSide', currentCardSide.value)
     }, 300)
   } else {
     stopPreview()
