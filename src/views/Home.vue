@@ -56,7 +56,6 @@ const getSets = async ({ limit, offset, fields }: { limit: number, offset: numbe
 const loadMore = async () => {
   loading.value = true
   try {
-    console.log('loadMore', { limit, offset: offset.value })
     const data = await getSets({ limit, offset: offset.value, fields: 'id' })
     const unique = data.items.map((item: { id: number }) => item.id).filter((id: number) => !newestSets.value.includes(id))
     newestSets.value = [...newestSets.value, ...unique]
@@ -64,7 +63,10 @@ const loadMore = async () => {
     if (data.items.length < limit) {
       noMoreResults.value = true
     }
-    console.log('loadMore', { unique: unique })
+  }
+  catch {
+    console.error('Error loading more sets')
+    noMoreResults.value = true
   } finally {
     loading.value = false
   }
