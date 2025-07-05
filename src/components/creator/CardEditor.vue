@@ -108,8 +108,8 @@ defineExpose({ getAllContent })
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  padding-top: 0.5rem;
   height: var(--card-max-height);
+  outline: 1px solid var(--color-border);
 }
 
 .hint-section {
@@ -117,5 +117,12 @@ defineExpose({ getAllContent })
   width: 100%;
   padding: 0.5rem 0;
   margin-top: 3em;
+}
+
+@media (max-width: 768px) {
+  .card-side {
+    height: var(--card-mobile-max-height) !important;
+    max-height: var(--card-mobile-max-height) !important;
+  }
 }
 </style> 

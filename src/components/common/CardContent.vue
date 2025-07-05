@@ -1,6 +1,5 @@
 <template>
   <div class="card-content" :class="{ 'is-editing': isEditing }">
-    <span v-if="isEditing" class="text-xs text-muted text-center mb-2">{{ side }}</span>
     <CardContentLayout
       ref="layoutRef"
       :layout="cardState[side].layout"

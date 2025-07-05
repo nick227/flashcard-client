@@ -133,6 +133,8 @@ const getFirstLetter = computed(() => {
   min-height: 60px;
   transition: font-size 0.2s ease;
   padding: 10px 0;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .title-buttons {

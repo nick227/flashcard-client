@@ -142,8 +142,11 @@
               </template>
             </div>
             <!-- Timer Bar for autoplay -->
-            <div v-if="autoPlay" class="timer-bar pt-4 mb-36">
+            <div v-if="autoPlay" class="timer-bar pt-4 mb-24">
               <div class="timer-bar-fill" :style="{ width: `${timerProgress}%` }"></div>
+            </div>
+            <div v-if="autoPlay && isFullScreen" class="w-full flex justify-center items-center mb-12">
+              <button style="height:36px;" class="button button-round" @click="toggleFullScreen">Exit Full-Screen</button>
             </div>
             <CardControls v-if="cards && cards.length > 0 && !autoPlay" :current-index="currentIndex" :total-cards="cards.length"
               :is-prev-disabled="isPrevDisabled" :is-next-disabled="isNextDisabled" :progress-percent="progressPercent"
@@ -153,24 +156,24 @@
 
         <!-- Bottom Controls -->
         <div class="flex justify-center w-full mb-4 flex-wrap main-controls">
-          <a @click="handleRestart" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
-            <i class="fa-solid fa-rotate-right"></i> Restart
-          </a>
-          <a @click="handleShuffle" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
-            <i class="fa-solid fa-shuffle"></i> Shuffle
-          </a>
-          <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)">
-            <i class="fa-solid fa-mobile"></i> Mobile
-          </a>
-          <a @click="toggleFullScreen" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
-            <i class="fa-solid fa-expand"></i> Full-Screen
-          </a>
           <a @click="toggleAutoPlay"
              class="button-round"
              :aria-pressed="autoPlay"
              :title="autoPlay ? 'Pause Autoplay' : 'Start Autoplay'"
              :disabled="autoPlayLoading">
             <i :class="autoPlay ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i>
+          </a>
+          <a @click="handleRestart" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
+            <i class="fa-solid fa-rotate-right"></i> Restart
+          </a>
+          <a @click="handleShuffle" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
+            <i class="fa-solid fa-shuffle"></i> Shuffle
+          </a>
+          <a @click="toggleFullScreen" :disabled="autoPlay" class="button-round" href="javascript:void(0)">
+            <i class="fa-solid fa-expand"></i> Full-Screen
+          </a>
+          <a @click="toggleMobileView" :class="['button-round', { active: showMobileView }]" href="javascript:void(0)">
+            <i class="fa-solid fa-mobile"></i> Mobile
           </a>
           <CardHint v-if="cards[currentIndex]?.hint" :hint="cards[currentIndex].hint || ''"
             @show-hint="() => showHintToast(cards[currentIndex]?.hint || '')" />

@@ -55,6 +55,14 @@ defineExpose({ cellRef })
   color: var(--color-white);
 }
 
+@media (max-width: 768px) {
+  .card-content-layout {
+    height: var(--card-mobile-max-height) !important;
+    max-height: var(--card-mobile-max-height) !important;
+    aspect-ratio: 1/1;
+  }
+}
+
 .content-area {
   display: flex;
   align-items: center;

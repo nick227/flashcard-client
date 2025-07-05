@@ -47,4 +47,5 @@
     --card-max-height: 550px;
     --card-tile-height: 260px;
     --card-tile-width: 360px;
+    --card-mobile-max-height: 350px;
 }
