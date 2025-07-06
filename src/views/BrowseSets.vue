@@ -1,44 +1,30 @@
 <template>
   <div class="container-main  py-0">
     <HomeHero />
-
     <!-- Filter & Sort Controls -->
     <section class="my-8 gap-4 container-main">
+      <!-- Categories -->
+      <CategoryCloud />
 
-        <!-- Categories -->
-         <CategoryCloud />
-      
       <div class="flex flex-wrap gap-4 w-full mt-8">
-
         <!-- Search -->
-        <SearchInput
-          v-model="searchQuery"
-          @submit="onSearchSubmit"
-          :disabled="loading"
-        />
+        <SearchInput v-model="searchQuery" @submit="onSearchSubmit" :disabled="loading" />
       </div>
-        <!-- Loading indicator -->
-        <div v-if="loading" class="flex items-center">
-          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-        </div>
+      <!-- Loading indicator -->
+      <div v-if="loading" class="flex items-center">
+        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+      </div>
     </section>
 
     <!-- Error Message -->
     <div v-if="error" class="text-red-500 text-center mb-4">
       {{ error }}
     </div>
-
     <!-- Sets Grid with Transition -->
     <section class="section">
       <div ref="cardsGridRef" class="cards-grid">
-        <SetPreviewCard
-          v-for="set in sets || []"
-          :key="set.id"
-          :set="set"
-          theme="small"
-          @view="viewSet"
-          :class="{ 'opacity-50': isTransitioning }"
-        />
+        <SetPreviewCard v-for="set in sets || []" :key="set.id" :set="set" theme="small" @view="viewSet"
+          :class="{ 'opacity-50': isTransitioning }" />
       </div>
       <!-- Loading indicator for pagination -->
       <FunnyLoadingIndicator v-if="(loading && sets?.length) || isBatchWaiting" />
@@ -47,7 +33,8 @@
       <div v-if="!hasMore && sets?.length" class="text-center text-gray-500 py-8 mb-8">
         <div class="text-2xl my-16"><span class="text-2xl">😢</span> That's all the sets.</div>
         <div class="w-full h-4 mt-4">
-          <button @click="router.push('/create')" class="button button-accent text-white-500">Hey, what if you created one?</button>
+          <button @click="router.push('/create')" class="button button-accent text-white-500">Hey, what if you created
+            one?</button>
         </div>
       </div>
       <!-- Empty state -->
@@ -104,12 +91,12 @@ let observer: IntersectionObserver | null = null
 
 const triggerNextBatch = () => {
   if (isBatchWaiting.value || loading.value || showLoadMoreButton.value) return
-  
+
   // Only increment batch count if we're not at the first page
   if (currentPage.value > 1) {
     batchCount.value++
   }
-  
+
   isBatchWaiting.value = true
   batchDelay.value = Math.floor(Math.random() * 3000) + 500 // random delay
   batchTimeout = setTimeout(() => {
@@ -131,14 +118,14 @@ const handleLoadMore = () => {
 onMounted(() => {
   // Initialize categories and sets
   initialize()
-  
+
   // Small delay to ensure DOM is ready
   setTimeout(() => {
     observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && hasMore.value && !loading.value && !isBatchWaiting.value) {
         triggerNextBatch()
       }
-    }, { 
+    }, {
       threshold: 0.1,
       rootMargin: '200px' // Increased margin to trigger earlier
     })
@@ -182,7 +169,6 @@ function onSearchSubmit(value: string) {
 </script>
 
 <style scoped>
-
 .search-input {
   width: calc(100% - 20px);
 }
@@ -193,4 +179,4 @@ function onSearchSubmit(value: string) {
     max-width: 100% !important;
   }
 }
-</style> 
+</style>

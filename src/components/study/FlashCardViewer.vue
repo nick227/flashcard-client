@@ -2,10 +2,7 @@
   <div v-if="!loading"
     class="container-main  flex flex-col items-center justify-start w-full px-4 py-2 mb-8 sm:mb-2 relative">
     <div style="width: 100%;">
-      <div v-if="historyLoading" class="text-gray-500 text-sm">Loading history...</div>
-      <div v-if="historyError" class="text-red-500 text-sm">{{ historyError }}</div>
-      <div v-else-if="error" class="text-red-500 text-lg">{{ error }}</div>
-      <div v-else-if="!set" class="text-gray-500 text-lg">Set not found</div>
+      <div v-if="!set" class="text-gray-500 text-lg">Set not found</div>
       <div v-else-if="unauthorized && set" class="w-full max-w-4xl mx-auto">
         <div class="bg-white rounded-lg overflow-hidden">
           <!-- Set Header with Image -->
@@ -218,6 +215,7 @@ import CardContent from '@/components/common/CardContent.vue'
 const props = defineProps<{
   setId: number | string
   hideRelatedSets?: boolean
+  hideHistory?: boolean
 }>()
 
 const { toast, toasts, remove } = useToaster()
@@ -240,8 +238,6 @@ const {
   isPrevDisabled,
   isNextDisabled,
   progressPercent,
-  historyLoading,
-  historyError,
   viewedCards,
   handleCardFlip,
   handleNextCardWithHistory,
@@ -303,7 +299,7 @@ const fetchSet = async (setId?: number) => {
     } else {
       const cardsData = Array.isArray(data.cards) ? data.cards : []
       cards.value = cardsData.map((card: RawCard) => transformCard(card, data))
-      await initializeViewer()
+      if(!props.hideHistory) await initializeViewer()
       await initializeLikes()
     }
   } catch (err) {

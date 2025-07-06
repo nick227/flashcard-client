@@ -12,7 +12,7 @@
 
     <transition-group name="fade" tag="div">
       <div v-for="id in newestSets" :key="id" class="py-12 alternate-bg">
-        <FlashCardViewer :set-id="id" :hideRelatedSets="true" />
+        <FlashCardViewer :set-id="id" :hideRelatedSets="true" :hideHistory="true" />
       </div>
     </transition-group>
 
