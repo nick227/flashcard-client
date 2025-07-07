@@ -4,7 +4,7 @@
     <!-- Filter & Sort Controls -->
     <section class="my-8 gap-4 container-main">
       <!-- Categories -->
-      <CategoryCloud />
+      <CategoryCloud view="all" />
 
       <div class="flex flex-wrap gap-4 w-full mt-8">
         <!-- Search -->

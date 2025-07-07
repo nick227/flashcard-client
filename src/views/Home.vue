@@ -6,7 +6,7 @@
     </div>
 
     <div class="container-main flex flex-col gap-4 items-center justify-center pb-24">
-      <CategoryCloud />
+      <CategoryCloud view="fader" />
       <StatsSection />
     </div>
 

@@ -1,13 +1,18 @@
 <template>
-    <div class="category-cloud">
+    <div v-if="view === 'all'" class="category-cloud">
         <div @click="handleCategoryClick(category)" class="category-cloud-item chip" v-for="category in categories" :key="category.id">
+            <span class="category-cloud-item-name">{{ category.name }} ({{ category.setCount }})</span>
+        </div>
+    </div>
+    <div v-else class="category-cloud">
+        <div class="category-cloud-item chip" v-for="category in currentCategories" :key="category.id">
             <span class="category-cloud-item-name">{{ category.name }} ({{ category.setCount }})</span>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { api } from '@/api'
 import { useRouter } from 'vue-router'
 
@@ -18,9 +23,40 @@ const handleCategoryClick = (category: any) => {
     router.push(`/browse/${category.name}`)
 }
 
+const props = defineProps<{
+    view: 'fader' | 'all'
+}>()
+
+const view = computed(() => props.view)
+
+const fadeSetStart = ref(0)
+const numCategoriesPerFade = ref(4)
+const fadeInterval = ref<number | null>(null)
+const fadeSpeed = ref(3000)
+
+const currentCategories = computed(() => {
+    if (categories.value.length === 0) return [];
+    const start = fadeSetStart.value % categories.value.length;
+    let end = start + numCategoriesPerFade.value;
+    if (end > categories.value.length) {
+        return [
+            ...categories.value.slice(start),
+            ...categories.value.slice(0, end - categories.value.length)
+        ];
+    }
+    return categories.value.slice(start, end);
+});
+
 onMounted(async () => {
     const res = await api.get('/categories')
     categories.value = res.data
+
+    if (fadeInterval.value) {
+        clearInterval(fadeInterval.value)
+    }
+    fadeInterval.value = setInterval(() => {
+        fadeSetStart.value = (fadeSetStart.value + numCategoriesPerFade.value) % categories.value.length;
+    }, fadeSpeed.value)
 })
 </script>
 
