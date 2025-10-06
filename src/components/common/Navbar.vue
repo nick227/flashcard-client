@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar mb-2 pb-2">
+  <nav class="navbar pb-2">
     <div class="navbar-inner container-main">
       <div class="navbar-masthead">
         <router-link to="/" class="navbar-logo">
@@ -12,9 +12,9 @@
         </router-link>
       </div>
       <div class="navbar-actions">
-        <a href="/" class="navbar-link" active-class="active">Home</a>
-        <a href="/browse" class="navbar-link" active-class="active">Browse</a>
-        <a href="/creator" class="navbar-link" active-class="active">Create</a>
+        <a href="/creator">
+          <button class="button button-accent">Create</button>
+        </a>
         <div class="navbar-divider"></div>
         <AuthWidget />
       </div>

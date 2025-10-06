@@ -10,6 +10,7 @@
         align-items: center;
         justify-content: center;
         transition: all 0.3s ease;
+        z-index: 10033;
     }
     
     @media (max-width: 760px) {
