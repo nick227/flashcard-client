@@ -54,7 +54,7 @@ onMounted(async () => {
     if (fadeInterval.value) {
         clearInterval(fadeInterval.value)
     }
-    fadeInterval.value = setInterval(() => {
+    fadeInterval.value = window.setInterval(() => {
         fadeSetStart.value = (fadeSetStart.value + numCategoriesPerFade.value) % categories.value.length;
     }, fadeSpeed.value)
 })
