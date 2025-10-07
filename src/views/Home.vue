@@ -1,33 +1,29 @@
 <template>
   <div class="home-page">
-    <!-- Browse Hero - Main landing section -->
-    <section class="hero-section">
-      <BrowseHero />
-    </section>
-
+  
     <!-- Newest Sets Section -->
-    <section class="newest-sets-section">
+    <section class="random-sets-section">
       <div class="container-main">
         <h2 class="section-title">Latest Sets</h2>
         
-        <!-- Loading indicator for newest sets -->
-        <div v-if="newestSetsLoading && !newestSets.length" class="loading-container">
+        <!-- Loading indicator for random sets -->
+        <div v-if="randomSetsLoading && !randomSets.length" class="loading-container">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p class="loading-text">Loading latest sets...</p>
         </div>
         
-        <!-- Error state for newest sets -->
-        <div v-if="newestSetsError" class="error-container">
-          <p class="error-text">{{ newestSetsError }}</p>
+        <!-- Error state for random sets -->
+        <div v-if="randomSetsError" class="error-container">
+          <p class="error-text">{{ randomSetsError }}</p>
           <button @click="loadMoreNewestSets" class="retry-button">Try Again</button>
         </div>
         
         <!-- Newest sets display -->
-        <transition-group v-if="newestSets.length" name="fade" tag="div" class="newest-sets-list">
+        <transition-group v-if="randomSets.length" name="fade" tag="div" class="random-sets-list">
           <div 
-            v-for="id in newestSets" 
+            v-for="id in randomSets" 
             :key="id" 
-            class="newest-set-item alternate-bg"
+            class="random-set-item alternate-bg"
             :aria-label="`Flashcard set ${id}`"
           >
             <FlashCardViewer 
@@ -41,11 +37,11 @@
         <!-- Load More Button for Newest Sets -->
         <div class="load-more-container">
           <LoadMoreSetsButton
-            v-if="!noMoreResults && newestSets.length > 0"
-            :loading="newestSetsLoading"
+            v-if="!noMoreResults && randomSets.length > 0"
+            :loading="randomSetsLoading"
             @loadMore="loadMoreNewestSets"
           />
-          <div v-else-if="newestSets.length > 0" class="end-message">
+          <div v-else-if="randomSets.length > 0" class="end-message">
             🎉 You've reached the end of the latest sets!
           </div>
         </div>
@@ -133,7 +129,6 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import HomeHero from '@/components/sections/HomeHero.vue'
-import BrowseHero from '@/components/sections/BrowseHero.vue'
 import SetPreviewCard from '@/components/cards/SetPreviewCard.vue'
 import CategoryCloud from '@/components/common/CategoryCloud.vue'
 import StatsSection from '@/components/common/StatsSection.vue'
@@ -148,12 +143,12 @@ const router = useRouter()
 const sentinel = ref<HTMLElement | null>(null)
 
 // Newest sets state
-const newestSets = ref<number[]>([])
-const newestSetsLoading = ref(false)
-const newestSetsError = ref<string | null>(null)
+const randomSets = ref<number[]>([])
+const randomSetsLoading = ref(false)
+const randomSetsError = ref<string | null>(null)
 const noMoreResults = ref(false)
-const newestSetsLimit = 3
-const newestSetsOffset = ref(0)
+const randomSetsLimit = 3
+const randomSetsOffset = ref(0)
 
 // Batch loading state for featured sets
 const batchDelay = ref(0)
@@ -186,46 +181,46 @@ const getNewestSets = async ({ limit, offset, fields }: { limit: number, offset:
       limit, 
       offset, 
       fields,
-      sortOrder: 'newest' // Ensure we get newest sets
+      sortOrder: 'random' // Ensure we get random sets
     } 
   })
   return res.data
 }
 
-// Load more newest sets with improved error handling
+// Load more random sets with improved error handling
 const loadMoreNewestSets = async () => {
-  if (newestSetsLoading.value) return // Prevent multiple simultaneous calls
+  if (randomSetsLoading.value) return // Prevent multiple simultaneous calls
   
-  newestSetsLoading.value = true
-  newestSetsError.value = null
+  randomSetsLoading.value = true
+  randomSetsError.value = null
   
   try {
     const data = await getNewestSets({ 
-      limit: newestSetsLimit, 
-      offset: newestSetsOffset.value, 
+      limit: randomSetsLimit, 
+      offset: randomSetsOffset.value, 
       fields: 'id' 
     })
     
     if (data?.items && Array.isArray(data.items)) {
       const unique = data.items
         .map((item: { id: number }) => item.id)
-        .filter((id: number) => !newestSets.value.includes(id))
+        .filter((id: number) => !randomSets.value.includes(id))
       
-      newestSets.value = [...newestSets.value, ...unique]
-      newestSetsOffset.value += newestSetsLimit
+      randomSets.value = [...randomSets.value, ...unique]
+      randomSetsOffset.value += randomSetsLimit
       
-      if (data.items.length < newestSetsLimit) {
+      if (data.items.length < randomSetsLimit) {
         noMoreResults.value = true
       }
     } else {
-      newestSetsError.value = 'No sets data received'
+      randomSetsError.value = 'No sets data received'
     }
   } catch (error) {
-    console.error('Error loading more newest sets:', error)
-    newestSetsError.value = 'Failed to load latest sets. Please try again.'
+    console.error('Error loading more random sets:', error)
+    randomSetsError.value = 'Failed to load latest sets. Please try again.'
     noMoreResults.value = true
   } finally {
-    newestSetsLoading.value = false
+    randomSetsLoading.value = false
   }
 }
 
@@ -313,7 +308,7 @@ onUnmounted(() => {
   padding: 0;
 }
 
-.newest-sets-section,
+.random-sets-section,
 .featured-sets-section {
   padding: 3rem 0;
 }
@@ -389,11 +384,11 @@ onUnmounted(() => {
 }
 
 /* Newest sets */
-.newest-sets-list {
+.random-sets-list {
   margin-bottom: 2rem;
 }
 
-.newest-set-item {
+.random-set-item {
   padding: 3rem 0;
 }
 
@@ -509,11 +504,11 @@ onUnmounted(() => {
     gap: 1rem;
   }
   
-  .newest-set-item {
+  .random-set-item {
     padding: 2rem 0;
   }
   
-  .newest-sets-section,
+  .random-sets-section,
   .featured-sets-section {
     padding: 2rem 0;
   }

@@ -6,7 +6,9 @@
     "scripts": {
         "dev": "vite",
         "build": "vue-tsc -b && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "start": "vite preview --host",
+        "build:prod": "vite build"
     },
     "dependencies": {
         "@auth0/auth0-spa-js": "^2.0.4",
