@@ -28,3 +28,6 @@ lerna-debug.log*
 .env.local
 .env.*.local
 .vercel
+
+src/components/__tests__
+src/utils/__tests__
