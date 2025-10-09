@@ -16,10 +16,16 @@ import { ref, onMounted, computed } from 'vue'
 import { api } from '@/api'
 import { useRouter } from 'vue-router'
 
-const categories = ref<any[]>([])
+interface Category {
+    id: number
+    name: string
+    setCount?: number
+}
+
+const categories = ref<Category[]>([])
 const router = useRouter()
 
-const handleCategoryClick = (category: any) => {
+const handleCategoryClick = (category: Category) => {
     router.push(`/browse/${category.name}`)
 }
 
@@ -48,15 +54,25 @@ const currentCategories = computed(() => {
 });
 
 onMounted(async () => {
-    const res = await api.get('/categories')
-    categories.value = res.data
+    try {
+        const res = await api.get('/categories')
+        // Handle both wrapped and direct responses
+        const data = res.data?.data || res.data
+        categories.value = Array.isArray(data) ? data : []
 
-    if (fadeInterval.value) {
-        clearInterval(fadeInterval.value)
+        if (fadeInterval.value) {
+            clearInterval(fadeInterval.value)
+        }
+        
+        if (categories.value.length > 0) {
+            fadeInterval.value = window.setInterval(() => {
+                fadeSetStart.value = (fadeSetStart.value + numCategoriesPerFade.value) % categories.value.length;
+            }, fadeSpeed.value)
+        }
+    } catch (error) {
+        console.error('Error loading categories:', error)
+        categories.value = []
     }
-    fadeInterval.value = window.setInterval(() => {
-        fadeSetStart.value = (fadeSetStart.value + numCategoriesPerFade.value) % categories.value.length;
-    }, fadeSpeed.value)
 })
 </script>
 

@@ -163,14 +163,16 @@ export function useSets() {
     isTransitioning.value = true
 
     try {
-      const params = {
+      const params: Record<string, unknown> = {
         page: currentPage.value,
         limit: 12,
-        category: selectedCategory.value || undefined,
-        search: searchQuery.value || undefined,
-        setType: selectedSetType.value || undefined,
-        sortOrder: sortOrder.value || 'featured'
+        sortOrder: sortOrder.value || 'newest'
       }
+      
+      // Only add optional params if they have values
+      if (selectedCategory.value) params.category = selectedCategory.value
+      if (searchQuery.value) params.search = searchQuery.value
+      if (selectedSetType.value) params.setType = selectedSetType.value
       
       const cacheKey = `sets:${JSON.stringify({
         ...params,
@@ -186,13 +188,17 @@ export function useSets() {
         }
       )
 
-      if (!response || !Array.isArray(response.items)) {
+      // Handle both wrapped and unwrapped responses
+      const items = response?.items || response
+      
+      if (!items || !Array.isArray(items)) {
+        console.warn('[Stats] Sets response is not an array:', response)
         state.data = currentPage.value === 1 ? [] : state.data
         hasMore.value = false
         return
       }
 
-      const setsData = response.items
+      const setsData = items
 
       if (setsData.length === 0) {
         state.data = currentPage.value === 1 ? [] : state.data

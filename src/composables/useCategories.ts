@@ -11,11 +11,17 @@ export function useCategories() {
         error.value = null
         try {
             const data = await fetchCategories()
-            // Take only the first 12 categories
-            categories.value = data.slice(0, 12)
+            // Ensure data is an array before calling slice
+            if (Array.isArray(data)) {
+                categories.value = data.slice(0, 12)
+            } else {
+                console.warn('Categories response is not an array:', data)
+                categories.value = []
+            }
         } catch (err) {
             error.value = 'Failed to load categories'
             console.error('Error loading categories:', err)
+            categories.value = []
         } finally {
             loading.value = false
         }
