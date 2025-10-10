@@ -20,7 +20,7 @@
     --color-black: #000000;
     --card-back-background: #1d4ed8;
     --card-front-background: #ffffff;
-    --card-border: #e5e7eb;
+    --card-border: transparent;
     /* Spacing & Sizing */
     --space-xs: 0.5rem;
     --space-sm: 1rem;

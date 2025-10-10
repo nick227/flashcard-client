@@ -5,7 +5,7 @@ import { router } from './router'
 import '@fortawesome/fontawesome-free/css/all.min.css'
 import { createPinia } from 'pinia'
 // import piniaPersist from 'pinia-plugin-persistedstate'
-import GoogleSignInPlugin from 'vue3-google-login'
+// import GoogleSignInPlugin from 'vue3-google-login'
 import { useAuthStore } from '@/stores/auth'
 import axios from 'axios'
 import { watch } from 'vue'
@@ -62,15 +62,6 @@ app.config.performance = isProd
 const pinia = createPinia()
 // pinia.use(piniaPersist)
 app.use(pinia)
-
-// Google Sign In Configuration
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
-if (!GOOGLE_CLIENT_ID) {
-  console.error('[Debug] VITE_GOOGLE_CLIENT_ID is not defined')
-}
-app.use(GoogleSignInPlugin, {
-  clientId: GOOGLE_CLIENT_ID
-})
 
 // Initialize plugins
 app.use(cachePlugin)
