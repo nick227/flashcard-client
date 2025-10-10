@@ -18,7 +18,7 @@
         <span class="user-name">{{ auth.user?.name || 'User' }}</span>
       </div>
     </div>
-    <router-link v-else to="/login" class="login-link">
+    <router-link v-else to="/login" class="link">
       Sign In
     </router-link>
   </div>
@@ -122,7 +122,7 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
 }
 
-.login-link {
+.link {
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
   background: var(--color-primary);
@@ -132,8 +132,8 @@ onUnmounted(() => {
   transition: background-color 0.2s;
 }
 
-.login-link:hover,
-.login-link:active {
+.link:hover,
+.link:active {
   background: var(--color-primary);
 }
 </style> 
