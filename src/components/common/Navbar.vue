@@ -25,7 +25,6 @@
 
 <script setup lang="ts">
 import AuthWidget from '@/components/common/AuthWidget.vue'
-import { useRouter } from 'vue-router'
 
 // Handle HMR
 if (import.meta.hot) {
