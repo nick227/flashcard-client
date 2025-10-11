@@ -169,23 +169,61 @@ export const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, _from, savedPosition) {
-    if (savedPosition) return savedPosition
-  
-    return new Promise(resolve => {
-      nextTick(() => {
-        if (to.hash && document.querySelector(to.hash)) {
-          resolve({ el: to.hash, behavior: 'smooth' })
-        } else {
-          resolve({ top: 0, behavior: 'smooth' })
-        }
+    // Return saved position for back/forward navigation
+    if (savedPosition) {
+      return savedPosition
+    }
+    
+    // Scroll to anchor if hash is present
+    if (to.hash) {
+      return new Promise(resolve => {
+        nextTick(() => {
+          const element = document.querySelector(to.hash)
+          if (element) {
+            resolve({ el: to.hash, behavior: 'smooth' })
+          } else {
+            resolve({ top: 0, left: 0 })
+          }
+        })
       })
-    })
+    }
+    
+    // For route changes, scroll to top instantly to prevent content flashing
+    // Smooth behavior can cause timing issues with lazy-loaded components
+    return { top: 0, left: 0 }
   }
 })
+
+// Force scroll to top helper - multiple strategies to handle all edge cases
+function forceScrollToTop() {
+  // Strategy 1: Immediate scroll
+  window.scrollTo(0, 0)
+  
+  // Strategy 2: Next frame (after current render)
+  requestAnimationFrame(() => {
+    window.scrollTo(0, 0)
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+  })
+  
+  // Strategy 3: After double RAF (ensures DOM is fully rendered)
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0)
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    })
+  })
+}
 
 // Navigation guards
 router.beforeEach(async (to, _from, next) => {
   const auth = useAuthStore()
+  
+  // Force scroll to top on navigation (unless using back/forward)
+  if (!window.history.state.position) {
+    forceScrollToTop()
+  }
   
   // Update page title
   document.title = `${to.meta.title} | Flashcard Academy` || 'Flashcard Academy'
@@ -221,4 +259,22 @@ router.beforeEach(async (to, _from, next) => {
   }
 
   next()
+})
+
+// Additional scroll enforcement after each navigation completes
+router.afterEach((_to, _from) => {
+  // Don't interfere with back/forward navigation
+  if (window.history.state.position) {
+    return
+  }
+  
+  // Force scroll to top with delay to handle lazy-loaded components
+  nextTick(() => {
+    forceScrollToTop()
+    
+    // Fallback timeout for very slow components
+    setTimeout(() => {
+      window.scrollTo(0, 0)
+    }, 100)
+  })
 })

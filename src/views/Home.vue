@@ -149,6 +149,10 @@ const {
 
 // Navigation handler
 const viewSet = (setId: number) => {
+  // Scroll to top BEFORE navigation to avoid layout shifts
+  window.scrollTo(0, 0)
+  
+  // Then navigate
   router.push({ path: '/study/' + setId })
 }
 

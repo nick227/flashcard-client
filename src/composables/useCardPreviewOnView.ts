@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { useEventListener } from '@vueuse/core'
 
 export function useCardPreviewOnView(
@@ -58,18 +58,17 @@ export function useCardPreviewOnView(
   }
 
   // Attach listeners using VueUse
-  onMounted(() => {
-    nextTick(() => {
-      useEventListener(document.body, 'scroll', () => {
-        onScrollOrResize();
-      });
-      useEventListener(window, 'resize', onScrollOrResize)
-      updateActive()
-    })
-  })
+  const cleanupScroll = useEventListener(document.body, 'scroll', onScrollOrResize)
+  const cleanupResize = useEventListener(window, 'resize', onScrollOrResize)
+  
+  // Initial check
+  updateActive()
 
-  onUnmounted(() => {
+  // Return cleanup function
+  return () => {
     if (scrollStopTimeout) clearTimeout(scrollStopTimeout)
     if (isActive.value) onLeave()
-  })
+    cleanupScroll()
+    cleanupResize()
+  }
 } 

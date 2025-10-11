@@ -118,7 +118,7 @@
                   <div class="autoplay-preview-container">
                     <CardContent
                       v-if="previewCard && currentCardSide"
-                      :card="previewCard"
+                      :card="previewCard as any"
                       :side="currentCardSide"
                       :is-editing="false"
                       :is-flipped="false"
@@ -208,7 +208,7 @@ import Toaster from '@/components/common/Toaster.vue'
 import CardRiverMobile from './CardRiverMobile.vue'
 import { useCardViewer } from '@/composables/useCardViewer'
 import { useCardControls } from '@/composables/useCardControls'
-import { loadStripe } from '@stripe/stripe-js'
+// import { loadStripe } from '@stripe/stripe-js'
 import { useCardPreview } from '@/composables/useCardPreview'
 import CardContent from '@/components/common/CardContent.vue'
 
@@ -380,14 +380,14 @@ const downloadSet = async () => {
   }
 }
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+// const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 
 const redirectToCheckout = async (setId: number | string) => {
   checkoutLoading.value = true
   try {
     const { data } = await api.get(`/checkout/${setId}`)
-    const stripe = await stripePromise
-    if (data.url && stripe) {
+    // const stripe = await stripePromise
+    if (data.url) {
       window.location.href = data.url
     }
   } catch (error) {
