@@ -220,7 +220,7 @@
         .cards-grid {
             grid-template-columns: 1fr;
         }
-        ..container-main {
+        .container-main {
             max-width: 100% !important;
         }
     }
